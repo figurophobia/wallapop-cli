@@ -1,0 +1,16 @@
+# cookies.txt — pega aquí UNA request de wallapop (Copy as cURL) y ejecuta ./paste-cookies.sh
+#
+# Pasos:
+#   1. Abre https://es.wallapop.com con tu sesión iniciada y pulsa F12.
+#   2. Ve a la pestaña Red (Network) y busca una petición que apunte a
+#      es.wallapop.com o api.wallapop.com (suele haber muchas al cargar).
+#   3. Clic derecho sobre esa petición -> Copy -> Copy as cURL (bash)
+#      "Copy as cURL" DEBE ser en bash (también funciona "Copy as cURL (Windows)").
+#   4. Pega el "curl ..." entero debajo de esta línea y guarda.
+#
+# El script lee la cabecera 'Cookie:' de esa request y entra en la sesión.
+# "Copy as cURL" incluye la 'Cookie:' con accessToken, la sesión larga
+# (__Secure-next-auth.session-token), device_id y device_fgp: no hay que
+# copiar nada a mano.
+# ----------------------------------------------------------------------------------
+curl 'https://es.wallapop.com/api/auth/session' -H 'Cookie: __Secure-next-auth.session-token=XXX; accessToken=YYY; device_id=ZZZ; device_fgp=WWW' -H 'User-Agent: Mozilla/5.0' --compressed

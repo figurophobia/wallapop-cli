@@ -34,6 +34,29 @@ Con `--browser firefox` la CLI lee `cookies.sqlite` del perfil de Firefox más
 reciente y guarda la sesión bajo `~/.config/wallapop_cli/session.json`. Es la
 vía que funciona cuando la cuenta se registró con Google.
 
+**La vía fácil (cualquier navegador / Windows):** no copies cookies a mano; pega
+una request entera.
+
+```
+./paste-cookies.sh            # lee cookies.txt   (ver cookies.txt.example)
+./paste-cookies.sh --clip     # o toma el portapapeles
+```
+
+1. Abre `https://es.wallapop.com` logueado → `F12` → pestaña **Red**.
+2. Clic derecho en una petición que apunte a `es.wallapop.com` /
+   `api.wallapop.com` → **Copy → Copy as cURL (bash)**.
+3. Pega el `curl ...` completo en `cookies.txt` (o cópialo antes de ejecutar
+   con `--clip`) y ejecuta.
+
+El script extrae la cabecera `Cookie:` de la request (que incluye
+`accessToken`, `__Secure-next-auth.session-token`, `device_id` y `device_fgp`)
+y hace login con ella. Funciona igual en Windows si ejecutas el script con Git
+Bash, o directamente:
+
+```
+python3 wallapop.py login --cookies '<tu cabecera Cookie:>'
+```
+
 ---
 
 ## Búsqueda
