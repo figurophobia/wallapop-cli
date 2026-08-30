@@ -148,8 +148,11 @@ CI: GitHub Actions `python-app.yml` — matrix `3.10/3.11/3.12`,
 
 ## Envío a PyPI
 
-- `0.1.0` en TestPyPI primero; luego PyPI real vía `twine` (logout de credenciales
-  locales no afecta: solo sube código + docs, nunca sesiones).
+- **Diferido por decisión del usuario (2026-08-30): NO publicar en PyPI por ahora.**
+  El empaquetado (`pyproject.toml`) y la verificación del build se hacen, pero la
+  subida (TestPyPI/PyPI) queda fuera de alcance hasta que el usuario lo pida.
+- Cuando se active: `0.1.0` en TestPyPI primero; luego PyPI real vía `twine`
+  (solo código + docs, nunca sesiones ni cookies).
 - Versionado semántico; `__version__` liberada.
 
 ## Fuera de alcance (YAGNI, para fases posteriores)
