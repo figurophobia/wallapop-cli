@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wallapoplib"
+version = "0.1.0"
+description = "Typed Wallapop API client + CLI: search, deals, offers and messaging without a browser."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "figurophobia" }]
+keywords = ["wallapop", "api", "client", "cli", "offers", "chat"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+wallapop = "wallapoplib.cli.main:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+browser = ["playwright"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.hatch.build]
+exclude = [
+    "docs/**",
+    "tests/**",
+    "cookies.txt.example",
+    ".github/**",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["wallapoplib"]
+
+[tool.hatch.build.targets.sdist]
+include = ["wallapoplib"]
