@@ -67,12 +67,32 @@ respuesta a ofertas, chating idempotente).
 
 ## Instalación rápida
 
-No hay dependencias obligatorias para casi todo el flujo; solo se necesita
-`python3`. El único caso con dependencia extra es el **fallback** del envío de
-chat por navegador (Playwright + Firefox), que no es necesario si PubNub
-responde:
+**No hay dependencias obligatorias.** Toda la comunicación con Wallapop se hace
+por HTTP plano con la stdlib de Python: solo necesitas `python3` (≥ 3.10).
+
+Puedes usarla de dos formas:
+
+1. **Sin instalar nada** — con el repo clonado:
+
+   ```
+   python3 wallapop.py <comando> ...
+   ```
+
+2. **Como paquete instalable** (con la CLI `wallapop` incluida):
+
+   ```
+   pip install -e '.[test]'     # desarrollo local
+   ```
+
+### Playwright es opcional (y solo para el fallback de chat)
+
+El envío de mensajes de chat funciona por PubNub REST, sin navegador. Solo si
+PubNub no confirma la entrega se intenta un **fallback** que abre un navegador
+headless (Playwright + Firefox) con tus cookies de sesión. Para el flujo normal
+**no necesitas instalar Playwright**; puedes ignorar este paso:
 
 ```
+# Solo si quieres el fallback del chat por navegador (opcional):
 pip install --user --break-system-packages playwright
 python3 -m playwright install firefox
 ```
