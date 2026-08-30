@@ -10,34 +10,40 @@ sin Playwright salvo en un fallback puntual del envío de chat.
 ```
 wallapop.py                    # entrypoint fino (launches wallapoplib.cli.main)
 wallapoplib/
-  __init__.py                  # doc del paquete + __version__
+  __init__.py                  # API pública curada (dataclasses+cliente+dominio re-exportados)
   config.py                    # constantes API, paths, storage local, cookies
-  http.py                      # transporte HTTP (rate-limit, retries, decode)
+  http.py                      # transporte HTTP (rate-limit, retries, decode) + eprint
   tokens.py                    # JWT: claims, hash de usuario, política de expiración
-  models.py                    # derivaciones de dominio (normalización, ranking, ledger de ofertas)
+  models.py                    # dominio: dataclasses Item/Deal/OfferEvent/OfferState + derivaciones
   ids.py                       # resolución item url/slug/hash -> id interno
-  output.py                    # render en terminal (colores, tablas, announce, colas/hilos)
   client.py                    # clase Wallapop: TODAS las llamadas a endpoints
-  commands.py                  # handlers de comandos (login, search, deals, watch, offer, message, replies)
-  cli.py                       # argparse + main()
+  cli/                         # capa de consumo (NO contrato público del paquete)
+    main.py                    # argparse + main()   (entry point wallapoplib.cli.main:main)
+    commands.py                # handlers de comandos (login, search, deals, watch, offer, message, replies)
+    output.py                  # render en terminal (colores, tablas, announce, colas/hilos)
 ```
 
 La gerencia es sencilla y unidireccional:
 
 ```
-cli.py  ->  commands.py  ->  client.py  ->  http.py
-                |                |
-                v                v
-           models / ids / output / tokens   config.py (constantes y storage)
+cli/main.py  ->  cli/commands.py  ->  client.py  ->  http.py
+                  |                      |
+                  v                      v
+       models / ids / tokens  <-   config.py (constantes y storage)
+                 |
+                 v
+          cli/output.py (terminal)
 ```
 
 Ningún módulo `importa` a un superior jerárquico (evitando ciclos): `models`
-nunca toca `output`/`client`; las etiquetas con color del estado de ofertas
-viven en `output` (que importa `models`), no al revés.
+nunca toca `output`/`client`; `client` importa `eprint` desde `http` (no desde
+`cli.output`, para no cerrar un ciclo `client`↔`cli`); las etiquetas con color
+del estado de ofertas viven en `cli/output` (que importa `models`), no al
+revés.
 
 ## Cómo fluye una invocación
 
-1. `python3 wallapop.py <comando> ...` → `wallapoplib.cli.main()`.
+1. `python3 wallapop.py <comando> ...` → `wallapoplib.cli.main.main()`.
 2. `build_parser()` monta subcomandos (`search`, `deals`, `watch`, `offer`,
    `message`, `replies`, `login`, `logout`, `session`) y registra su
    `cmd_*` como `func` en el namespace de argparse.

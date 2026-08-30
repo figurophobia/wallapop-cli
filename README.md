@@ -23,7 +23,7 @@ python3 wallapop.py <comando> ...
 
 ## Documentación
 
-La documentación está dividida en tres documentos:
+La documentación está dividida en cuatro documentos:
 
 - [**Uso de la CLI**](docs/USAGE.md) — referencia de todos los comandos y
   flags: login, búsqueda, deals/watch, ofertas (con el panel `offer status` y
@@ -36,6 +36,34 @@ La documentación está dividida en tres documentos:
   CLI, cómo se extrajeron del bundle JS de la web, y el significado de los
   identificadores públicos de la app (las constantes `API_BASE`, `PUB_KEY`,
   `SUB_KEY`, `PUB_ORIGIN`, etc. de `config.py`).
+- [**API de librería**](docs/API.md) — quickstart y contrato público de
+  `wallapoplib` como librería (dataclasses, cliente, dominio).
+
+## Usar como librería
+
+`wallapoplib` es un paquete instalable (ya listo para PyPI; la publicación en
+PyPI queda **diferida**): contiene el cliente tipado + las dataclasses de
+dominio y trae la CLI dentro. Sin publicar, se instala localmente en modo
+editable:
+
+```
+pip install -e '.[test]'
+```
+
+Uso mínimo:
+
+```python
+from wallapoplib import Wallapop, load_session
+
+client = Wallapop(token=load_session().get("accessToken"))
+items = client.search("nintendo switch lite", pages=1)
+for it in items:
+    print(it.price, it.title, it.url)
+```
+
+Ver [docs/API.md](docs/API.md) para el contrato completo (dataclasses `Item` /
+`Deal` / `OfferEvent`/`OfferState`, `rank_deals`, `parse_offer_events`,
+respuesta a ofertas, chating idempotente).
 
 ## Instalación rápida
 

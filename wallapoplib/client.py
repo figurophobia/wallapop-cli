@@ -28,6 +28,7 @@ from .models import Item, deep_find, extract_items, first, normalize_item
 from .tokens import user_hash_of
 
 def refresh_web_session(session: dict) -> Optional[str]:
+    """Exchange a browser session cookie set for a fresh access token (GET /api/auth/session)."""
     session_token = session.get("__Secure-next-auth.session-token")
     if not session_token:
         return None
@@ -48,6 +49,7 @@ def refresh_web_session(session: dict) -> Optional[str]:
 
 
 def persist_browser_session(session: dict, token: Optional[str] = None) -> None:
+    """Save a browser session (cookies + optional access token) to local storage."""
     updated = dict(session)
     if token:
         updated["accessToken"] = token
@@ -109,6 +111,7 @@ class Wallapop:
         return resp
 
     def refresh_web(self) -> bool:
+        """Refresh the access token from the browser session cookie; return True on success."""
         if not self.web_cookies:
             return False
         token = refresh_web_session(self.web_cookies)
@@ -124,6 +127,7 @@ class Wallapop:
             self.persist_fn(self)
 
     def login(self, email: str, password: str) -> tuple[str, str]:
+        """Log in by email/password and return (access_token, refresh_token)."""
         resp = self._request(
             "POST",
             "/access/login",
@@ -147,6 +151,7 @@ class Wallapop:
         return token, refresh
 
     def try_refresh(self) -> bool:
+        """Exchange refresh_token for a fresh access token; return True on success."""
         if not self.refresh_token or not self.token:
             return False
         resp = self._request(
@@ -338,12 +343,15 @@ class Wallapop:
         return self._authed("POST", "/instant-messaging/conversation", body={"item_hash_id": item_hash})
 
     def conversation_thread(self, conversation_id: str) -> Response:
+        """Fetch the full message thread (messages, item, with_user) for a conversation."""
         return self._bff("GET", f"/bff/messaging/conversation/{conversation_id}")
 
     def inbox(self) -> Response:
+        """Fetch the inbox: up to 30 conversations with their latest messages."""
         return self._bff("GET", "/bff/messaging/inbox", params={"page_size": 30, "max_messages": 30})
 
     def unread_count(self) -> Response:
+        """Total unread message counter (instant messaging)."""
         return self._authed("GET", "/instant-messaging/messages/unread")
 
     def send_message(self, item_hash: str, message: str, report: Optional[dict] = None) -> Response:
