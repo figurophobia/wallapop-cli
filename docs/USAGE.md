@@ -34,28 +34,25 @@ Con `--browser firefox` la CLI lee `cookies.sqlite` del perfil de Firefox más
 reciente y guarda la sesión bajo `~/.config/wallapop_cli/session.json`. Es la
 vía que funciona cuando la cuenta se registró con Google.
 
-**La vía fácil (cualquier navegador / Windows):** no copies cookies a mano; pega
-una request entera.
+**La vía fácil con cookies (cualquier navegador / Windows):** no copies cookies
+a mano. Pega en un fichero el valor del campo `Cookie` de una request y haz
+login con un solo comando.
 
 ```
-./paste-cookies.sh            # lee cookies.txt   (ver cookies.txt.example)
-./paste-cookies.sh --clip     # o toma el portapapeles
+python3 wallapop.py login --cookies "$(cat cookies.txt)"
 ```
 
 1. Abre `https://es.wallapop.com` logueado → `F12` → pestaña **Red**.
-2. Clic derecho en una petición que apunte a `es.wallapop.com` /
-   `api.wallapop.com` → **Copy → Copy as cURL (bash)**.
-3. Pega el `curl ...` completo en `cookies.txt` (o cópialo antes de ejecutar
-   con `--clip`) y ejecuta.
+2. Clic en una petición que apunte a `es.wallapop.com` / `api.wallapop.com` →
+   pestaña **Cabeceras** → apartado **Request Headers** → campo **Cookie:** →
+   clic derecho → **Copiar valor**.
+3. Pega ese valor en `cookies.txt` (la primera línea sin comentario; ver
+   `cookies.txt.example`) y ejecuta el comando anterior.
 
-El script extrae la cabecera `Cookie:` de la request (que incluye
-`accessToken`, `__Secure-next-auth.session-token`, `device_id` y `device_fgp`)
-y hace login con ella. Funciona igual en Windows si ejecutas el script con Git
-Bash, o directamente:
-
-```
-python3 wallapop.py login --cookies '<tu cabecera Cookie:>'
-```
+La CLI se queda solo con las cookies que necesita (`accessToken`,
+`__Secure-next-auth.session-token`, `device_id`, `device_fgp`). En Windows
+(PowerShell): `python3 wallapop.py login --cookies (Get-Content cookies.txt -Raw)`
+o con Git Bash el comando de arriba.
 
 ---
 

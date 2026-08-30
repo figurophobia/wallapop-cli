@@ -1,16 +1,18 @@
-# cookies.txt — pega aquí UNA request de wallapop (Copy as cURL) y ejecuta ./paste-cookies.sh
+# cookies.txt — pega aquí el valor del campo "Cookie" de una request y luego:
 #
-# Pasos:
+#     python3 wallapop.py login --cookies "$(cat cookies.txt)"
+#
+# Como conseguir el valor (sin copiar cookies a mano):
 #   1. Abre https://es.wallapop.com con tu sesión iniciada y pulsa F12.
 #   2. Ve a la pestaña Red (Network) y busca una petición que apunte a
-#      es.wallapop.com o api.wallapop.com (suele haber muchas al cargar).
-#   3. Clic derecho sobre esa petición -> Copy -> Copy as cURL (bash)
-#      "Copy as cURL" DEBE ser en bash (también funciona "Copy as cURL (Windows)").
-#   4. Pega el "curl ..." entero debajo de esta línea y guarda.
+#      es.wallapop.com o api.wallapop.com (suelen salir muchas al cargar).
+#   3. Haz clic en esa petición -> pestaña "Cabeceras" (Headers).
+#   4. Busca el apartado "Request Headers" -> campo "Cookie:" -> clic derecho
+#      -> "Copiar valor".
+#   5. Pega ese valor justo debajo de esta línea (toda la línea "name=value;
+#      name2=value2; ..." entre ; ) y guarda el fichero.
 #
-# El script lee la cabecera 'Cookie:' de esa request y entra en la sesión.
-# "Copy as cURL" incluye la 'Cookie:' con accessToken, la sesión larga
-# (__Secure-next-auth.session-token), device_id y device_fgp: no hay que
-# copiar nada a mano.
+# El login se queda solo con lo que necesita: accessToken,
+# __Secure-next-auth.session-token (la sesión larga), device_id y device_fgp.
 # ----------------------------------------------------------------------------------
-curl 'https://es.wallapop.com/api/auth/session' -H 'Cookie: __Secure-next-auth.session-token=XXX; accessToken=YYY; device_id=ZZZ; device_fgp=WWW' -H 'User-Agent: Mozilla/5.0' --compressed
+device_id=REEMPLAZA; __Secure-next-auth.session-token=REEMPLAZA; accessToken=REEMPLAZA; device_fgp=REEMPLAZA
