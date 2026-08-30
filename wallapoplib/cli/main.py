@@ -16,8 +16,8 @@ from .commands import (
     cmd_session,
     cmd_watch,
 )
-from .config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
-from .http import ApiError
+from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
+from ..http import ApiError
 from .output import eprint, paint
 
 def add_search_args(sp: argparse.ArgumentParser) -> None:

@@ -10,7 +10,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from .models import Deal, Item, OfferEvent, offer_payload_summary
+from ..http import Response
+from ..models import Deal, Item, OfferEvent, offer_payload_summary
 
 
 @dataclass

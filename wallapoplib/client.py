@@ -25,7 +25,7 @@ from .config import (
 )
 from .http import ApiError, Response, http_request
 from .models import Item, deep_find, extract_items, first, normalize_item
-from .output import eprint
+from .cli.output import eprint
 from .tokens import user_hash_of
 
 def refresh_web_session(session: dict) -> Optional[str]:

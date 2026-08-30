@@ -11,8 +11,8 @@ import signal
 import time
 from typing import Any, Optional
 
-from .client import Wallapop, persist_browser_session, refresh_web_session
-from .config import (
+from ..client import Wallapop, persist_browser_session, refresh_web_session
+from ..config import (
     CITIES,
     CRED_PATH,
     DEFAULT_GEO,
@@ -29,9 +29,9 @@ from .config import (
     save_contacted,
     save_credentials,
 )
-from .http import ApiError
-from .ids import resolve_internal_id
-from .models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, rank_deals
+from ..http import ApiError
+from ..ids import resolve_internal_id
+from ..models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, rank_deals
 from .output import (
     announce,
     clock,
@@ -50,7 +50,7 @@ from .output import (
     render_template,
     truncate,
 )
-from .tokens import refresh_if_expired, token_expiry
+from ..tokens import refresh_if_expired, token_expiry
 
 def authed_client(required: bool = True) -> tuple[Wallapop, dict]:
     creds = load_credentials()
