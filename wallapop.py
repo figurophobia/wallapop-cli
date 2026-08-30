@@ -18,6 +18,7 @@ import sqlite3
 import sys
 import tempfile
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,6 +28,11 @@ from typing import Any, Callable, Iterator, Optional
 API_BASE = "https://api.wallapop.com/api/v3"
 API_ROOT = "https://api.wallapop.com"  # host root; bff endpoints live under /bff (no /api/v3)
 WEB_BASE = "https://es.wallapop.com"
+PUB_KEY = "pub-c-255dc549-86f5-4abd-8b9e-921d5a02fde7"
+SUB_KEY = "sub-c-89405e27-d4df-4d87-aca1-d6e9118f0a0d"
+PUB_ORIGIN = "ps7.pndsn.com"
+PNSDK = "PubNub-JS-Web/10.2.6"
+WEB_APP_VERSION = "8.2656.0"
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "wallapop_cli")
 CRED_PATH = os.path.join(CONFIG_DIR, "credentials.json")
 SESSION_PATH = os.path.join(CONFIG_DIR, "session.json")
@@ -379,6 +385,7 @@ class Wallapop:
         self.user: dict = {}
 
     def _headers(self, auth: bool = False) -> dict:
+        device_id = (self.web_cookies or {}).get("device_id", "") or ""
         hdrs = {
             "Accept": "application/json, text/plain, */*",
             "Origin": WEB_BASE,
@@ -386,8 +393,11 @@ class Wallapop:
             "User-Agent": random.choice(USER_AGENTS),
             "X-DeviceOS": "0",
             "X-Product": "wallapop",
+            "X-AppVersion": "826560",
             "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
         }
+        if device_id:
+            hdrs["X-DeviceID"] = device_id
         if auth and self.token:
             hdrs["Authorization"] = f"Bearer {self.token}"
         return hdrs
@@ -556,10 +566,32 @@ class Wallapop:
         return data if isinstance(data, dict) else {}
 
     def send_offer(self, item_id: str, amount: float, message: Optional[str] = None) -> Response:
-        body: dict[str, Any] = {"amount": int(round(amount))}
+        """POST the delivery/buyer offer endpoint (the web app's real offer send).
+
+        The legacy /items/{id}/offers endpoint is dead (404). The current flow
+        posts to /api/v3/delivery/buyer/offers with a client-generated offer_id
+        (uuid) and the item's price currency.
+        """
+        body: dict[str, Any] = {
+            "offer_id": str(uuid.uuid4()),
+            "offer_price_amount": float(round(amount, 2)),
+            "offer_price_currency": self._item_currency(item_id),
+            "item_ids": [item_id],
+        }
         if message:
             body["message"] = message
-        return self._authed("POST", f"/items/{item_id}/offers", body=body)
+        resp = self._authed("POST", "/delivery/buyer/offers", body=body)
+        if not resp.ok and message and (resp.status == 400 or resp.status == 422):
+            del body["message"]
+            resp = self._authed("POST", "/delivery/buyer/offers", body=body)
+        return resp
+
+    def _item_currency(self, item_id: str) -> str:
+        return extract_currency(self.item(item_id))
+
+    def make_offer_info(self, item_id: str) -> Response:
+        """Fetch the offer editor config (price, max_offer_percentage, restriction)."""
+        return self._bff("GET", "/bff/delivery/make-an-offer", params={"item_id": item_id})
 
     def _bff(
         self,
@@ -587,12 +619,18 @@ class Wallapop:
     def inbox(self) -> Response:
         return self._bff("GET", "/bff/messaging/inbox", params={"page_size": 30, "max_messages": 30})
 
-    def send_message(self, item_hash: str, message: str, report: Optional[dict] = None) -> Response:
-        """Send a chat message to an item's seller via the browser chat session.
+    def unread_count(self) -> Response:
+        return self._authed("GET", "/instant-messaging/messages/unread")
 
-        Idempotent guard: if the exact same text is already the last message we
-        sent in this conversation, the browser send is skipped. When `report`
-        is given, it is filled with {"browser_s": float, "skipped": bool}.
+    def send_message(self, item_hash: str, message: str, report: Optional[dict] = None) -> Response:
+        """Send a chat message to an item's seller.
+
+        Prefers the PubNub REST publish (GET to pndsn.com), which is how the
+        web app actually delivers chat messages; falls back to the browser
+        flow only if the REST publish does not ack. Idempotent guard: no send
+        when the exact text is already our last message in the thread. When
+        `report` is given it is filled with {"path": "rest"|"browser",
+        "skipped": bool, "browser_s": float}.
         """
         resp = self.ensure_conversation(item_hash)
         if not resp.ok:
@@ -601,13 +639,26 @@ class Wallapop:
         if not conv_id:
             return Response(resp.status, resp.data, False, resp.unauthorized)
         thread = self.conversation_thread(conv_id)
+        thread_data = thread.data if isinstance(thread.data, dict) else {}
+        msgs = (((thread_data.get("messages") or {}).get("messages")) or [])
         skipped = False
-        if thread.ok:
-            msgs = (((thread.data or {}).get("messages") or {}).get("messages")) or []
-            for m in reversed(msgs):
-                if m.get("from_self"):
-                    skipped = str(m.get("text") or "") == message
-                    break
+        for m in reversed(msgs):
+            if m.get("from_self"):
+                skipped = str(m.get("text") or "") == message
+                break
+        if not skipped:
+            channel = thread_data.get("channel") or ""
+            to_user = (thread_data.get("with_user") or {}).get("hash") or ""
+            if channel and to_user:
+                tok = self.im_token()
+                if tok.ok:
+                    ack = self.pubnub_publish(channel, message, to_user, conv_id, tok.data.get("token", ""))
+                    if ack:
+                        time.sleep(1)
+                        if report is not None:
+                            report["path"] = "rest"
+                            report["skipped"] = False
+                        return self.conversation_thread(conv_id)
         browser_s = 0.0
         if not skipped:
             t0 = time.monotonic()
@@ -616,9 +667,57 @@ class Wallapop:
             browser_s = time.monotonic() - t0
             time.sleep(2)
         if report is not None:
+            report["path"] = "browser" if not skipped else "skipped"
             report["skipped"] = skipped
             report["browser_s"] = browser_s
         return self.conversation_thread(conv_id)
+
+    def im_token(self) -> Response:
+        """Fetch the PubNub access-manager token used as `auth` on publish."""
+        return self._authed("GET", "/instant-messaging/token")
+
+    def pubnub_publish(
+        self,
+        channel: str,
+        text: str,
+        to_user_hash: str,
+        conversation_hash: str,
+        auth_token: str,
+    ) -> bool:
+        """Publish a chat message to a conversation channel via PubNub REST.
+
+        Returns True when PubNub acks with `[1,"Sent",<timetoken>]`.
+        """
+        message = json.dumps({"id": str(uuid.uuid4()), "payload": {"text": text}}, separators=(",", ":"))
+        meta = {
+            "type": "text",
+            "sender": {
+                "platform": {"app_version": WEB_APP_VERSION, "os_version": "0"},
+            },
+            "to_user_hash": to_user_hash,
+            "from_user_hash": user_hash_of(self.token),
+            "conversation_hash": conversation_hash,
+        }
+        path = (
+            f"https://{PUB_ORIGIN}/publish/{PUB_KEY}/{SUB_KEY}/0/"
+            f"{channel}/0/{urllib.parse.quote(message, safe='')}"
+        )
+        params = {
+            "meta": json.dumps(meta, separators=(",", ":")),
+            "uuid": user_hash_of(self.token),
+            "requestid": str(uuid.uuid4()),
+            "pnsdk": PNSDK,
+            "auth": auth_token,
+        }
+        url = path + "?" + urllib.parse.urlencode(params)
+        status, payload, _ = http_request("GET", url, headers={})
+        if status != 200 or not isinstance(payload, str):
+            return False
+        try:
+            ack = json.loads(payload)
+        except json.JSONDecodeError:
+            return False
+        return bool(ack and ack[0] == 1 and ack[1] == "Sent")
 
 
 def send_chat_text(item_hash: str, text: str) -> bool:
@@ -817,13 +916,25 @@ def rank_deals(items: list[dict], min_discount: float, max_price: Optional[float
     return [d for d in deals if d["discount"] >= min_discount], median
 
 
-def token_expiry(token: str) -> Optional[datetime.datetime]:
-    if not token.startswith("eyJ"):
-        return None
+def jwt_claims(token: str) -> dict:
     try:
         part = token.split(".")[1]
         padded = part + "=" * (-len(part) % 4)
         claims = json.loads(base64.urlsafe_b64decode(padded))
+        return claims if isinstance(claims, dict) else {}
+    except Exception:
+        return {}
+
+
+def user_hash_of(token: str) -> str:
+    return str(jwt_claims(token).get("hashed_sub") or "")
+
+
+def token_expiry(token: str) -> Optional[datetime.datetime]:
+    if not token.startswith("eyJ"):
+        return None
+    try:
+        claims = jwt_claims(token)
         exp = claims.get("exp")
         if isinstance(exp, (int, float)):
             return datetime.datetime.fromtimestamp(exp)
@@ -1220,16 +1331,29 @@ def cmd_offer(args: argparse.Namespace) -> int:
     if args.price is not None and args.pct is not None:
         raise ApiError("provide only one of --price or --pct")
     item_id = resolve_internal_id(args.item_id)
+    client, _ = authed_client()
+    info = client.make_offer_info(item_id)
+    asking = 0.0
+    max_pct = 30.0
+    if info.ok:
+        asking = float((((info.data or {}).get("item") or {}).get("price") or {}).get("amount") or 0.0)
+        max_pct = float(((info.data or {}).get("restriction") or {}).get("max_offer_percentage") or 30.0)
+        remain = ((info.data or {}).get("restriction") or {}).get("remaining_offers_per_day")
     if args.price is not None:
         amount = args.price
     else:
-        asking = safe_price(Wallapop().item(item_id))
+        if asking <= 0:
+            asking = safe_price(Wallapop().item(item_id))
         amount = max(1.0, round(asking * args.pct, 2))
+    min_offer = 0.0 if asking <= 0 else round(asking * (1 - max_pct / 100), 2)
+    if min_offer > 0 and amount < min_offer:
+        print(paint.yellow(f"warning: {amount:.2f}€ is below the {max_pct:.0f}% discount limit (min {min_offer:.2f}€); the offer may be rejected"))
+    if "remain" in locals() and remain is not None:
+        print(paint.dim(f"offers left today: {remain}"))
     label = f"offer {amount:.2f}€ on item {item_id}"
     if args.dry_run:
         announce(label, None)
         return 0
-    client, _ = authed_client()
     announce(label, client.send_offer(item_id, amount, message=args.msg))
     return 0
 
@@ -1251,15 +1375,85 @@ def cmd_message(args: argparse.Namespace) -> int:
         whom = (resp.data or {}).get("with_user") or {}
         name = whom.get("name") or "?"
         note = " (same text already sent, skipped)" if report.get("skipped") else ""
-        print(f"      delivered to {name} in {elapsed:.1f}s total {note}")
+        path = report.get("path") or "?"
+        print(f"      delivered to {name} via {path} in {elapsed:.1f}s total {note}")
         if report.get("browser_s"):
             print(f"      browser send itself took {report['browser_s']:.1f}s")
         return 0
     return 1
 
 
+def msg_type_label(m: dict) -> str:
+    t = m.get("type") or "text"
+    if t == "text":
+        return ""
+    if t == "delivery_generic":
+        return paint.yellow(" [offer]")
+    if t == "prompt_buyer_to_sell":
+        return paint.dim(" [prompt-buy]")
+    if t == "review":
+        return paint.dim(" [review]")
+    if t == "delivery_transaction_claim_period_started":
+        return paint.dim(" [claim]")
+    return paint.dim(f" [{t}]")
+
+
+def offer_payload_summary(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    amount = ""
+    for key in ("offer_price_amount", "amount", "counter_offer_price_amount"):
+        v = payload.get(key)
+        if v is not None:
+            amount = f"{v}€"
+            break
+    loc = payload.get("loc", {}) if isinstance(payload.get("loc"), dict) else {}
+    cur = loc.get("current", "") or payload.get("text") or ""
+    return f" {amount} · {cur}" if amount or cur else ""
+
+
+def fmt_thread_message(m: dict) -> str:
+    if m.get("from_self"):
+        mark = paint.green("->")
+    else:
+        mark = paint.cyan("<-")
+    stamp = m.get("timestamp")
+    when = (
+        datetime.datetime.fromtimestamp(stamp / 1000).strftime("%Y-%m-%d %H:%M:%S") if stamp else ""
+    )
+    status = m.get("status") or ""
+    st = {"read": paint.dim("·read"), "received": paint.dim("·recvd"), "sent": paint.dim("·sent")}.get(
+        status, paint.dim(f"·{status}")
+    )
+    toks = m.get("time_token") or ""
+    head = f"  {mark} {when} {st}"
+    if m.get("type") not in (None, "", "text"):
+        head += msg_type_label(m)
+    if toks:
+        head += paint.dim(f" t={toks}")
+    return head + "\n" + "      " + str(m.get("text") or offer_payload_summary(m.get("payload")))
+
+
 def cmd_replies(args: argparse.Namespace) -> int:
     client, _ = authed_client()
+
+    if args.json:
+        if args.conversation:
+            resp = client.conversation_thread(args.conversation)
+            if not resp.ok:
+                eprint(f"conversation {args.conversation} failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+                return 1
+            print(json.dumps(resp.data, ensure_ascii=False, indent=2))
+            return 0
+        resp = client.inbox()
+        if not resp.ok:
+            eprint(f"inbox failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+            return 1
+        print(json.dumps(resp.data, ensure_ascii=False, indent=2))
+        return 0
+
+    unread = client.unread_count()
+
     resp = client.inbox()
     if not resp.ok:
         eprint(f"inbox failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
@@ -1277,26 +1471,57 @@ def cmd_replies(args: argparse.Namespace) -> int:
         with_user = (data.get("with_user") or {}).get("name") or ""
         item = data.get("item") or {}
         title = item.get("title") or ""
-        print(f"conversation {args.conversation} with {with_user}  ·  {title}")
+        sale = (data.get("sale") or {}).get("status") or item.get("status") or ""
+        if sale:
+            sale = f"  ·  sale {sale}"
+        print(f"conversation {args.conversation} with {with_user}  ·  {title}{sale}")
         msgs = (((data.get("messages") or {}).get("messages")) or [])
+        msgs.sort(key=lambda m: m.get("timestamp") or 0)
         for m in msgs:
-            mark = paint.green("->") if m.get("from_self") else paint.cyan("<-")
-            stamp = m.get("timestamp")
-            when = datetime.datetime.fromtimestamp((stamp or 0) / 1000).strftime("%m-%d %H:%M") if stamp else ""
-            print(f"  {mark} {when}  {m.get('text')}")
+            print(fmt_thread_message(m))
+        print(paint.dim(f"{len(msgs)} messages total"))
         return 0
+
+    n_unread = 0
+    if unread.ok and isinstance(unread.data, dict) and (unread.data.get("unread_counter") or 0):
+        n_unread = unread.data.get("unread_counter") or 0
+    print(paint.bold(f"inbox · {len(convs)} conversations · {n_unread} unread"))
     for c in convs:
         item = c.get("item") or {}
-        who = str((c.get("with_user") or {}).get("name") or "")
         title = str(item.get("title") or "")[:44]
         price = item.get("price")
         amount = price.get("amount") if isinstance(price, dict) else ""
+        cur = (price.get("currency") or "EUR") if isinstance(price, dict) else ""
+        status = item.get("status") or ""
+        if status:
+            status = f" [{status}]"
+        who = (c.get("with_user") or {}) or {}
+        name = str(who.get("name") or "")
+        slug = who.get("slug") or ""
+        rr = who.get("response_rate") or ""
+        if rr:
+            rr = f" rr={rr}"
         msgs = ((c.get("messages") or {}).get("messages")) or []
+        msgs.sort(key=lambda m: m.get("timestamp") or 0)
         last = msgs[-1] if msgs else {}
-        text = str(last.get("text") or "(no messages)")[:90]
-        unread = c.get("unread_messages", 0)
-        print(f"{paint.cyan(c['hash'])}  {who:<22} {amount}{'€' if amount not in (None, '') else ''} · {unread} unread")
-        print(f"      {title}  —  {text}")
+        if last:
+            last_from = "->" if last.get("from_self") else "<-"
+            stamp = last.get("timestamp")
+            lt = datetime.datetime.fromtimestamp(stamp / 1000).strftime("%m-%d %H:%M") if stamp else ""
+            text = str(last.get("text") or "")[:80] or offer_payload_summary(last.get("payload"))[:80]
+            lastline = f"  {paint.dim('last')} {last_from} {lt}{msg_type_label(last)}  {text}"
+        else:
+            lastline = ""
+        unread_c = c.get("unread_messages", 0)
+        un = paint.yellow(f"· {unread_c} unread") if unread_c else ""
+        ch = c.get("channel") or ""
+        if c.get("map_enabled"):
+            ch = f" map=on"
+        print(f"{paint.cyan(c['hash'])}  {name:<24} {slug}{rr}")
+        items_n = c.get("items_count") or 1
+        print(f"      {title}{f' x{items_n}' if items_n > 1 else ''} price {amount or '?'}{cur}{status}{un}")
+        if lastline:
+            print(lastline)
     return 0
 
 
@@ -1394,6 +1619,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     rp = sub.add_parser("replies", help="list your inbox conversations (or print one full thread)")
     rp.add_argument("--conversation", help="conversation id to dump the full message thread")
+    rp.add_argument("--json", action="store_true", help="dump raw JSON (inbox or conversation thread)")
     rp.set_defaults(func=cmd_replies)
 
     parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")
