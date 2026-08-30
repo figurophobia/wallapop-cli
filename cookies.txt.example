@@ -1,6 +1,9 @@
 # cookies.txt — pega aquí el valor del campo "Cookie" de una request y luego:
 #
-#     python3 wallapop.py login --cookies "$(cat cookies.txt)"
+#     python3 wallapop.py login
+#
+# (login lee cookies.txt automáticamente; también funciona
+#  "python3 wallapop.py login --cookies-file <otro fichero>")
 #
 # Como conseguir el valor (sin copiar cookies a mano):
 #   1. Abre https://es.wallapop.com con tu sesión iniciada y pulsa F12.

@@ -36,10 +36,11 @@ vía que funciona cuando la cuenta se registró con Google.
 
 **La vía fácil con cookies (cualquier navegador / Windows):** no copies cookies
 a mano. Pega en un fichero el valor del campo `Cookie` de una request y haz
-login con un solo comando.
+`login`, que lo lee automáticamente.
 
 ```
-python3 wallapop.py login --cookies "$(cat cookies.txt)"
+python3 wallapop.py login                    # lee cookies.txt si existe
+python3 wallapop.py login --cookies-file mi.txt
 ```
 
 1. Abre `https://es.wallapop.com` logueado → `F12` → pestaña **Red**.
@@ -47,12 +48,12 @@ python3 wallapop.py login --cookies "$(cat cookies.txt)"
    pestaña **Cabeceras** → apartado **Request Headers** → campo **Cookie:** →
    clic derecho → **Copiar valor**.
 3. Pega ese valor en `cookies.txt` (la primera línea sin comentario; ver
-   `cookies.txt.example`) y ejecuta el comando anterior.
+   `cookies.txt.example`) y ejecuta `login`.
 
 La CLI se queda solo con las cookies que necesita (`accessToken`,
-`__Secure-next-auth.session-token`, `device_id`, `device_fgp`). En Windows
-(PowerShell): `python3 wallapop.py login --cookies (Get-Content cookies.txt -Raw)`
-o con Git Bash el comando de arriba.
+`__Secure-next-auth.session-token`, `device_id`, `device_fgp`). No depende del
+shell ni del SO: `login` busca el fichero directamente. Sigue existiendo
+`--cookies '...'` si prefieres pegar el valor inline.
 
 ---
 

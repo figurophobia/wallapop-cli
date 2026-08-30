@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import getpass
 import json
+import os
 import re
 import signal
 import time
@@ -190,7 +191,22 @@ def cmd_login(args: argparse.Namespace) -> int:
         return 0
 
     if getattr(args, "cookies", None):
-        parsed = parse_cookie_string(args.cookies)
+        cookies_source = args.cookies
+    else:
+        cfp = getattr(args, "cookies_file", None) or "cookies.txt"
+        if os.path.exists(cfp):
+            try:
+                with open(cfp, encoding="utf-8") as fh:
+                    cookies_source = " ".join(
+                        line.strip() for line in fh.read().splitlines() if not line.strip().startswith("#")
+                    )
+            except OSError as exc:
+                eprint(f"could not read {cfp}: {exc}")
+                return 1
+        else:
+            cookies_source = ""
+    if cookies_source:
+        parsed = parse_cookie_string(cookies_source)
         session = {k: parsed[k] for k in WALLAPOP_COOKIE_KEYS if k in parsed}
         missing = ", ".join(k for k in WALLAPOP_COOKIE_KEYS if k not in session)
         if missing:

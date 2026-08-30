@@ -71,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("--browser", choices=["firefox"], help="import your session from the Firefox profile (works with Google accounts)")
     lp.add_argument("--cookies", help="paste cookies as a 'name=value; ...' string (accessToken, __Secure-next-auth.session-token)"
     )
+    lp.add_argument("--cookies-file", default="cookies.txt", help="read cookies from this file instead of --cookies (default: cookies.txt)")
     lp.set_defaults(func=cmd_login)
 
     so = sub.add_parser("logout", help="clear stored credentials")

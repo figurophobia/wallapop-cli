@@ -54,9 +54,9 @@ python3 -m playwright install firefox
 - `wallapop login your@email.com` (pedirá contraseña de forma segura)
 - `wallapop login --browser firefox` — importa la sesión de Firefox
   (funciona para cuentas registradas con Google)
-- `wallapop login --cookies "$(cat cookies.txt)"` — login pegando el valor del
-  campo `Cookie` de una request (F12 → Cabeceras → Copiar valor); ver
-  `cookies.txt.example` y `docs/USAGE.md`.
+- `wallapop login` (con `cookies.txt` en el directorio) — login pegando el
+  valor del campo `Cookie` de una request (F12 → Cabeceras → Copiar valor);
+  ver `cookies.txt.example` y `docs/USAGE.md`.
 - Los tokens y cookies se guardan en `~/.config/wallapop_cli/`, **fuera del
   repo** (no se suben a git).
 
