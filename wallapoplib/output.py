@@ -8,9 +8,9 @@ import json
 import shutil
 import sys
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Iterable
 
-from .models import offer_payload_summary
+from .models import Deal, Item, OfferEvent, offer_payload_summary
 
 
 @dataclass
@@ -60,26 +60,26 @@ def emit_json(obj: Any) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
 
 
-def emit_csv(items: list[dict]) -> None:
+def emit_csv(items: Iterable[Item | Deal]) -> None:
     fieldnames = ["id", "title", "price", "currency", "city", "user_id", "user_name", "url", "shippable", "discount", "median"]
     writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
     for it in items:
-        writer.writerow(it)
+        writer.writerow(it.to_dict() if hasattr(it, "to_dict") else vars(it))
 
 
-def render_template(template: str, it: dict, amount: Optional[float] = None) -> str:
-    price = f"{it['price']:.2f}"
-    text = template.replace("{title}", it["title"])
+def render_template(template: str, it: Item, amount: Optional[float] = None) -> str:
+    price = f"{it.price:.2f}"
+    text = template.replace("{title}", it.title)
     text = text.replace("{price}", price)
-    text = text.replace("{link}", it["url"])
-    text = text.replace("{city}", it["city"])
+    text = text.replace("{link}", it.url)
+    text = text.replace("{city}", it.city)
     if amount is not None:
         text = text.replace("{offer}", f"{amount:.2f}")
     return text
 
 
-def print_items(items: list[dict]) -> None:
+def print_items(items: list[Item]) -> None:
     if not items:
         print("no results")
         return
@@ -87,39 +87,40 @@ def print_items(items: list[dict]) -> None:
     title_w = max(20, width - 65)
     print(paint.bold(f"{'#':>3}  {'PRICE':>9}  {'CTY':<11}  {'SELLER':<12}  SHP  TITLE"))
     for idx, it in enumerate(items, 1):
-        ship = paint.green("yes") if it["shippable"] else paint.dim("no")
+        ship = paint.green("yes") if it.shippable else paint.dim("no")
         row = (
-            f"{idx:>3}  {paint.cyan(f'{it['price']:8.2f}')}  {truncate(it['city'], 11):<11}  "
-            f"{truncate(it['user_name'] or it['user_id'], 12):<12}  {ship}  {truncate(it['title'], title_w)}"
+            f"{idx:>3}  {paint.cyan(f'{it.price:8.2f}')}  {truncate(it.city, 11):<11}  "
+            f"{truncate(it.user_name or it.user_id, 12):<12}  {ship}  {truncate(it.title, title_w)}"
         )
         print(row)
-        if it["url"]:
-            print(f"     {paint.dim(it['url'])}")
+        if it.url:
+            print(f"     {paint.dim(it.url)}")
 
 
-def print_deals(deals: list[dict], show_discount_bars: bool = True) -> None:
+def print_deals(deals: list[Deal], show_discount_bars: bool = True) -> None:
     if not deals:
         print("no deals at the current threshold")
         return
     width = shutil.get_terminal_size((100, 24)).columns
     title_w = max(20, width - 69)
     print(paint.bold(f"{'#':>3}  {'DEAL':>5}  {'PRICE':>9}  {'MEDIAN':>9}  {'CTY':<10}  SHP  TITLE"))
-    for idx, it in enumerate(deals, 1):
-        pct = it["discount"] * 100
-        if it["discount"] > 0:
+    for idx, d in enumerate(deals, 1):
+        it = d.item
+        pct = d.discount * 100
+        if d.discount > 0:
             deal_tag = paint.green(f"{-pct:4.0f}%")
-        elif it["discount"] == 0:
+        elif d.discount == 0:
             deal_tag = paint.dim("  0%")
         else:
             deal_tag = paint.red(f"+{abs(pct):3.0f}%")
-        ship = paint.green("yes") if it["shippable"] else paint.dim("no")
+        ship = paint.green("yes") if it.shippable else paint.dim("no")
         row = (
-            f"{idx:>3}  {deal_tag}  {paint.cyan(f'{it['price']:8.2f}')}  {paint.dim(f'{it['median']:8.2f}')}  "
-            f"{truncate(it['city'], 10):<10}  {ship}  {truncate(it['title'], title_w)}"
+            f"{idx:>3}  {deal_tag}  {paint.cyan(f'{it.price:8.2f}')}  {paint.dim(f'{d.median:8.2f}')}  "
+            f"{truncate(it.city, 10):<10}  {ship}  {truncate(it.title, title_w)}"
         )
         print(row)
-        if it["url"]:
-            print(f"     {paint.dim(it['url'])}")
+        if it.url:
+            print(f"     {paint.dim(it.url)}")
 
 
 def announce(label: str, resp: Optional[Response]) -> None:
@@ -135,15 +136,12 @@ def announce(label: str, resp: Optional[Response]) -> None:
         print(paint.red(f"[failed] {label} ({resp.status}): {resp.error_reason or str(resp.data)[:300]}"))
 
 
-def print_offer_events(events: list[dict], indent: str = "   ") -> None:
+def print_offer_events(events: list[OfferEvent], indent: str = "   ") -> None:
     for ev in events:
-        when = ""
-        if ev["ts"]:
-            when = datetime.datetime.fromtimestamp(ev["ts"] / 1000).strftime("%m-%d %H:%M")
-        amount = f"{ev['amount']:.2f}€" if ev["amount"] is not None else ""
-        oid = f"  offer={ev['offer_id']}" if ev["offer_id"] else ""
-        print(f"   {when}  {ev['kind']:<15} {amount}{oid}")
-        print(f"       {str(ev['text'])[:90]}")
+        amount = f"{ev.amount:.2f}€" if ev.amount is not None else ""
+        oid = f"  offer={ev.offer_id}" if ev.offer_id else ""
+        print(f"   {ev.date:<12}  {ev.kind:<15} {amount}{oid}")
+        print(f"       {str(ev.text)[:90]}")
 
 
 def offer_label(kind: str) -> str:

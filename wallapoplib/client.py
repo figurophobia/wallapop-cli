@@ -24,7 +24,7 @@ from .config import (
     save_session,
 )
 from .http import ApiError, Response, http_request
-from .models import deep_find, extract_currency, extract_items, first, normalize_item
+from .models import Item, deep_find, extract_items, first, normalize_item
 from .output import eprint
 from .tokens import user_hash_of
 
@@ -178,7 +178,7 @@ class Wallapop:
         longitude: Optional[float] = None,
         pages: int = 1,
         delay: float = 0.0,
-    ) -> list[dict]:
+    ) -> list[Item]:
         order = order_by or "most_relevance"
         base = {
             "keywords": keywords,
@@ -197,8 +197,8 @@ class Wallapop:
             return self._search_sections(base, search_id, pages, delay)
         return self._search_legacy(keywords, category_id, order, latitude, longitude)
 
-    def _search_sections(self, base: dict, search_id: str, pages: int, delay: float) -> list[dict]:
-        all_items: list[dict] = []
+    def _search_sections(self, base: dict, search_id: str, pages: int, delay: float) -> list[Item]:
+        all_items: list[Item] = []
         params = dict(base)
         params.update({"search_id": search_id, "section_type": "organic_search_results", "source": "deep_link"})
         next_page: Optional[str] = None
@@ -225,7 +225,7 @@ class Wallapop:
         order: str,
         latitude: Optional[float],
         longitude: Optional[float],
-    ) -> list[dict]:
+    ) -> list[Item]:
         params = {
             "keywords": keywords,
             "order_by": order,
@@ -245,12 +245,13 @@ class Wallapop:
         objs = data.get("search_objects", []) if isinstance(data, dict) else []
         return [normalize_item(obj) for obj in objs]
 
-    def item(self, item_id: str) -> dict:
+    def item(self, item_id: str) -> Item:
         resp = self._request("GET", f"/items/{item_id}")
         if not resp.ok:
             raise ApiError(f"item {item_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
         data = resp.data
-        return data if isinstance(data, dict) else {}
+        raw = data if isinstance(data, dict) else {}
+        return Item.from_raw(raw)
 
     def send_offer(self, item_id: str, amount: float, message: Optional[str] = None) -> Response:
         """POST the delivery/buyer offer endpoint (the web app's real offer send).
@@ -311,7 +312,7 @@ class Wallapop:
         return self._bff("GET", "/delivery/offer-details", params={"offer_id": offer_id})
 
     def _item_currency(self, item_id: str) -> str:
-        return extract_currency(self.item(item_id))
+        return self.item(item_id).currency
 
     def make_offer_info(self, item_id: str) -> Response:
         """Fetch the offer editor config (price, max_offer_percentage, restriction)."""

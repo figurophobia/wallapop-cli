@@ -1,10 +1,16 @@
-"""Domain derivations: item normalization, deal ranking, offer-ledger parsing."""
+"""Domain model: typed dataclasses (Item, Deal, OfferEvent, OfferState) and the
+derivations that produce them from raw Wallapop payloads.
+
+Public contract (from the v1 design) lives on these dataclasses; the CLI and
+downstream projects read attributes, never dict keys.
+"""
 
 from __future__ import annotations
 
 import datetime
 import json
 import re
+from dataclasses import dataclass, field
 from typing import Any, Iterator, Optional
 
 from .config import WEB_BASE
@@ -81,54 +87,98 @@ def extract_shipping(raw: dict) -> bool:
     return False
 
 
-def normalize_item(raw: dict, fallback_user_id: Optional[str] = None) -> dict:
-    item_id = str(raw.get("id") or "")
-    user = raw.get("user") or {}
-    user_id = str(raw.get("user_id") or raw.get("userId") or user.get("id") or "")
-    if not user_id and fallback_user_id:
-        user_id = str(fallback_user_id)
-    user_name = str(raw.get("user_name") or user.get("micro_name") or user.get("name") or "")
-    title = raw.get("title") or ""
-    if isinstance(title, dict):
-        title = title.get("original") or ""
-    price = safe_price(raw)
-    flags = raw.get("flags") or {}
-    reserved = raw.get("reserved")
-    if isinstance(reserved, dict):
-        reserved = bool(reserved.get("flag") or reserved.get("value"))
-    else:
-        reserved = bool(reserved or raw.get("is_reserved") or flags.get("reserved"))
-    sold = bool(raw.get("is_sold") or flags.get("sold"))
-    location = raw.get("location") or {}
-    city = raw.get("city") or location.get("city") or ""
-    if isinstance(city, dict):
-        city = city.get("title") or ""
-    web_slug = raw.get("web_slug") or ""
-    slug = web_slug or item_id
-    taxonomy = raw.get("taxonomy") or []
-    category = ""
-    category_name = ""
-    if isinstance(taxonomy, list) and taxonomy:
-        leaf = taxonomy[-1]
-        if isinstance(leaf, dict):
-            category = str(leaf.get("id") or "")
-            category_name = str(leaf.get("name") or "")
-    return {
-        "id": item_id,
-        "user_id": user_id,
-        "user_name": user_name,
-        "title": str(title),
-        "price": price,
-        "currency": extract_currency(raw),
-        "reserved": reserved,
-        "sold": sold,
-        "shippable": extract_shipping(raw),
-        "city": str(city),
-        "category": category,
-        "category_name": category_name,
-        "created_at": str(raw.get("created_at") or ""),
-        "url": f"{WEB_BASE}/item/{slug}" if slug else "",
-    }
+@dataclass
+class Item:
+    """A listing as the CLI/library sees it (normalized from raw payloads)."""
+
+    id: str
+    title: str
+    price: float
+    currency: str
+    city: str
+    user_id: str
+    user_name: str
+    url: str
+    shippable: bool
+    reserved: bool = False
+    sold: bool = False
+    category: str = ""
+    category_name: str = ""
+    created_at: str = ""
+    extra: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_raw(cls, raw: dict, fallback_user_id: Optional[str] = None) -> "Item":
+        item_id = str(raw.get("id") or "")
+        user = raw.get("user") or {}
+        user_id = str(raw.get("user_id") or raw.get("userId") or user.get("id") or "")
+        if not user_id and fallback_user_id:
+            user_id = str(fallback_user_id)
+        user_name = str(raw.get("user_name") or user.get("micro_name") or user.get("name") or "")
+        title = raw.get("title") or ""
+        if isinstance(title, dict):
+            title = title.get("original") or ""
+        price = safe_price(raw)
+        flags = raw.get("flags") or {}
+        reserved = raw.get("reserved")
+        if isinstance(reserved, dict):
+            reserved = bool(reserved.get("flag") or reserved.get("value"))
+        else:
+            reserved = bool(reserved or raw.get("is_reserved") or flags.get("reserved"))
+        sold = bool(raw.get("is_sold") or flags.get("sold"))
+        location = raw.get("location") or {}
+        city = raw.get("city") or location.get("city") or ""
+        if isinstance(city, dict):
+            city = city.get("title") or ""
+        web_slug = raw.get("web_slug") or ""
+        slug = web_slug or item_id
+        taxonomy = raw.get("taxonomy") or []
+        category = ""
+        category_name = ""
+        if isinstance(taxonomy, list) and taxonomy:
+            leaf = taxonomy[-1]
+            if isinstance(leaf, dict):
+                category = str(leaf.get("id") or "")
+                category_name = str(leaf.get("name") or "")
+        return cls(
+            id=item_id,
+            user_id=user_id,
+            user_name=user_name,
+            title=str(title),
+            price=price,
+            currency=extract_currency(raw),
+            reserved=reserved,
+            sold=sold,
+            shippable=extract_shipping(raw),
+            city=str(city),
+            category=category,
+            category_name=category_name,
+            created_at=str(raw.get("created_at") or ""),
+            url=f"{WEB_BASE}/item/{slug}" if slug else "",
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "user_name": self.user_name,
+            "title": self.title,
+            "price": self.price,
+            "currency": self.currency,
+            "reserved": self.reserved,
+            "sold": self.sold,
+            "shippable": self.shippable,
+            "city": self.city,
+            "category": self.category,
+            "category_name": self.category_name,
+            "created_at": self.created_at,
+            "url": self.url,
+        }
+
+
+def normalize_item(raw: dict, fallback_user_id: Optional[str] = None) -> Item:
+    """Alias of ``Item.from_raw`` kept for callers of the original helper."""
+    return Item.from_raw(raw, fallback_user_id=fallback_user_id)
 
 
 def median_price(prices: list[float]) -> float:
@@ -141,67 +191,138 @@ def median_price(prices: list[float]) -> float:
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
-def rank_deals(items: list[dict], min_discount: float, max_price: Optional[float]) -> tuple[list[dict], float]:
-    candidates = [it for it in items if not it["reserved"] and not it["sold"] and it["price"] > 0]
+@dataclass
+class Deal:
+    """An item priced below the median price of its candidate set."""
+
+    item: Item
+    median: float
+    discount: float
+
+    def to_dict(self) -> dict:
+        d = self.item.to_dict()
+        d["median"] = self.median
+        d["discount"] = self.discount
+        return d
+
+
+def rank_deals(
+    items: list[Item], min_discount: float, max_price: Optional[float]
+) -> tuple[list[Deal], float]:
+    candidates = [it for it in items if not it.reserved and not it.sold and it.price > 0]
     if max_price is not None:
-        candidates = [it for it in candidates if it["price"] <= max_price]
-    median = median_price([it["price"] for it in candidates])
+        candidates = [it for it in candidates if it.price <= max_price]
+    median = median_price([it.price for it in candidates])
     deals = []
     for it in candidates:
-        discount = (median - it["price"]) / median if median else 0.0
-        deals.append({**it, "median": median, "discount": discount})
-    deals.sort(key=lambda d: d["discount"], reverse=True)
-    return [d for d in deals if d["discount"] >= min_discount], median
+        discount = (median - it.price) / median if median else 0.0
+        deals.append(Deal(item=it, median=median, discount=discount))
+    deals.sort(key=lambda d: d.discount, reverse=True)
+    return [d for d in deals if d.discount >= min_discount], median
 
 
-def parse_offer_events(msgs: list[dict]) -> list[dict]:
+OFFER_KINDS = (
+    "our-offer",
+    "seller-counter",
+    "our-counter",
+    "seller-accepted",
+    "accepted-buy",
+    "seller-declined",
+    "our-declined",
+    "expired",
+)
+
+
+@dataclass
+class OfferEvent:
+    """One entry in a conversation's offer ledger."""
+
+    kind: str
+    amount: Optional[float]
+    offer_id: Optional[str]
+    date: str
+    ts: int = 0
+    text: str = ""
+
+
+@dataclass
+class OfferState:
+    """The current negotiation state derived from an offer ledger."""
+
+    kind: str
+    label: str
+    amount: Optional[float]
+    offer_id: Optional[str]
+    actionable: bool
+
+
+STATE_LABELS = {
+    "seller-counter": "esperando tu respuesta",
+    "our-offer": "esperando la respuesta del vendedor",
+    "our-counter": "esperando la respuesta del vendedor",
+    "seller-accepted": "aceptada por el vendedor (comprar en 24h)",
+    "accepted-buy": "aceptada por ti — comprar en 24h",
+    "seller-declined": "rechazada por el vendedor",
+    "our-declined": "rechazada por ti",
+    "expired": "caducada",
+}
+
+__PYMAPS = {}
+
+
+def _offer_event(m: dict) -> Optional[dict]:
+    """Classify one message into a raw ledger event (or None if not an offer)."""
+    text = str(m.get("text") or offer_payload_summary(m.get("payload")) or "").lstrip()
+    low = text.lower()
+    if "contraoferta" in low:
+        kind = "our-counter" if text.startswith("Has") else "seller-counter"
+    elif "cómpralo ahora" in low or "oferta aceptada" in low:
+        kind = "accepted-buy"
+    elif "ha aceptado tu oferta" in low:
+        kind = "seller-accepted"
+    elif "ha rechazado tu oferta" in low:
+        kind = "seller-declined"
+    elif low.startswith("has rechazado"):
+        kind = "our-declined"
+    elif "oferta de" in low and text.startswith("Has"):
+        kind = "our-offer"
+    elif "caducad" in low:
+        kind = "expired"
+    else:
+        return None
+    amount = None
+    mm = re.search(r"([0-9]+(?:[.,][0-9]{1,2})?)\s*[€]", text)
+    if mm:
+        amount = float(mm.group(1).replace(",", "."))
+    offer_id = None
+    payload = m.get("payload")
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except Exception:
+            payload = None
+    if isinstance(payload, dict):
+        for btn in payload.get("buttons") or []:
+            mid = re.search(r"/app/chat/offer/([0-9a-f-]{36})", str(btn.get("action") or ""))
+            if mid:
+                offer_id = mid.group(1)
+                break
+    return {
+        "kind": kind,
+        "amount": amount,
+        "offer_id": offer_id,
+        "ts": m.get("timestamp") or 0,
+        "text": text,
+    }
+
+
+def parse_offer_events(msgs: list[dict]) -> list[OfferEvent]:
     """Reconstruct the offer ledger from a thread's delivery messages."""
     events: list[dict] = []
     for m in sorted((m or {} for m in msgs), key=lambda m: m.get("timestamp") or 0):
-        t = str(m.get("text") or offer_payload_summary(m.get("payload")) or "").lstrip()
-        low = t.lower()
-        if "contraoferta" in low:
-            kind = "our-counter" if t.startswith("Has") else "seller-counter"
-        elif "cómpralo ahora" in low or "oferta aceptada" in low:
-            kind = "accepted-buy"
-        elif "ha aceptado tu oferta" in low:
-            kind = "seller-accepted"
-        elif "ha rechazado tu oferta" in low:
-            kind = "seller-declined"
-        elif low.startswith("has rechazado"):
-            kind = "our-declined"
-        elif "oferta de" in low and t.startswith("Has"):
-            kind = "our-offer"
-        elif "caducad" in low:
-            kind = "expired"
-        else:
-            continue
-        amount = None
-        mm = re.search(r"([0-9]+(?:[.,][0-9]{1,2})?)\s*[€]", t)
-        if mm:
-            amount = float(mm.group(1).replace(",", "."))
-        offer_id = None
-        payload = m.get("payload")
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except Exception:
-                payload = None
-        if isinstance(payload, dict):
-            for btn in payload.get("buttons") or []:
-                mid = re.search(r"/app/chat/offer/([0-9a-f-]{36})", str(btn.get("action") or ""))
-                if mid:
-                    offer_id = mid.group(1)
-                    break
-        events.append(
-            {
-                "kind": kind,
-                "amount": amount,
-                "offer_id": offer_id,
-                "ts": m.get("timestamp") or 0,
-                "text": t,
-            }
-        )
+        ev = _offer_event(m)
+        if ev:
+            events.append(ev)
     last_amount: Optional[float] = None
     last_offer_id: Optional[str] = None
     for ev in events:
@@ -213,28 +334,43 @@ def parse_offer_events(msgs: list[dict]) -> list[dict]:
             ev["offer_id"] = last_offer_id
         else:
             last_offer_id = ev["offer_id"]
-    return events
+    return [
+        OfferEvent(
+            kind=ev["kind"],
+            amount=ev["amount"],
+            offer_id=ev["offer_id"],
+            ts=ev["ts"],
+            text=ev["text"],
+            date=(
+                datetime.datetime.fromtimestamp(ev["ts"] / 1000).strftime("%m-%d %H:%M")
+                if ev["ts"]
+                else ""
+            ),
+        )
+        for ev in events
+    ]
 
 
-def offer_state_summary(events: list[dict]) -> Optional[dict]:
+def offer_state_summary(events: list[OfferEvent]) -> Optional[OfferState]:
     """Current negotiation state derived from the latest offer event.
 
-    Pure data (no terminal styling): returns the last event's ``kind``,
-    the standing ``offer_id`` / ``amount`` (forward-filled from older
-    events, since terminal delivery messages carry neither), and whether
-    the state is ``actionable`` for us. Human/colored labels live in
-    :func:`wallapoplib.output.offer_label`.
+    Pure data (no terminal styling): returns the last event's ``kind``, the
+    standing ``offer_id`` / ``amount`` (forward-filled from older events, since
+    terminal delivery messages carry neither), and whether the state is
+    ``actionable`` for us. Colored labels live in ``wallapoplib.cli.output``.
     """
     if not events:
         return None
     last = events[-1]
-    kind = last["kind"]
-    base = {"offer_id": last.get("offer_id"), "amount": last.get("amount"), "kind": kind}
-    if kind == "seller-counter":
-        return {"actionable": True, **base}
-    if kind in ("our-offer", "our-counter"):
-        return {"actionable": False, **base}
-    return {"actionable": False, **base}
+    kind = last.kind
+    actionable = kind == "seller-counter"
+    return OfferState(
+        kind=kind,
+        label=STATE_LABELS.get(kind, kind),
+        amount=last.amount,
+        offer_id=last.offer_id,
+        actionable=actionable,
+    )
 
 
 def offer_payload_summary(payload: Any) -> str:

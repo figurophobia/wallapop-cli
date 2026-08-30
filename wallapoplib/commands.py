@@ -31,7 +31,7 @@ from .config import (
 )
 from .http import ApiError
 from .ids import resolve_internal_id
-from .models import deep_find, first, offer_state_summary, parse_offer_events, rank_deals, safe_price
+from .models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, rank_deals
 from .output import (
     announce,
     clock,
@@ -103,7 +103,7 @@ def resolve_geo(args: argparse.Namespace) -> tuple[Optional[float], Optional[flo
     return DEFAULT_GEO
 
 
-def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> list[dict]:
+def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> list[Item]:
     lat, lon = resolve_geo(args)
     if lat is None and args.city is None and args.lat is None and not args.quiet:
         eprint("note: no location given, searching all of Spain (--city or --lat/--lon to narrow)")
@@ -119,51 +119,51 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
         pages=args.pages,
         delay=args.delay,
     )
-    items = [it for it in items if not it["reserved"] and not it["sold"]]
+    items = [it for it in items if not it.reserved and not it.sold]
     if args.subcat:
-        items = [it for it in items if it["category"] == str(args.subcat)]
+        items = [it for it in items if it.category == str(args.subcat)]
     if args.min_price is not None:
-        items = [it for it in items if it["price"] >= args.min_price]
+        items = [it for it in items if it.price >= args.min_price]
     if args.max_price is not None:
-        items = [it for it in items if it["price"] <= args.max_price]
+        items = [it for it in items if it.price <= args.max_price]
     if getattr(args, "ship_only", False):
-        items = [it for it in items if it["shippable"]]
+        items = [it for it in items if it.shippable]
     return items
 
 
-def deliver(client: Wallapop, it: dict, offer_pct: Optional[float], message: Optional[str], dry_run: bool) -> None:
+def deliver(client: Wallapop, it: Item, offer_pct: Optional[float], message: Optional[str], dry_run: bool) -> None:
     amount = None
     if offer_pct is not None:
-        amount = max(1.0, round(it["price"] * offer_pct, 2))
+        amount = max(1.0, round(it.price * offer_pct, 2))
     text = render_template(message, it, amount) if message else None
-    snippet = truncate(it["title"], 40)
+    snippet = truncate(it.title, 40)
     if offer_pct is not None:
-        label = f"offer {amount:.2f}€ on {snippet!r} ({it['id']})"
+        label = f"offer {amount:.2f}€ on {snippet!r} ({it.id})"
         if dry_run:
             announce(label, None)
             if text:
                 print(f"      message: {text}")
         else:
-            announce(label, client.send_offer(it["id"], amount, message=text))
+            announce(label, client.send_offer(it.id, amount, message=text))
     elif text:
-        label = f"message seller of {it['id']} re {snippet!r}"
+        label = f"message seller of {it.id} re {snippet!r}"
         if dry_run:
             announce(label, None)
             print(f"      text: {text}")
         else:
-            announce(label, client.send_message(it["id"], text))
+            announce(label, client.send_message(it.id, text))
 
 
-def maybe_deliver_all(client: Wallapop, args: argparse.Namespace, deals: list[dict]) -> None:
+def maybe_deliver_all(client: Wallapop, args: argparse.Namespace, deals: list[Deal]) -> None:
     if args.offer_pct is None and not args.msg:
         return
     contacted = set(load_contacted())
-    for it in deals:
-        if it["id"] in contacted:
+    for d in deals:
+        if d.item.id in contacted:
             continue
-        deliver(client, it, args.offer_pct, args.msg, args.dry_run)
+        deliver(client, d.item, args.offer_pct, args.msg, args.dry_run)
         if not args.dry_run:
-            contacted.add(it["id"])
+            contacted.add(d.item.id)
             save_contacted(contacted)
 
 
@@ -271,7 +271,7 @@ def cmd_search(args: argparse.Namespace) -> int:
     keyword = " ".join(args.keyword)
     items = fetch_items(client, args, keyword)
     if args.json:
-        emit_json(items)
+        emit_json([it.to_dict() for it in items])
     elif args.csv:
         emit_csv(items)
     else:
@@ -287,7 +287,7 @@ def cmd_deals(args: argparse.Namespace) -> int:
     deals, median = rank_deals(items, args.min_discount, args.max_price)
     deals = deals[: args.top]
     if args.json:
-        emit_json({"keyword": keyword, "median": median, "count": len(deals), "deals": deals})
+        emit_json({"keyword": keyword, "median": median, "count": len(deals), "deals": [d.to_dict() for d in deals]})
     elif args.csv:
         emit_csv(deals)
     else:
@@ -316,16 +316,16 @@ def cmd_watch(args: argparse.Namespace) -> int:
             items = fetch_items(client, args, keyword)
             deals, median = rank_deals(items, args.min_discount, args.max_price)
             contacted = set(load_contacted())
-            fresh = [d for d in deals if d["id"] not in contacted]
+            fresh = [d for d in deals if d.item.id not in contacted]
             print(
                 f"[{clock()}] scanned {len(items)} listings, median {median:.2f}€, "
                 f"{len(deals)} deals, {len(fresh)} new"
             )
-            for it in fresh[: args.top]:
-                print_deals([it])
-                deliver(client, it, args.offer_pct, args.msg, args.dry_run)
+            for d in fresh[: args.top]:
+                print_deals([d])
+                deliver(client, d.item, args.offer_pct, args.msg, args.dry_run)
                 if not args.dry_run:
-                    contacted.add(it["id"])
+                    contacted.add(d.item.id)
                     save_contacted(contacted)
             if args.once:
                 break
@@ -396,10 +396,10 @@ def run_offer_status(args: argparse.Namespace) -> int:
             events = parse_offer_events(msgs)
             if events:
                 state = offer_state_summary(events)
-                kind = ((state or {}).get("kind") or "") if state else ""
+                kind = state.kind if state else ""
                 label = offer_label(kind) if kind else "?"
-                oid = ((state or {}).get("offer_id") or "") if state else ""
-                amt = ((state or {}).get("amount")) if state else None
+                oid = state.offer_id or "" if state else ""
+                amt = state.amount if state else None
                 offer = f"  offer={oid}" if oid else ""
                 pr = f"  actual {amt:.2f}€" if amt is not None else ""
                 tag = offer_tag(kind)
@@ -442,12 +442,12 @@ def find_conversation_for_offer(client, offer_id: str) -> Optional[str]:
     convs = ((resp.data or {}).get("conversations")) or []
     for c in convs:
         msgs = (((c.get("messages") or {}).get("messages")) or [])
-        if any(ev.get("offer_id") == offer_id for ev in parse_offer_events(msgs)):
+        if any(ev.offer_id == offer_id for ev in parse_offer_events(msgs)):
             return c.get("hash")
     for c in convs:
         t = client.conversation_thread(c.get("hash"))
         msgs = (((t.data or {}).get("messages") or {}).get("messages")) or []
-        if any(ev.get("offer_id") == offer_id for ev in parse_offer_events(msgs)):
+        if any(ev.offer_id == offer_id for ev in parse_offer_events(msgs)):
             return c.get("hash")
     return None
 
@@ -474,10 +474,10 @@ def render_thread_offer_status(data: Any, what: str) -> int:
     print_offer_events(events)
     state = offer_state_summary(events)
     if state:
-        oid = f"  offer={state['offer_id']}" if state.get("offer_id") else ""
-        amt = f"  actual {state['amount']:.2f}€" if state.get("amount") is not None else ""
-        print(f"   => {offer_label(state['kind'])}{amt}{oid}")
-        if state.get("actionable"):
+        oid = f"  offer={state.offer_id}" if state.offer_id else ""
+        amt = f"  actual {state.amount:.2f}€" if state.amount is not None else ""
+        print(f"   => {offer_label(state.kind)}{amt}{oid}")
+        if state.actionable:
             print(paint.dim("      you can: offer accept <offer_id> | offer decline <offer_id> | offer counter <offer_id> --price N"))
             print(paint.dim("      (accepting gives you 24h to buy at the accepted price)"))
     return 0
@@ -526,7 +526,7 @@ def cmd_offer(args: argparse.Namespace) -> int:
         amount = args.price
     else:
         if asking <= 0:
-            asking = safe_price(Wallapop().item(item_id))
+            asking = Wallapop().item(item_id).price
         amount = max(1.0, round(asking * args.pct, 2))
     min_offer = 0.0 if asking <= 0 else round(asking * (1 - max_pct / 100), 2)
     if min_offer > 0 and amount < min_offer:
