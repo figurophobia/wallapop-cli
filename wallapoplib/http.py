@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -15,6 +16,10 @@ RATE_PACE = float(os.environ.get("WALLAPOP_RATE_PACE", "1.0"))
 
 
 LAST_REQUEST = 0.0
+
+
+def eprint(msg: str) -> None:
+    print(msg, file=sys.stderr)
 
 
 class ApiError(Exception):

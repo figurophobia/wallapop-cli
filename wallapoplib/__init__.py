@@ -1,17 +1,50 @@
-"""Wallapop CLI internals (package split of the original wallapop.py).
+"""wallapoplib: typed Wallapop API client + CLI, without a browser.
 
-Modules:
-- config   : API constants, paths, credential/session/contacted storage, cookie import
-- http     : rate-limited HTTP transport (urllib) + Response wrapper
-- tokens   : JWT parsing, token expiry policy
-- models   : item normalization, deal ranking, offer-ledger parsing
-- ids      : resolve item url/slug/hash -> internal item id
-- output   : terminal rendering (colors, tables, announce, thread/offer printing)
-- client   : the Wallapop API client (every endpoint call) + browser send fallback
-- commands : CLI command handlers (login, search, deals, watch, offer, message, replies)
-- cli      : argparse wiring + main()
+Public surface (the v1 contract):
+
+- ``Wallapop`` client with ``item``/``search``/``send_offer``/
+  ``offer_response``/``counter_offer``/``send_message``/``conversation_thread``/
+  ``inbox``/``make_offer_info`` and login/session helpers.
+- Domain dataclasses ``Item``, ``Deal``, ``OfferEvent``, ``OfferState`` and the
+  derivations ``parse_offer_events``, ``offer_state_summary``, ``rank_deals``.
+- ``resolve_internal_id`` for item references.
+- ``ApiError`` / ``Response`` from the HTTP layer.
+- Session aids ``load_credentials`` / ``load_session`` / ``save_session``.
+
+The bundled CLI lives in ``wallapoplib.cli`` (entry point ``wallapop``) and is
+not part of the library contract. Requires Python >= 3.10, zero mandatory
+dependencies.
 """
 
-from .config import VERSION
+from .config import VERSION as __version__
+from .config import load_credentials, load_session, save_session
+from .http import ApiError, Response
+from .ids import resolve_internal_id
+from .models import (
+    Deal,
+    Item,
+    OfferEvent,
+    OfferState,
+    offer_state_summary,
+    parse_offer_events,
+    rank_deals,
+)
+from .client import Wallapop
 
-__version__ = VERSION
+__all__ = [
+    "Wallapop",
+    "Item",
+    "Deal",
+    "OfferEvent",
+    "OfferState",
+    "parse_offer_events",
+    "offer_state_summary",
+    "rank_deals",
+    "resolve_internal_id",
+    "ApiError",
+    "Response",
+    "load_credentials",
+    "load_session",
+    "save_session",
+    "__version__",
+]

@@ -23,9 +23,8 @@ from .config import (
     load_session,
     save_session,
 )
-from .http import ApiError, Response, http_request
+from .http import ApiError, Response, eprint, http_request
 from .models import Item, deep_find, extract_items, first, normalize_item
-from .cli.output import eprint
 from .tokens import user_hash_of
 
 def refresh_web_session(session: dict) -> Optional[str]:

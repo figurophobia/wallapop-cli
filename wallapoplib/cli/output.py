@@ -10,7 +10,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from ..http import Response
+from ..http import Response, eprint
 from ..models import Deal, Item, OfferEvent, offer_payload_summary
 
 
@@ -51,10 +51,6 @@ def truncate(text: str, width: int) -> str:
 
 def clock() -> str:
     return datetime.datetime.now().strftime("%H:%M:%S")
-
-
-def eprint(msg: str) -> None:
-    print(msg, file=sys.stderr)
 
 
 def emit_json(obj: Any) -> None:
