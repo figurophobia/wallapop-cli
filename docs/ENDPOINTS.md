@@ -170,14 +170,25 @@ Perfil público del vendedor (sin auth).
 
 ### GET `/api/v3/users/{user_id}/reviews`
 
-Reseñas recientes del vendedor (sin auth).
+Reseñas detalladas del vendedor (sin auth).
 
 - Respuesta: array (una por transacción). Cada ítem tiene
   `review.rating_over_five` (estrellas 1-5), `review.scoring` (0-100),
   `review.comments` (texto) y `item.title` (qué vendió).
-- El array no expone el total exacto (paginación limitada); se usa la
-  primera página para promediar estrellas y contar reseñas.
+- El array está paginado y no expone el total exacto; para el promedio y el
+  total reales usa `/stats`.
 - Código: `Wallapop.seller_reviews()`.
+
+### GET `/api/v3/users/{user_id}/stats`
+
+Estadísticas agregadas del vendedor (sin auth) — **los valores que la web
+muestra en la página del item** (p. ej. "★ 4.9 · 465 reseñas").
+
+- `rating_average`: media de estrellas (p. ej. `4.9`).
+- `counters[]`: lista de `{type, value}` incluyendo `reviews` (total de
+  reseñas), `publish`, `buys`, `sells`, `sold`.
+- Además `shipping`, `deliveries_on_time_in_days`.
+- Código: `Wallapop.seller_stats()`.
 
 ---
 

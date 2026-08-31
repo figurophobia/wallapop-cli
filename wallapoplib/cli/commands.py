@@ -321,27 +321,30 @@ def seller_summary(client, user_id: str) -> dict:
     if micro_name.lower() == "undefined":
         micro_name = ""
     try:
-        reviews = client.seller_reviews(user_id)
+        stats = client.seller_stats(user_id)
     except Exception:
-        reviews = []
+        stats = {}
     avg = None
-    count = len(reviews) if reviews else None
-    if reviews:
-        ratings = [((r.get("review")) or {}).get("rating_over_five") for r in reviews]
-        valid = [x for x in ratings if isinstance(x, (int, float))]
-        if valid:
-            avg = round(sum(valid) / len(valid), 2)
+    count = None
+    rv = stats.get("rating_average")
+    if isinstance(rv, (int, float)):
+        avg = round(float(rv), 1)
+    for c in (stats.get("counters") or []):
+        if isinstance(c, dict) and c.get("type") == "reviews":
+            count = c.get("value")
+            break
     parts = []
     if micro_name:
         parts.append(f"({micro_name})")
     if avg is not None:
-        parts.append(f"★ {avg} · {count} reseñas")
+        label = f"★ {avg}" + (f" ({count})" if count is not None else "")
+        parts.append(label)
     return {
         "text": " ".join(parts),
         "name": micro_name,
         "rating": avg,
         "reviews": count,
-        "data": {"profile": profile, "reviews": reviews},
+        "data": {"profile": profile, "stats": stats},
     }
 
 

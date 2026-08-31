@@ -44,6 +44,17 @@ RAW_REVIEWS = [
     {"item": {"title": "3DS"}, "review": {"rating_over_five": 4, "scoring": 80}},
 ]
 
+RAW_SELLER_STATS = {
+    "rating_average": 4.9,
+    "counters": [
+        {"type": "publish", "value": 139},
+        {"type": "buys", "value": 98},
+        {"type": "sells", "value": 505},
+        {"type": "reviews", "value": 465},
+        {"type": "sold", "value": 505},
+    ],
+}
+
 RAW_THREAD = {
     "channel": "channel-abc",
     "with_user": {"hash": "36ewgvee286d", "name": "pixelia"},
@@ -91,6 +102,8 @@ class FakeTransport:
             return 200, RAW_ITEM, "application/json"
         if url.endswith("/users/wz0123456789/reviews"):
             return 200, RAW_REVIEWS, "application/json"
+        if url.endswith("/users/wz0123456789/stats"):
+            return 200, RAW_SELLER_STATS, "application/json"
         if url.endswith("/users/wz0123456789"):
             return 200, RAW_SELLER, "application/json"
         if url.endswith("/instant-messaging/conversation"):
@@ -133,6 +146,14 @@ def test_seller_reviews(fake):
     assert len(reviews) == 2
     ratings = [r["review"]["rating_over_five"] for r in reviews]
     assert sum(ratings) / len(ratings) == 4.5
+
+
+def test_seller_stats(fake):
+    client = Wallapop()
+    stats = client.seller_stats("wz0123456789")
+    assert stats["rating_average"] == 4.9
+    counters = {c["type"]: c["value"] for c in stats["counters"]}
+    assert counters["reviews"] == 465
 
 
 def test_search_returns_items(fake):

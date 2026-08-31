@@ -301,6 +301,16 @@ class Wallapop:
             return []
         return data
 
+    def seller_stats(self, user_id: str) -> dict:
+        """Fetch a seller's aggregated stats incl. rating average and review count (GET /users/{id}/stats).
+
+        Returns the real values the web shows on an item page (~rating_average
+        and counters[].reviews), unlike /reviews which only gives one page.
+        """
+        resp = self._request("GET", f"/users/{user_id}/stats")
+        data = resp.data if isinstance(resp.data, dict) else {}
+        return data
+
     def send_offer(self, item_id: str, amount: float, message: Optional[str] = None) -> Response:
         """POST the delivery/buyer offer endpoint (the web app's real offer send).
 
