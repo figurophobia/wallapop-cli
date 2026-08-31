@@ -118,12 +118,26 @@ if not resp.ok:
 ```
 
 ## Sesión
-
 - `load_credentials()` — dict con `email`, `access_token`, `refresh_token`, `user` (login por email).
 - `load_session()` — dict de cookies de navegador; con `__Secure-next-auth.session-token` activa la vía de refresh por cookie.
 - `save_session(data)` — persiste la sesión de navegador.
 
 Los datos se guardan en `~/.config/wallapop_cli/` con permisos `600`, fuera del repo.
+
+## Geografía y selección de país
+
+`wallapoplib.config.CITIES` es el mapa lugares → `(lat, lon)` del que cuelgan el
+default de `search()` y el `--city` del CLI. Incluye ciudades, países y regiones
+españolas (`italia`, `portugal`, `francia`, `galicia`, `andalucia`, …).
+
+```python
+from wallapoplib.config import CITIES, DEFAULT_GEO
+lat, lon = CITIES["italia"]          # ancla a Italia
+```
+
+El backend ancla los resultados a las coordenadas: con `order_by` por
+relevancia los anuncios salen del país elegido; sin pasar `latitude`/`longitude`
+se usa `DEFAULT_GEO` (España, 40.0, -3.5).
 
 ## Referencias a ids
 

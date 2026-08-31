@@ -36,3 +36,16 @@ def test_parse_empty():
 def test_parse_keeps_first_of_duplicate_key():
     parsed = parse_cookie_string("device_id=a;device_id=b")
     assert parsed["device_id"] == "b"
+
+def test_cities_include_countries_and_regions():
+    from wallapoplib.config import CITIES, DEFAULT_GEO
+    assert CITIES["italia"] == (41.9, 12.5)
+    assert CITIES["portugal"] == (38.7, -9.1)
+    assert CITIES["galicia"] == (42.6, -8.1)
+    assert DEFAULT_GEO == CITIES["espana"]
+
+
+def test_cities_preserve_existing_city_presets():
+    from wallapoplib.config import CITIES
+    assert CITIES["madrid"] == (40.4168, -3.7038)
+    assert CITIES["barcelona"] == (41.3896, 2.1476)

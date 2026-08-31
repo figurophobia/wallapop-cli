@@ -75,7 +75,7 @@ Flags comunes:
 | `--subcat ID` | Filtra por hoja de taxonomía (ej. `10088` consolas, `10092` accesorios) |
 | `--condition LIST` | Filtra por estado de conservación (comas: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`) |
 | `--min-price` / `--max-price` | Rango de precio |
-| `--city NAME` | Preset de ciudad (`madrid`, `barcelona`, `valencia`, …) |
+| `--city NAME` | Preset de ciudad/país/región (`madrid`, `barcelona`, `italia`, `portugal`, `galicia`, …). Sin `--city`/`--lat` busca en toda España |
 | `--lat L` / `--lon L` | Coordenadas exactas (se usan juntos) |
 | `--order` | `relevance`, `newest`, `price_asc`, `price_desc`, `closest` |
 | `--pages N` | Páginas de resultados (1 por defecto) |
@@ -83,6 +83,26 @@ Flags comunes:
 | `--ship-only` | Solo artículos enviables |
 | `--json` / `--csv` | Salida estructurada |
 | `--quiet` | Oculta avisos |
+
+### Seleccionar país / región
+
+El alcance geográfico se controla con `--city` (o `--lat`/`--lon`). Sin ninguno
+se busca en toda España por defecto. Como el backend ancla los resultados a las
+coordenadas, elegir un país/región distinto cambia el origen de los anuncios:
+
+```
+wallapop search "gamecube" --city italia      # solo anuncios de Italia
+wallapop search "gamecube" --city portugal    # de Portugal (mezcla con la franja ES)
+wallapop search "gamecube" --city galicia     # ancla a Galicia
+```
+
+Presets disponibles (además de las ciudades): países (`espana`, `portugal`,
+`italia`, `francia`, `marruecos`, `andorra`, `reino-unido`, `alemania`,
+`belgica`) y regiones españolas (`galicia`, `andalucia`, `cataluna`,
+`pais-vasco`, `comunidad-valenciana`, …).
+
+Nota: el orden `relevance` es el que respeta el país elegido; `newest` tiende a
+devolver un conjunto más global (mezcla de España y otros países).
 
 ---
 
