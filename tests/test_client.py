@@ -39,8 +39,9 @@ RAW_ITEM = {
 }
 
 SEARCH_COMPONENTS = {"data": {"search_id": "abc123", "sections": {"organic": {"position": 1}}}}
-SEARCH_SECTION = {
-    "data": {"next_page": None, "items": [RAW_ITEM]}
+
+LEGACY_SEARCH = {
+    "search_objects": [RAW_ITEM]
 }
 
 RAW_SELLER = {
@@ -102,13 +103,27 @@ class FakeTransport:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, dict, dict]] = []
         self.thread_same = False
+        self.section_pages = 1
+        self.force_legacy = False
 
     def __call__(self, method: str, url: str, params=None, body=None, headers=None):
         self.calls.append((method, url, dict(params or {}), dict(body or {})))
         if url.endswith("/search/components"):
+            if self.force_legacy:
+                return 200, {"data": {}}, "application/json"
             return 200, SEARCH_COMPONENTS, "application/json"
         if "/search/section" in url:
-            return 200, SEARCH_SECTION, "application/json"
+            section_calls = [c for c in self.calls if "/search/section" in c[1]]
+            current = section_calls.index((method, url, dict(params or {}), dict(body or {})))
+            has_next = current < self.section_pages - 1
+            return 200, {
+                "data": {
+                    "next_page": "cursor-page-2" if has_next else None,
+                    "items": [RAW_ITEM],
+                }
+            }, "application/json"
+        if url.endswith("/general/search"):
+            return 200, LEGACY_SEARCH, "application/json"
         if url.endswith(f"/items/{RAW_ITEM['id']}"):
             return 200, RAW_ITEM, "application/json"
         if url.endswith("/users/wz0123456789/reviews"):
@@ -183,6 +198,57 @@ def test_search_respects_provided_coords(fake):
     params = comps[2]
     assert params["latitude"] == 41.5
     assert params["longitude"] == 2.1
+
+
+def test_search_sends_filter_params(fake):
+    client = Wallapop()
+    client.search(
+        "gamecube",
+        pages=1,
+        delay=0,
+        category_id=1,
+        subcategory_ids=2,
+        condition="new",
+        min_price=10.0,
+        max_price=100.0,
+        ship_only=True,
+    )
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    params = comps[2]
+    assert params["keywords"] == "gamecube"
+    assert params["category_id"] == 1
+    assert params["subcategory_ids"] == 2
+    assert params["condition"] == "new"
+    assert params["min_sale_price"] == 10.0
+    assert params["max_sale_price"] == 100.0
+    assert params["is_shippable"] == "true"
+
+
+def test_search_orders_by_relevance_by_default(fake):
+    client = Wallapop()
+    client.search("gamecube", pages=1, delay=0)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    assert comps[2]["order_by"] == "most_relevance"
+
+
+def test_search_paginates_with_next_page(fake):
+    fake.section_pages = 3
+    client = Wallapop()
+    items = client.search("gamecube", pages=3, delay=0)
+    sections = [c for c in fake.calls if "/search/section" in c[1]]
+    assert len(sections) == 3
+    assert sections[1][2].get("next_page") == "cursor-page-2"
+    assert len(items) == 3
+
+
+def test_search_falls_back_to_legacy_when_no_search_id(fake):
+    fake.force_legacy = True
+    client = Wallapop()
+    items = client.search("gamecube", pages=1, delay=0)
+    assert len(items) == 1
+    legacy = next(c for c in fake.calls if c[1].endswith("/general/search"))
+    assert legacy[2]["keywords"] == "gamecube"
+    assert legacy[2]["distance"] == 1000000
 
 
 def test_search_returns_items(fake):
