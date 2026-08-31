@@ -135,9 +135,16 @@ from wallapoplib.config import CITIES, DEFAULT_GEO
 lat, lon = CITIES["italia"]          # ancla a Italia
 ```
 
-El backend ancla los resultados a las coordenadas: con `order_by` por
-relevancia los anuncios salen del país elegido; sin pasar `latitude`/`longitude`
-se usa `DEFAULT_GEO` (España, 40.0, -3.5).
+- Sin `latitude`/`longitude`, `search()` usa `DEFAULT_GEO` (España, 40.0, -3.5),
+  que reproduce **exactamente** la búsqueda de `es.wallapop.com`. No es una
+  restricción: pasar coords de otro país devuelve los items de ese país.
+- El país real de los resultados lo decide principalmente `search_country`
+  (que la lib no envía; el backend infiere por coords). Con `order_by` de
+  relevancia los anuncios salen del país anclado; con `newest` el API devuelve
+  un conjunto más global (mezcla de países), como a veces hace la app.
+
+El detalle completo del comportamiento geográfico está en
+`docs/ENDPOINTS.md` (sección "Comportamiento geográfico").
 
 ## Referencias a ids
 

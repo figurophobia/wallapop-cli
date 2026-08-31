@@ -132,6 +132,41 @@ Alternativa antigua si `/search/components` no devuelve `search_id`.
 - Respuesta: `search_objects[]`.
 - Código: `Wallapop._search_legacy()`.
 
+### Comportamiento geográfico (cómo decide el país/alcance)
+
+Esto es lo que descubrimos reproduciendo el flujo del navegador real
+(`es.wallapop.com/search`), e importa para quien llame a `search()`:
+
+- **Sin `latitude`/`longitude` el API devuelve 0 resultados.** El backend no
+  tiene default: necesita un ancla geográfica para decidir qué mostrar. La web
+  "no lo nota" porque el navegador **geolocaliza por IP/sesión** y manda
+  coords + `search_country` siempre — no es que la web no use coords, es que
+  las calcula por ti.
+- **`search_country` es el que más manda.** El país devuelto en los items
+  depende sobre todo de este param (+ coords). Verificado:
+  - `coords PL + search_country=PL` → 0 items (no hay gamecubes anclados a PL).
+  - `coords PL + search_country=ES` → 40 items **de España** (el país domina
+    sobre las coords).
+  - `coords ES + search_country=ES` → 40 items (39 ES + 1 PT de frontera).
+- **El país casi no filtra los resultados por contenido**, solo influye en el
+  orden (con `order_by=closest`) y en flags de envío/moneda. Con
+  `order_by=most_relevance` los items salen del país de `search_country`.
+- **`order_by=newest` ignora el país** y devuelve un conjunto más global
+  (p. ej. mezcla de España + otros países), igual que pasa en la app cuando "a
+  veces te saca cosas de Italia o Portugal".
+- **`distance` no amplía el alcance** en el flujo `/search/components` +
+  `/search/section` (probado con 1M y 50M: mismo resultado). El legacy
+  `/general/search` acepta `distance` pero hoy devuelve 0 items.
+
+### Default de la librería
+
+`Wallapop.search()` usa **España por defecto** (`CITIES["espana"]` = 40.0,
+-3.5) cuando no se pasan `latitude`/`longitude`. Verificado que devuelve
+**exactamente** los mismos items (mismos ids y orden) que `search_country=ES`
+con las coords españolas — es decir, reproduce la búsqueda que verías en ese
+país en `es.wallapop.com`. No es una restricción: si se pasan coords de otro
+país (p. ej. `CITIES["italia"]`), la búsqueda devuelve los items de ese país.
+
 ---
 
 ## Anuncios

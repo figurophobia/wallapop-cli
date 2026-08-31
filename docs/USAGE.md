@@ -87,8 +87,10 @@ Flags comunes:
 ### Seleccionar país / región
 
 El alcance geográfico se controla con `--city` (o `--lat`/`--lon`). Sin ninguno
-se busca en toda España por defecto. Como el backend ancla los resultados a las
-coordenadas, elegir un país/región distinto cambia el origen de los anuncios:
+se busca en toda España por defecto — y eso **no es una restricción ni una
+diferencia con el navegador**: `es.wallapop.com` para un usuario en España
+geolocaliza y devuelve exactamente lo mismo que la CLI sin `--city`. Es el
+comportamiento natural; si quieres otro país se lo dices:
 
 ```
 wallapop search "gamecube" --city italia      # solo anuncios de Italia
@@ -102,7 +104,11 @@ Presets disponibles (además de las ciudades): países (`espana`, `portugal`,
 `pais-vasco`, `comunidad-valenciana`, …).
 
 Nota: el orden `relevance` es el que respeta el país elegido; `newest` tiende a
-devolver un conjunto más global (mezcla de España y otros países).
+devolver un conjunto más global (mezcla de España y otros países), igual que la
+app cuando "a veces saca cosas de Italia o Portugal".
+
+El detalle técnico (por qué sin coords el API devuelve 0, el papel de
+`search_country`, etc.) está en `docs/ENDPOINTS.md`.
 
 ---
 
