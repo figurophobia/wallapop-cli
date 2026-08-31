@@ -22,7 +22,7 @@ client = Wallapop(
     web_cookies=ses if ses.get("__Secure-next-auth.session-token") else None,
 )
 
-# Buscar y leer resultados tipados
+# Buscar y leer resultados tipados (España por defecto)
 items = client.search("nintendo switch lite", pages=2, delay=1.0)
 for it in items:
     print(it.title, it.price, it.url, it.shippable)
@@ -93,7 +93,7 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
 | `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
 | `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
-| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`) |
+| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. |
 | `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
 | `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |
 | `counter_offer(offer_id, amount, currency="EUR")` | `PATCH /delivery/offers/{id}/offer-price` |

@@ -167,6 +167,24 @@ def test_seller_stats(fake):
     assert counters["reviews"] == 465
 
 
+def test_search_uses_default_geo_when_no_coords(fake):
+    client = Wallapop()
+    client.search("gamecube", pages=1, delay=0)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    params = comps[2]
+    assert params["latitude"] == 40.0
+    assert params["longitude"] == -3.5
+
+
+def test_search_respects_provided_coords(fake):
+    client = Wallapop()
+    client.search("gamecube", pages=1, delay=0, latitude=41.5, longitude=2.1)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    params = comps[2]
+    assert params["latitude"] == 41.5
+    assert params["longitude"] == 2.1
+
+
 def test_search_returns_items(fake):
     client = Wallapop()
     items = client.search("nintendo ds", pages=1, delay=0)

@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 from .config import (
     API_BASE,
     API_ROOT,
+    DEFAULT_GEO,
     PNSDK,
     PUB_KEY,
     PUB_ORIGIN,
@@ -191,6 +192,8 @@ class Wallapop:
         max_price: Optional[float] = None,
         ship_only: Optional[bool] = None,
     ) -> list[Item]:
+        if latitude is None or longitude is None:
+            latitude, longitude = DEFAULT_GEO
         order = order_by or "most_relevance"
         base = {
             "keywords": keywords,
