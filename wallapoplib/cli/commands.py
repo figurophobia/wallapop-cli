@@ -120,14 +120,11 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
         pages=args.pages,
         delay=args.delay,
         condition=getattr(args, "condition", None),
+        min_price=args.min_price,
+        max_price=args.max_price,
+        ship_only=getattr(args, "ship_only", None),
     )
     items = [it for it in items if not it.reserved and not it.sold]
-    if args.min_price is not None:
-        items = [it for it in items if it.price >= args.min_price]
-    if args.max_price is not None:
-        items = [it for it in items if it.price <= args.max_price]
-    if getattr(args, "ship_only", False):
-        items = [it for it in items if it.shippable]
     return items
 
 

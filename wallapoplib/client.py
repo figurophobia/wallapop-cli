@@ -184,6 +184,9 @@ class Wallapop:
         pages: int = 1,
         delay: float = 0.0,
         condition: Optional[str] = None,
+        min_price: Optional[float] = None,
+        max_price: Optional[float] = None,
+        ship_only: Optional[bool] = None,
     ) -> list[Item]:
         order = order_by or "most_relevance"
         base = {
@@ -198,6 +201,12 @@ class Wallapop:
             base["subcategory_ids"] = subcategory_ids
         if condition:
             base["condition"] = condition
+        if min_price is not None:
+            base["min_sale_price"] = min_price
+        if max_price is not None:
+            base["max_sale_price"] = max_price
+        if ship_only:
+            base["is_shippable"] = "true"
         if latitude is not None and longitude is not None:
             base["latitude"] = latitude
             base["longitude"] = longitude
@@ -205,7 +214,7 @@ class Wallapop:
         search_id = first(deep_find(components.data, "search_id"))
         if search_id:
             return self._search_sections(base, search_id, pages, delay)
-        return self._search_legacy(keywords, category_id, order, latitude, longitude, condition=condition, subcategory_ids=subcategory_ids)
+        return self._search_legacy(keywords, category_id, order, latitude, longitude, condition=condition, subcategory_ids=subcategory_ids, min_price=min_price, max_price=max_price, ship_only=ship_only)
 
     def _search_sections(self, base: dict, search_id: str, pages: int, delay: float) -> list[Item]:
         all_items: list[Item] = []
@@ -237,6 +246,9 @@ class Wallapop:
         longitude: Optional[float],
         condition: Optional[str] = None,
         subcategory_ids: Optional[int] = None,
+        min_price: Optional[float] = None,
+        max_price: Optional[float] = None,
+        ship_only: Optional[bool] = None,
     ) -> list[Item]:
         params = {
             "keywords": keywords,
@@ -250,6 +262,12 @@ class Wallapop:
             params["subcategory_ids"] = subcategory_ids
         if condition:
             params["condition"] = condition
+        if min_price is not None:
+            params["min_sale_price"] = min_price
+        if max_price is not None:
+            params["max_sale_price"] = max_price
+        if ship_only:
+            params["is_shippable"] = "true"
         if latitude is not None and longitude is not None:
             params["latitude"] = latitude
             params["longitude"] = longitude
