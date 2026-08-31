@@ -165,8 +165,9 @@ Perfil público del vendedor (sin auth).
 
 - Puntos clave: `micro_name` (nombre), `is_top_profile`, `location`,
   `register_date`, `seller_type`.
-- NO trae la valoración (estrellas/reseñas) — eso va en `/reviews`.
-- Código: `Wallapop.seller()`.
+- NO trae la valoración (estrellas/reseñas) — eso va en `/stats` (media y
+  total) y `/reviews` (detalle).
+- Código: `Wallapop.seller()`; lo usa el comando CLI `seller` (nombre).
 
 ### GET `/api/v3/users/{user_id}/reviews`
 
@@ -177,7 +178,8 @@ Reseñas detalladas del vendedor (sin auth).
   `review.comments` (texto) y `item.title` (qué vendió).
 - El array está paginado y no expone el total exacto; para el promedio y el
   total reales usa `/stats`.
-- Código: `Wallapop.seller_reviews()`.
+- Código: `Wallapop.seller_reviews()`; lo usa el comando CLI `seller`
+  (reseñas detalladas).
 
 ### GET `/api/v3/users/{user_id}/stats`
 
@@ -188,7 +190,8 @@ muestra en la página del item** (p. ej. "★ 4.9 · 465 reseñas").
 - `counters[]`: lista de `{type, value}` incluyendo `reviews` (total de
   reseñas), `publish`, `buys`, `sells`, `sold`.
 - Además `shipping`, `deliveries_on_time_in_days`.
-- Código: `Wallapop.seller_stats()`.
+- Código: `Wallapop.seller_stats()`; lo usan `show` (media + nº de reseñas en
+  la línea del vendedor) y el comando CLI `seller` (valoración + stats).
 
 ---
 
