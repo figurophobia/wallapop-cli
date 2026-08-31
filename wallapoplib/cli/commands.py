@@ -282,8 +282,7 @@ def cmd_show(args: argparse.Namespace) -> int:
     extra = seller_data.get("text")
     if extra:
         who = f"{who}  {extra}"
-    profile = " (top)" if it.top_profile else ""
-    print(f"seller:   {who}{profile}")
+    print(f"seller:   {who}")
     city = it.city or "?"
     if it.latitude or it.longitude:
         city += f"  ({it.latitude:.4f}, {it.longitude:.4f})"
@@ -346,6 +345,57 @@ def seller_summary(client, user_id: str) -> dict:
         "reviews": count,
         "data": {"profile": profile, "stats": stats},
     }
+
+
+def cmd_seller(args: argparse.Namespace) -> int:
+    client, _ = authed_client()
+    user_id = args.user
+    try:
+        profile = client.seller(user_id)
+    except Exception as e:
+        print(paint.error(f"error: no se pudo obtener el vendedor: {e}"))
+        return 1
+    try:
+        stats = client.seller_stats(user_id)
+    except Exception:
+        stats = {}
+    try:
+        reviews = client.seller_reviews(user_id)
+    except Exception:
+        reviews = []
+    name = str((profile or {}).get("micro_name") or user_id).strip()
+    if name.lower() == "undefined":
+        name = user_id
+    if args.json:
+        import json as _json
+
+        emit(_json.dumps({"profile": profile, "stats": stats, "reviews": reviews}, ensure_ascii=False, indent=2))
+        return 0
+    avg = stats.get("rating_average")
+    avg_lbl = f"★ {avg}" if isinstance(avg, (int, float)) else "★ ?"
+    reviews_lbl = "0"
+    for c in (stats.get("counters") or []):
+        if isinstance(c, dict) and c.get("type") == "reviews":
+            reviews_lbl = str(c.get("value", "0"))
+            break
+    print(paint.bold(f"{name} ({user_id})"))
+    print(f"valoración: {avg_lbl} · {reviews_lbl} reseñas")
+    print(f"total reseñas: {reviews_lbl}")
+    if isinstance(stats.get("sells"), (int, float)):
+        print(f"ventas: {stats['sells']}")
+    if isinstance(stats.get("shipping"), (int, float)):
+        print(f"envíos: {stats['shipping']}")
+    if isinstance(stats.get("deliveries_on_time_in_days"), (int, float)):
+        print(f"entrega media: {stats['deliveries_on_time_in_days']} días")
+    if reviews:
+        print()
+        print(paint.dim("reseñas:"))
+        for r in reviews:
+            rev = r.get("review") or {}
+            score = rev.get("rating_over_five")
+            item = (r.get("item") or {}).get("title", "")
+            print(f"  {'★' * int(score) if isinstance(score, (int, float)) else '?'}  {item}")
+    return 0
 
 
 def cmd_search(args: argparse.Namespace) -> int:

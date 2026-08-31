@@ -16,7 +16,8 @@ Referencia completa de `wallapop`. Se invoca como
 | `offer` | Hacer ofertas, responder ofertas, ver estado de negociaciones |
 | `message` | Enviar mensaje al vendedor de un anuncio |
 | `replies` | Ver el inbox y los hilos completos |
-| `show` | Ver los detalles completos de un anuncio (incluye descripción) |
+| `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
+| `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
 
 ---
 
@@ -195,17 +196,34 @@ wallapop show <item> --json          # dump crudo de todo el anuncio como JSON
 ```
 
 - `<item>` acepta url, slug web o hash interno (igual que `message`/`offer`).
-- Imprime título, precio, vendedor (nombre, valoración en estrellas, nº de
-  reseñas y si es perfil top), ciudad con coordenadas, categoría, marca,
-  género, estado de conservación, envío, vistas/favoritos, URL y la
-  descripción completa del anuncio.
+- Imprime título, precio, vendedor (id, nombre, valoración media en estrellas y
+  nº de reseñas — los mismos valores que muestra la web en la página del item),
+  ciudad con coordenadas, categoría, marca, género, estado de conservación,
+  envío, vistas/favoritos, URL y la descripción completa del anuncio.
 - El detalle sale de `GET /items/{id}` (campos `description.original`,
   `type_attributes`, `counters`, `location`, …); la valoración del vendedor
-  se obtiene de `GET /users/{id}` (nombre) y `GET /users/{id}/stats`
-  (media de estrellas y total de reseñas, los mismos valores que muestra la
-  web en la página del item).
+  se obtiene de `GET /users/{id}` (nombre) y `GET /users/{id}/stats` (media
+  de estrellas y total de reseñas).
 - Con `--json` el output incluye además `seller_name`, `seller_rating` y
   `seller_reviews`.
+- Si quieres el perfil completo del vendedor (más stats y sus reseñas), usa el
+  comando `seller` (ver más abajo).
+
+---
+
+## Ver el perfil de un vendedor
+
+```
+wallapop seller <user_id>             # valoración, stats de ventas y reseñas
+wallapop seller <user_id> --json      # dump crudo (profile + stats + reviews)
+```
+
+- `<user_id>` es el id del vendedor que sale en la línea `seller:` de `show`.
+- Muestra el nombre, la valoración media y el total de reseñas (igual que el
+  item), además de stats de la cuenta (ventas, envíos, días de entrega media)
+  y sus reseñas detalladas (qué vendió y valoración).
+- Se alimenta de `GET /users/{id}` (nombre), `GET /users/{id}/stats`
+  (valoración y contadores) y `GET /users/{id}/reviews` (reseñas).
 
 ---
 

@@ -15,6 +15,7 @@ from .commands import (
     cmd_search,
     cmd_session,
     cmd_show,
+    cmd_seller,
     cmd_watch,
 )
 from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
@@ -131,6 +132,11 @@ def build_parser() -> argparse.ArgumentParser:
     sh.add_argument("item", help="item url, web slug or internal hash")
     sh.add_argument("--json", action="store_true", help="dump the full item as JSON")
     sh.set_defaults(func=cmd_show)
+
+    seller = sub.add_parser("seller", help="print a seller's full profile (rating, stats, reviews)")
+    seller.add_argument("user", help="seller user id (found in 'show' output)")
+    seller.add_argument("--json", action="store_true", help="dump the seller profile as JSON")
+    seller.set_defaults(func=cmd_seller)
 
     parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")
     return parser
