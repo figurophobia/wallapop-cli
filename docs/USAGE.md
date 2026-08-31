@@ -71,6 +71,7 @@ Flags comunes:
 | --- | --- |
 | `--category ID` | Filtra por categoría (ej. `12900` Consolas y videojuegos) |
 | `--subcat ID` | Filtra por hoja de taxonomía (ej. `10088` consolas, `10092` accesorios) |
+| `--condition LIST` | Filtra por estado de conservación (comas: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`) |
 | `--min-price` / `--max-price` | Rango de precio |
 | `--city NAME` | Preset de ciudad (`madrid`, `barcelona`, `valencia`, …) |
 | `--lat L` / `--lon L` | Coordenadas exactas (se usan juntos) |

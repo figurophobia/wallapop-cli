@@ -106,7 +106,8 @@ Bootstrap de una búsqueda.
 - Params: `keywords`, `source=search_box`, `order_by`
   (`most_relevance` | `newest` | `price_low_to_high` | `price_high_to_low` |
   `closest`), `filters_source=search_box`, opcional `category_id`,
-  `latitude`, `longitude`.
+  `subcategory_ids`, `condition`, `min_sale_price`, `max_sale_price`,
+  `is_shippable=true`, `latitude`, `longitude`.
 - De su respuesta se extrae `search_id` (clave para paginar).
 - Código: `Wallapop.search()`.
 
@@ -125,7 +126,9 @@ Página de resultados (lo que la web monta tras el bootstrap).
 Alternativa antigua si `/search/components` no devuelve `search_id`.
 
 - Params: `keywords`, `order_by`, `filters_source`, `source`, opcional
-  `category_ids` (plural), `latitude`, `longitude`, `distance=1000000`.
+  `category_ids` (plural), `subcategory_ids`, `condition`, `min_sale_price`,
+  `max_sale_price`, `is_shippable=true`, `latitude`, `longitude`,
+  `distance=1000000`.
 - Respuesta: `search_objects[]`.
 - Código: `Wallapop._search_legacy()`.
 
