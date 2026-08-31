@@ -40,13 +40,24 @@ client.counter_offer(offer_id, 75.0)               # PATCH offer-price 75.00
 client.send_message(items[0].id, "Hola! Tiene cargador?")
 ```
 
+### Imágenes de un item
+
+```python
+it = client.item(items[0].id)      # it.images -> URLs medium de las fotos
+print(it.images[0])                # https://cdn.wallapop.com/images/...?pictureSize=W640
+
+# Descargarlas a disco (solo stdlib)
+paths = client.download_images(it, "descargas")
+print(paths)                       # ['descargas/abc_1.jpg', ...]
+```
+
 ## Dataclasses públicas
 
 Ver `wallapoplib/models.py`.
 
 | Tipo | Campos | Uso |
 | --- | --- | --- |
-| `Item` | `id, title, price: float, currency, city, user_id, user_name, url, shippable: bool`, `reserved`, `sold`, `category + category_name`, `created_at` | Un anuncio normalizado |
+| `Item` | `id, title, price: float, currency, city, user_id, user_name, url, shippable: bool`, `reserved`, `sold`, `category + category_name`, `created_at`, `images: list[str]` | Un anuncio normalizado (`images` = URLs medium de las fotos) |
 | `Deal` | `item: Item, discount: float, median: float` | Un `Item` por debajo de la mediana del mercado |
 | `OfferEvent` | `kind, amount: float\|None, offer_id: str\|None, date, ts, text` | Entrada del ledger de negociación (una por evento de oferta en el hilo) |
 | `OfferState` | `kind, label, amount, offer_id, actionable: bool` | Estado actual derivado del último evento |
@@ -81,6 +92,7 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `seller(user_id)` → `dict` | `GET /users/{id}` |
 | `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
 | `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
+| `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
 | `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`) |
 | `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
 | `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |

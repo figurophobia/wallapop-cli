@@ -87,6 +87,24 @@ def extract_shipping(raw: dict) -> bool:
     return False
 
 
+def extract_images(raw: dict) -> list[str]:
+    """Return the item's image URLs (medium size; fallback to small/big)."""
+    images = raw.get("images")
+    if not isinstance(images, list):
+        return []
+    urls: list[str] = []
+    for img in images:
+        if not isinstance(img, dict):
+            continue
+        box = img.get("urls") or img.get("media") or {}
+        if not isinstance(box, dict):
+            continue
+        url = box.get("medium") or box.get("small") or box.get("big")
+        if isinstance(url, str) and url:
+            urls.append(url)
+    return urls
+
+
 def _attr_value(attr) -> str:
     if isinstance(attr, dict):
         v = attr.get("value")
@@ -137,6 +155,7 @@ class Item:
     latitude: float = 0.0
     longitude: float = 0.0
     top_profile: bool = False
+    images: list[str] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
     @classmethod
@@ -217,6 +236,7 @@ class Item:
             latitude=latitude,
             longitude=longitude,
             top_profile=top_profile,
+            images=extract_images(raw),
             url=f"{WEB_BASE}/item/{slug}" if slug else "",
         )
 
@@ -246,6 +266,7 @@ class Item:
             "latitude": self.latitude,
             "longitude": self.longitude,
             "top_profile": self.top_profile,
+            "images": list(self.images),
             "url": self.url,
         }
 

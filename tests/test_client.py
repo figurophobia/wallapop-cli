@@ -25,6 +25,17 @@ RAW_ITEM = {
     "location": {"city": "Barcelona"},
     "web_slug": "nintendo-ds-lite-blanca-funda-v6gpwy9d476e",
     "flags": {"reserved": False, "sold": False},
+    "images": [
+        {
+            "id": "nz0gdgn1dwrj",
+            "average_color": "13C1AC",
+            "urls": {
+                "small": "https://cdn.wallapop.com/images/s/i1.jpg",
+                "medium": "https://cdn.wallapop.com/images/m/i1.jpg",
+                "big": "https://cdn.wallapop.com/images/b/i1.jpg",
+            },
+        }
+    ],
 }
 
 SEARCH_COMPONENTS = {"data": {"search_id": "abc123", "sections": {"organic": {"position": 1}}}}
@@ -164,6 +175,47 @@ def test_search_returns_items(fake):
     assert it.id == RAW_ITEM["id"]
     assert it.price == 45.0
     assert it.title == "Nintendo DS Lite Blanca + Funda"
+
+
+def test_item_has_image_urls(fake):
+    client = Wallapop()
+    it = client.item(RAW_ITEM["id"])
+    assert it.images == ["https://cdn.wallapop.com/images/m/i1.jpg"]
+
+
+def test_download_images(tmp_path, fake, monkeypatch):
+    class FakeResponse:
+        def __init__(self, data):
+            self._data = data
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return None
+
+        def read(self):
+            return self._data
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda url, timeout: FakeResponse(b"JPEGDATA"),
+    )
+    client = Wallapop()
+    it = client.item(RAW_ITEM["id"])
+    saved = client.download_images(it, str(tmp_path))
+    assert len(saved) == 1
+    assert saved[0].endswith(f"{RAW_ITEM['id']}_1.jpg")
+    with open(saved[0], "rb") as f:
+        assert f.read() == b"JPEGDATA"
+
+
+def test_download_images_no_op_when_no_images(fake, tmp_path):
+    client = Wallapop()
+    raw = dict(RAW_ITEM)
+    raw["images"] = []
+    item = client_mod.Item.from_raw(raw)
+    assert client.download_images(item, str(tmp_path)) == []
 
 
 # --- session / auth ---------------------------------------------------------

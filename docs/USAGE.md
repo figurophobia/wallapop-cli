@@ -204,8 +204,8 @@ wallapop show <item> --json          # dump crudo de todo el anuncio como JSON
   `type_attributes`, `counters`, `location`, …); la valoración del vendedor
   se obtiene de `GET /users/{id}` (nombre) y `GET /users/{id}/stats` (media
   de estrellas y total de reseñas).
-- Con `--json` el output incluye además `seller_name`, `seller_rating` y
-  `seller_reviews`.
+- Con `--json` el output incluye además `seller_name`, `seller_rating`,
+  `seller_reviews` y `images` (URLs de las fotos del anuncio, tamaño medium).
 - Si quieres el perfil completo del vendedor (más stats y sus reseñas), usa el
   comando `seller` (ver más abajo).
 

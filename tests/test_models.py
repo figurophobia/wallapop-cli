@@ -99,6 +99,16 @@ RAW_ITEM = {
     "web_slug": "nintendo-ds-lite-blanca-funda-v6gpwy9d476e",
     "tag_highlights": [],
     "flags": {"reserved": False, "sold": False},
+    "images": [
+        {
+            "id": "nz0gdgn1dwrj",
+            "urls": {
+                "small": "https://cdn.wallapop.com/images/s/i1.jpg",
+                "medium": "https://cdn.wallapop.com/images/m/i1.jpg",
+                "big": "https://cdn.wallapop.com/images/b/i1.jpg",
+            },
+        }
+    ],
 }
 
 
@@ -114,6 +124,17 @@ def test_item_from_raw():
     assert item.city == "Barcelona"
     assert item.shippable is True
     assert item.url.endswith("/item/nintendo-ds-lite-blanca-funda-v6gpwy9d476e")
+    assert item.images == ["https://cdn.wallapop.com/images/m/i1.jpg"]
+
+
+def test_item_images_default_and_missing_media():
+    item = normalize_item(RAW_ITEM)
+    assert item.images
+    raw = {"id": "x", "title": "solo", "images": [{"urls": {"big": "https://cdn.wallapop.com/b.jpg"}}]}
+    fallback = normalize_item(raw)
+    assert fallback.images == ["https://cdn.wallapop.com/b.jpg"]
+    empty = normalize_item({"id": "y", "title": "sin img"})
+    assert empty.images == []
 
 
 def test_item_fallback_user_id():

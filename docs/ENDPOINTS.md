@@ -142,8 +142,11 @@ Detalle público de un anuncio (sin auth).
 
 - Respuesta: JSON plano del item (precio con su estructura, `user`,
   `web_slug`, etc.).
-- Código: `Wallapop.item()` (también se usa para averiguar la moneda al
-  mandar una oferta).
+- `images`: array de `{id, average_color, urls: {small, medium, big}}` con
+  URLs a `cdn.wallapop.com` (cada size a un ancho: W320 / W640 / W800).
+  `Item.images` guarda las URLs `medium` (W640).
+- Código: `Wallapop.item()`, `Wallapop.download_images()` (también se usa
+  `item()` para averiguar la moneda al mandar una oferta).
 
 ### GET `https://es.wallapop.com/item/{slug}`  [página]
 

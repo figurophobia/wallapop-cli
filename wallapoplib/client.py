@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import time
-import urllib.parse
 import uuid
+import urllib.parse
+import urllib.request
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .config import (
@@ -310,6 +313,31 @@ class Wallapop:
         resp = self._request("GET", f"/users/{user_id}/stats")
         data = resp.data if isinstance(resp.data, dict) else {}
         return data
+
+    def download_images(self, item: Item, dest: str = "images") -> list[str]:
+        """Download an item's images into ``dest`` and return the saved file paths.
+
+        Uses each URL in ``item.images``; filenames are derived from the item id
+        plus an index (``{item_id}_1.jpg``, ...). The directory is created if it
+        does not exist. Uses only the standard library.
+        """
+        images = list(item.images)
+        if not images:
+            return []
+        out_dir = Path(dest)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        saved: list[str] = []
+        for i, url in enumerate(images, start=1):
+            ext = Path(urllib.parse.urlparse(url).path).suffix or ".jpg"
+            filename = f"{item.id}_{i}{ext}"
+            target = out_dir / filename
+            try:
+                with urllib.request.urlopen(url, timeout=30) as resp, open(target, "wb") as f:
+                    f.write(resp.read())
+                saved.append(str(target))
+            except Exception:
+                continue
+        return saved
 
     def send_offer(self, item_id: str, amount: float, message: Optional[str] = None) -> Response:
         """POST the delivery/buyer offer endpoint (the web app's real offer send).
