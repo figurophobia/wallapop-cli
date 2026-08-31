@@ -16,6 +16,7 @@ Referencia completa de `wallapop`. Se invoca como
 | `offer` | Hacer ofertas, responder ofertas, ver estado de negociaciones |
 | `message` | Enviar mensaje al vendedor de un anuncio |
 | `replies` | Ver el inbox y los hilos completos |
+| `show` | Ver los detalles completos de un anuncio (incluye descripción) |
 
 ---
 
@@ -183,6 +184,21 @@ wallapop replies --conversation <conv> --json
   `playwright` instalado:
   `pip install --user --break-system-packages playwright && python3 -m playwright install firefox`.
 - La CLI evita reenviar un texto idéntico al último mensaje tuyo del hilo.
+
+---
+
+## Detalles de un anuncio
+
+```
+wallapop show <item>                 # detalles completos + descripción
+wallapop show <item> --json          # dump crudo de todo el anuncio como JSON
+```
+
+- `<item>` acepta url, slug web o hash interno (igual que `message`/`offer`).
+- Imprime título, precio, vendedor, ciudad, categoría, envío, estado y la
+  descripción completa del anuncio.
+- La descripción procede de `GET /items/{id}` (campo `description.original`),
+  que `search` no trae — por eso `show` consulta el anuncio individual.
 
 ---
 

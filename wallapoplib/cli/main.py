@@ -14,6 +14,7 @@ from .commands import (
     cmd_replies,
     cmd_search,
     cmd_session,
+    cmd_show,
     cmd_watch,
 )
 from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
@@ -63,6 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  wallapop deals 'ps5' --max-price 250 --min-discount 0.2\n"
             "  wallapop offer 123456789 --pct 0.8 --msg 'Hola, aceptarias 200?'\n"
             "  wallapop message nintendo-switch-lite-blu-1295309387 --text 'Hola, funciona bien?'\n"
+            "  wallapop show nintendo-switch-lite-blu-1295309387\n"
             "  wallapop replies --conversation nzxp0m9qp5j2\n"
             "  wallapop watch 'steam deck' --max-price 300 --msg 'hola amigo, funciona bien?' --interval 600\n"
         ),
@@ -124,6 +126,11 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--conversation", help="conversation id to dump the full message thread")
     rp.add_argument("--json", action="store_true", help="dump raw JSON (inbox or conversation thread)")
     rp.set_defaults(func=cmd_replies)
+
+    sh = sub.add_parser("show", help="print a listing's full details (including description)")
+    sh.add_argument("item", help="item url, web slug or internal hash")
+    sh.add_argument("--json", action="store_true", help="dump the full item as JSON")
+    sh.set_defaults(func=cmd_show)
 
     parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")
     return parser

@@ -131,6 +131,17 @@ def test_item_to_dict_roundtrip_keys():
     assert "url" in d
 
 
+def test_item_extracts_description_from_original():
+    raw = dict(RAW_ITEM)
+    raw["description"] = {"original": "Funda nueva, sin usar."}
+    item = normalize_item(raw)
+    assert item.description == "Funda nueva, sin usar."
+
+
+def test_item_description_defaults_empty():
+    assert normalize_item(RAW_ITEM).description == ""
+
+
 # --- Deals / ranking -------------------------------------------------------
 
 def _items(*prices: float) -> list[Item]:

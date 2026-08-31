@@ -105,6 +105,7 @@ class Item:
     category: str = ""
     category_name: str = ""
     created_at: str = ""
+    description: str = ""
     extra: dict = field(default_factory=dict)
 
     @classmethod
@@ -140,6 +141,12 @@ class Item:
             if isinstance(leaf, dict):
                 category = str(leaf.get("id") or "")
                 category_name = str(leaf.get("name") or "")
+        desc_raw = raw.get("description")
+        description = ""
+        if isinstance(desc_raw, dict):
+            description = str(desc_raw.get("original") or desc_raw.get("value") or "")
+        elif isinstance(desc_raw, str):
+            description = desc_raw
         return cls(
             id=item_id,
             user_id=user_id,
@@ -154,6 +161,7 @@ class Item:
             category=category,
             category_name=category_name,
             created_at=str(raw.get("created_at") or ""),
+            description=description,
             url=f"{WEB_BASE}/item/{slug}" if slug else "",
         )
 
@@ -172,6 +180,7 @@ class Item:
             "category": self.category,
             "category_name": self.category_name,
             "created_at": self.created_at,
+            "description": self.description,
             "url": self.url,
         }
 

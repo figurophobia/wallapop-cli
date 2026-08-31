@@ -263,6 +263,28 @@ def cmd_session(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_show(args: argparse.Namespace) -> int:
+    item_hash = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    it = client.item(item_hash)
+    if args.json:
+        emit_json(it.to_dict())
+        return 0
+    print(paint.bold(str(it.title)))
+    print(f"price:    {it.price:.2f} {it.currency}".rstrip("0").rstrip(".") if it.currency else f"price:    {it.price}")
+    who = it.user_name or it.user_id or "?"
+    print(f"seller:   {who}")
+    print(f"city:     {it.city or '?'}")
+    print(f"category: {it.category_name or it.category or '?'}")
+    print(f"shipping: {'yes' if it.shippable else 'no'}  reserved: {'yes' if it.reserved else 'no'}  sold: {'yes' if it.sold else 'no'}")
+    print(f"url:      {it.url}")
+    if it.description:
+        print()
+        print(paint.dim("descripción:"))
+        print(it.description.strip())
+    return 0
+
+
 def cmd_search(args: argparse.Namespace) -> int:
     client = Wallapop()
     keyword = " ".join(args.keyword)
