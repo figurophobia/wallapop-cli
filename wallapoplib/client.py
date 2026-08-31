@@ -177,6 +177,7 @@ class Wallapop:
         self,
         keywords: str,
         category_id: Optional[int] = None,
+        subcategory_ids: Optional[int] = None,
         order_by: Optional[str] = None,
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
@@ -193,6 +194,8 @@ class Wallapop:
         }
         if category_id:
             base["category_id"] = category_id
+        if subcategory_ids:
+            base["subcategory_ids"] = subcategory_ids
         if condition:
             base["condition"] = condition
         if latitude is not None and longitude is not None:
@@ -202,7 +205,7 @@ class Wallapop:
         search_id = first(deep_find(components.data, "search_id"))
         if search_id:
             return self._search_sections(base, search_id, pages, delay)
-        return self._search_legacy(keywords, category_id, order, latitude, longitude, condition=condition)
+        return self._search_legacy(keywords, category_id, order, latitude, longitude, condition=condition, subcategory_ids=subcategory_ids)
 
     def _search_sections(self, base: dict, search_id: str, pages: int, delay: float) -> list[Item]:
         all_items: list[Item] = []
@@ -233,6 +236,7 @@ class Wallapop:
         latitude: Optional[float],
         longitude: Optional[float],
         condition: Optional[str] = None,
+        subcategory_ids: Optional[int] = None,
     ) -> list[Item]:
         params = {
             "keywords": keywords,
@@ -242,6 +246,8 @@ class Wallapop:
         }
         if category_id:
             params["category_ids"] = category_id
+        if subcategory_ids:
+            params["subcategory_ids"] = subcategory_ids
         if condition:
             params["condition"] = condition
         if latitude is not None and longitude is not None:

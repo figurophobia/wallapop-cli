@@ -113,6 +113,7 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
     items = client.search(
         keyword,
         category_id=args.category,
+        subcategory_ids=args.subcat,
         order_by=order,
         latitude=lat,
         longitude=lon,
@@ -121,8 +122,6 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
         condition=getattr(args, "condition", None),
     )
     items = [it for it in items if not it.reserved and not it.sold]
-    if args.subcat:
-        items = [it for it in items if it.category == str(args.subcat)]
     if args.min_price is not None:
         items = [it for it in items if it.price >= args.min_price]
     if args.max_price is not None:
