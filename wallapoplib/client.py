@@ -287,6 +287,20 @@ class Wallapop:
         raw = data if isinstance(data, dict) else {}
         return Item.from_raw(raw)
 
+    def seller(self, user_id: str) -> dict:
+        """Fetch a seller's public profile (GET /users/{id})."""
+        resp = self._request("GET", f"/users/{user_id}")
+        data = resp.data if isinstance(resp.data, dict) else {}
+        return data
+
+    def seller_reviews(self, user_id: str) -> list[dict]:
+        """Fetch a seller's recent reviews (GET /users/{id}/reviews)."""
+        resp = self._request("GET", f"/users/{user_id}/reviews")
+        data = resp.data
+        if not isinstance(data, list):
+            return []
+        return data
+
     def send_offer(self, item_id: str, amount: float, message: Optional[str] = None) -> Response:
         """POST the delivery/buyer offer endpoint (the web app's real offer send).
 

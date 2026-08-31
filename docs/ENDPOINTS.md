@@ -157,6 +157,30 @@ payload en `<script id="__NEXT_DATA__" type="application/json">`.
 
 ---
 
+## Usuarios y valoraciones
+
+### GET `/api/v3/users/{user_id}`
+
+Perfil público del vendedor (sin auth).
+
+- Puntos clave: `micro_name` (nombre), `is_top_profile`, `location`,
+  `register_date`, `seller_type`.
+- NO trae la valoración (estrellas/reseñas) — eso va en `/reviews`.
+- Código: `Wallapop.seller()`.
+
+### GET `/api/v3/users/{user_id}/reviews`
+
+Reseñas recientes del vendedor (sin auth).
+
+- Respuesta: array (una por transacción). Cada ítem tiene
+  `review.rating_over_five` (estrellas 1-5), `review.scoring` (0-100),
+  `review.comments` (texto) y `item.title` (qué vendió).
+- El array no expone el total exacto (paginación limitada); se usa la
+  primera página para promediar estrellas y contar reseñas.
+- Código: `Wallapop.seller_reviews()`.
+
+---
+
 ## Mensajería
 
 ### POST `/api/v3/instant-messaging/conversation`

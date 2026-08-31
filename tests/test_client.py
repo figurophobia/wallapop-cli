@@ -32,6 +32,18 @@ SEARCH_SECTION = {
     "data": {"next_page": None, "items": [RAW_ITEM]}
 }
 
+RAW_SELLER = {
+    "id": "wz0123456789",
+    "micro_name": "Daniel",
+    "is_top_profile": True,
+    "location": {"city": "Barcelona", "country_code": "ES"},
+}
+
+RAW_REVIEWS = [
+    {"item": {"title": "GTA V"}, "review": {"rating_over_five": 5, "scoring": 100}},
+    {"item": {"title": "3DS"}, "review": {"rating_over_five": 4, "scoring": 80}},
+]
+
 RAW_THREAD = {
     "channel": "channel-abc",
     "with_user": {"hash": "36ewgvee286d", "name": "pixelia"},
@@ -77,6 +89,10 @@ class FakeTransport:
             return 200, SEARCH_SECTION, "application/json"
         if url.endswith(f"/items/{RAW_ITEM['id']}"):
             return 200, RAW_ITEM, "application/json"
+        if url.endswith("/users/wz0123456789/reviews"):
+            return 200, RAW_REVIEWS, "application/json"
+        if url.endswith("/users/wz0123456789"):
+            return 200, RAW_SELLER, "application/json"
         if url.endswith("/instant-messaging/conversation"):
             return 200, {"conversation_id": "wzy050ee4e65", "item_hash_id": RAW_ITEM["id"]}, "application/json"
         if "/bff/messaging/conversation/" in url:
@@ -103,6 +119,21 @@ def fake(monkeypatch):
 
 
 # --- search / normalize -----------------------------------------------------
+
+def test_seller_profile(fake):
+    client = Wallapop()
+    profile = client.seller("wz0123456789")
+    assert profile["micro_name"] == "Daniel"
+    assert profile["is_top_profile"] is True
+
+
+def test_seller_reviews(fake):
+    client = Wallapop()
+    reviews = client.seller_reviews("wz0123456789")
+    assert len(reviews) == 2
+    ratings = [r["review"]["rating_over_five"] for r in reviews]
+    assert sum(ratings) / len(ratings) == 4.5
+
 
 def test_search_returns_items(fake):
     client = Wallapop()

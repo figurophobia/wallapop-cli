@@ -78,6 +78,8 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | Método | Endpoint |
 | --- | --- |
 | `item(item_id)` → `Item` | `GET /items/{id}` |
+| `seller(user_id)` → `dict` | `GET /users/{id}` |
+| `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
 | `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`) |
 | `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
 | `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |

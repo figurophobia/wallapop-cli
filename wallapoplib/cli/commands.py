@@ -267,12 +267,21 @@ def cmd_show(args: argparse.Namespace) -> int:
     item_hash = resolve_internal_id(args.item)
     client, _ = authed_client()
     it = client.item(item_hash)
+    data = it.to_dict()
+    seller_data = seller_summary(client, it.user_id)
     if args.json:
-        emit_json(it.to_dict())
+        data["seller"] = seller_data.get("data", {})
+        data["seller_name"] = seller_data.get("name", "")
+        data["seller_rating"] = seller_data.get("rating")
+        data["seller_reviews"] = seller_data.get("reviews")
+        emit_json(data)
         return 0
     print(paint.bold(str(it.title)))
     print(f"price:    {it.price:.2f} {it.currency}".rstrip("0").rstrip(".") if it.currency else f"price:    {it.price}")
     who = it.user_name or it.user_id or "?"
+    extra = seller_data.get("text")
+    if extra:
+        who = f"{who}  {extra}"
     profile = " (top)" if it.top_profile else ""
     print(f"seller:   {who}{profile}")
     city = it.city or "?"
@@ -298,6 +307,42 @@ def cmd_show(args: argparse.Namespace) -> int:
         print(paint.dim("descripción:"))
         print(it.description.strip())
     return 0
+
+
+def seller_summary(client, user_id: str) -> dict:
+    """Return {text, name, rating, reviews, data} about a seller (tolerant to failures)."""
+    if not user_id:
+        return {"text": "", "name": "", "rating": None, "reviews": None, "data": {}}
+    try:
+        profile = client.seller(user_id)
+    except Exception:
+        profile = {}
+    micro_name = str((profile or {}).get("micro_name") or "").strip()
+    if micro_name.lower() == "undefined":
+        micro_name = ""
+    try:
+        reviews = client.seller_reviews(user_id)
+    except Exception:
+        reviews = []
+    avg = None
+    count = len(reviews) if reviews else None
+    if reviews:
+        ratings = [((r.get("review")) or {}).get("rating_over_five") for r in reviews]
+        valid = [x for x in ratings if isinstance(x, (int, float))]
+        if valid:
+            avg = round(sum(valid) / len(valid), 2)
+    parts = []
+    if micro_name:
+        parts.append(f"({micro_name})")
+    if avg is not None:
+        parts.append(f"★ {avg} · {count} reseñas")
+    return {
+        "text": " ".join(parts),
+        "name": micro_name,
+        "rating": avg,
+        "reviews": count,
+        "data": {"profile": profile, "reviews": reviews},
+    }
 
 
 def cmd_search(args: argparse.Namespace) -> int:
