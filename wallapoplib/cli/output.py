@@ -82,12 +82,12 @@ def print_items(items: list[Item]) -> None:
         return
     width = shutil.get_terminal_size((100, 24)).columns
     title_w = max(20, width - 65)
-    print(paint.bold(f"{'#':>3}  {'PRICE':>9}  {'CTY':<11}  {'SELLER':<12}  SHP  TITLE"))
+    print(paint.bold(f"{'#':>3}  {'PRICE':>9}  {'CTY':<11}  {'ID':<12}  SHP  TITLE"))
     for idx, it in enumerate(items, 1):
         ship = paint.green("yes") if it.shippable else paint.dim("no")
         row = (
             f"{idx:>3}  {paint.cyan(f'{it.price:8.2f}')}  {truncate(it.city, 11):<11}  "
-            f"{truncate(it.user_name or it.user_id, 12):<12}  {ship}  {truncate(it.title, title_w)}"
+            f"{paint.dim(it.id):<12}  {ship}  {truncate(it.title, title_w)}"
         )
         print(row)
         if it.url:
