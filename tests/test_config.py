@@ -49,3 +49,16 @@ def test_cities_preserve_existing_city_presets():
     from wallapoplib.config import CITIES
     assert CITIES["madrid"] == (40.4168, -3.7038)
     assert CITIES["barcelona"] == (41.3896, 2.1476)
+
+
+def test_categories_reflects_canonical_endpoint():
+    from wallapoplib.config import CATEGORIES
+    assert CATEGORIES[100] == "Coches"
+    assert CATEGORIES[12800] == "Motor y accesorios"
+    assert CATEGORIES[24200] == "Tecnología y electrónica"
+    assert CATEGORIES[12485] == "Otros"
+    assert len(CATEGORIES) == 18
+    assert 12545 not in CATEGORIES
+    assert 16000 not in CATEGORIES
+    assert 15000 not in CATEGORIES
+    assert 12900 not in CATEGORIES

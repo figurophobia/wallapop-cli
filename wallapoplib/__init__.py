@@ -2,7 +2,8 @@
 
 Public surface (the v1 contract):
 
-- ``Wallapop`` client with ``item``/``search``/``send_offer``/
+- ``Wallapop`` client with ``item``/``search``/``categories``/
+  ``send_offer``/
   ``offer_response``/``counter_offer``/``send_message``/``conversation_thread``/
   ``inbox``/``make_offer_info`` and login/session helpers.
 - Domain dataclasses ``Item``, ``Deal``, ``OfferEvent``, ``OfferState`` and the
@@ -17,7 +18,7 @@ dependencies.
 """
 
 from .config import VERSION as __version__
-from .config import load_credentials, load_session, save_session
+from .config import CATEGORIES, load_credentials, load_session, save_session
 from .http import ApiError, Response
 from .ids import resolve_internal_id
 from .models import (
@@ -43,6 +44,7 @@ __all__ = [
     "resolve_internal_id",
     "ApiError",
     "Response",
+    "CATEGORIES",
     "load_credentials",
     "load_session",
     "save_session",

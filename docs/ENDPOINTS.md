@@ -121,6 +121,77 @@ Página de resultados (lo que la web monta tras el bootstrap).
 - Respuesta: `...items[]` con los anuncios sin normalizar.
 - Código: `Wallapop._search_sections()`.
 
+### GET `/api/v3/categories?context=search`
+
+Catálogo completo de categorías para el buscador — **la fuente canónica del
+menú lateral de la web** (`es.wallapop.com/search`). Verificado con Playwright
+contra el sidebar real (véase "Verificación" abajo).
+
+- Params: `context=search` (obligatorio).
+- Respuesta: `{"categories": [...]}` con nodos `{id, name, vertical_id,
+  attributes, subcategories[]}`. `subcategories` es **recursivo**, con
+  `parent_id` en cada nivel; los nodos hoja tienen `subcategories: []`.
+- Los nombres se devuelven **localizados** según el locale de la petición
+  (Acepta-Language): sin locale el API responde en español (`Coches`, `Motos`…),
+  mientras el navegador en `en-*` muestra `Cars`, `Motorbike`… Mismo `id`.
+- Código: `Wallapop.categories()`.
+- Snapshot del árbol completo validado: `docs/categories.json`.
+
+Las 18 categorías **top-level** (id | nombre, localizadas a ES):
+
+| id | nombre |
+|----|--------|
+| 100 | Coches |
+| 14000 | Motos |
+| 12800 | Motor y accesorios |
+| 12465 | Moda y accesorios |
+| 200 | Inmobiliaria |
+| 24200 | Tecnología y electrónica |
+| 12579 | Deporte y ocio |
+| 17000 | Bicicletas |
+| 12467 | Hogar y jardín |
+| 13100 | Electrodomésticos |
+| 12463 | Cine, libros y música |
+| 12461 | Niños y bebés |
+| 18000 | Coleccionismo |
+| 19000 | Construcción y reformas |
+| 20000 | Industria y agricultura |
+| 21000 | Empleo |
+| 13200 | Servicios |
+| 12485 | Otros |
+
+> Categorías sin subcategorías: 100, 14000, 200, 12485.
+> Nota: `config.CATEGORIES` (tabla offline de nombres de la CLI) se corrigió
+> con estos ids reales — los antiguos (12545, 16000, 15000, 12900…) estaban
+> obsoletos y faltaban 12800, 24200 y 12485.
+
+### Verificación de subcategorías (Playwright)
+
+Haciendo clic en el árbol lateral se abre **un submenú por cada nivel** y cada
+selección genera una URL con `subcategory_ids=<id>` **igual al `id` del árbol de
+la API**. Ejemplo real capturado — categoría `12800` (Motor y accesorios):
+
+| Subcategoría del menú (EN) | `subcategory_ids` | Nodo API (ES) |
+|---|---|---|
+| GPS & electronics | `10164` | GPS y electrónica |
+| Car & van spare parts | `10167` | Recambios de coches y furgonetas |
+| Mechanical tools | `10165` | Herramientas |
+| Motorbike and four-wheeler spare parts | `10168` | Recambios de motos y cuatriciclos |
+| Others | `10166` | Otros |
+
+Y a **dos niveles** — categoría `24200`, subcategoría `Sound` → `Headphones`
+(`24149` → `10395`):
+
+```
+...search?category_id=24200&subcategory_ids=24149   # Sound
+...search?category_id=24200&subcategory_ids=10395   # Headphones (nieto)
+```
+
+Ambos coinciden con los ids del árbol recursivo de `/categories`. La brújula
+práctica: **un `name` del menú lateral = el `name` localizado de un nodo del
+árbol con el mismo `id`**. Con esto, `--subcat` de la CLI y los `subcategory_ids`
+de cualquier URL de la web apuntan al mismo árbol.
+
 ### GET `/api/v3/general/search` (legacy)
 
 Alternativa antigua si `/search/components` no devuelve `search_id`.

@@ -96,6 +96,28 @@ RAW_THREAD_NO_MY_TEXT = {
     },
 }
 
+RAW_CATEGORIES = {
+    "categories": [
+        {
+            "id": 100,
+            "name": "Coches",
+            "subcategories": [],
+        },
+        {
+            "id": 12800,
+            "name": "Motor y accesorios",
+            "subcategories": [
+                {"id": 10165, "name": "Herramientas", "subcategories": []},
+                {
+                    "id": 10167,
+                    "name": "Recambios de coches y furgonetas",
+                    "subcategories": [{"id": 10328, "name": "Accesorios", "subcategories": []}],
+                },
+            ],
+        },
+    ]
+}
+
 # --- transport fake ---------------------------------------------------------
 
 
@@ -147,6 +169,8 @@ class FakeTransport:
             return 200, data, "application/json"
         if "/delivery/buyer/offers" in url or "/delivery/offers/" in url:
             return 200, {"offer_id": "created"}, "application/json"
+        if url.endswith("/categories"):
+            return 200, RAW_CATEGORIES, "application/json"
         raise AssertionError(f"unexpected call: {method} {url} params={params} body={body}")
 
 
@@ -412,3 +436,23 @@ def test_make_offer_info_reads_restriction(fake):
     resp = client.make_offer_info(RAW_ITEM["id"])
     assert resp.ok
     assert resp.data["restriction"]["max_offer_percentage"] == 30.0
+
+
+# --- categories -------------------------------------------------------------
+
+def test_categories_hits_context_search(fake):
+    client = Wallapop()
+    client.categories()
+    call = next(c for c in fake.calls if c[1].endswith("/categories"))
+    assert call[2] == {"context": "search"}
+
+
+def test_categories_returns_clean_tree(fake):
+    client = Wallapop()
+    cats = client.categories()
+    assert [c["id"] for c in cats] == [100, 12800]
+    assert cats[0] == {"id": 100, "name": "Coches", "subcategories": []}
+    mot = cats[1]
+    assert mot["name"] == "Motor y accesorios"
+    assert mot["subcategories"][1]["name"] == "Recambios de coches y furgonetas"
+    assert mot["subcategories"][1]["subcategories"][0]["id"] == 10328

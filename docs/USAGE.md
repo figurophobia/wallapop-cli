@@ -71,7 +71,7 @@ Flags comunes:
 
 | Flag | Descripción |
 | --- | --- |
-| `--category ID` | Filtra por categoría (ej. `12900` Consolas y videojuegos) |
+| `--category ID` | Filtra por categoría (ej. `24200` Tecnología y electrónica) |
 | `--subcat ID` | Filtra por hoja de taxonomía (ej. `10088` consolas, `10092` accesorios) |
 | `--condition LIST` | Filtra por estado de conservación (comas: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`) |
 | `--min-price` / `--max-price` | Rango de precio |
@@ -83,6 +83,13 @@ Flags comunes:
 | `--ship-only` | Solo artículos enviables |
 | `--json` / `--csv` | Salida estructurada |
 | `--quiet` | Oculta avisos |
+
+> **Ids de categoría**: el catálogo completo (18 categorías top + todas sus
+> subcategorías con sus ids) está en `docs/categories.json`, o se puede obtener
+> en vivo con `Wallapop.categories()`. Los ids de `--category`/`--subcat` son
+> los de ese árbol, no invenciones. En la web, al hacer clic en una subcategoría
+> se abre otro submenú y la URL queda `category_id=X&subcategory_ids=Y` — esos
+> `Y` son ids de subcategoría del mismo árbol.
 
 ### Seleccionar país / región
 
@@ -109,6 +116,20 @@ app cuando "a veces saca cosas de Italia o Portugal".
 
 El detalle técnico (por qué sin coords el API devuelve 0, el papel de
 `search_country`, etc.) está en `docs/ENDPOINTS.md`.
+
+### Catálogo de categorías
+
+El árbol completo (18 categorías top + todas las subcategorías, con sus ids)
+está en `docs/categories.json`. Para obtenerlo en vivo:
+
+```python
+from wallapoplib import Wallapop
+cats = Wallapop().categories()   # [{"id", "name", "subcategories": [...]}]
+```
+
+Sirve para listar/guiar al usuario por las categorías al construir una
+búsqueda, en lugar de hardcodear ids. Detalle técnico del endpoint en
+`docs/ENDPOINTS.md` (sección `GET /api/v3/categories`).
 
 ---
 

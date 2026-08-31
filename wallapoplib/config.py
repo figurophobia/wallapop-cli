@@ -122,24 +122,23 @@ DEFAULT_GEO = CITIES["espana"]
 
 CATEGORIES = {
     100: "Coches",
-    200: "Inmobiliaria",
     14000: "Motos",
+    12800: "Motor y accesorios",
     12465: "Moda y accesorios",
-    12545: "Tecnologia y electronica",
-    16000: "Moviles y telefonia",
-    15000: "Informatica",
+    200: "Inmobiliaria",
+    24200: "Tecnología y electrónica",
     12579: "Deporte y ocio",
     17000: "Bicicletas",
-    12900: "Consolas y videojuegos",
-    12467: "Hogar y jardin",
-    13100: "Electrodomesticos",
-    12463: "Cine, libros y musica",
-    12461: "Ninos y bebes",
+    12467: "Hogar y jardín",
+    13100: "Electrodomésticos",
+    12463: "Cine, libros y música",
+    12461: "Niños y bebés",
     18000: "Coleccionismo",
-    19000: "Construccion y reformas",
+    19000: "Construcción y reformas",
     20000: "Industria y agricultura",
     21000: "Empleo",
     13200: "Servicios",
+    12485: "Otros",
 }
 
 

@@ -285,6 +285,28 @@ class Wallapop:
         objs = data.get("search_objects", []) if isinstance(data, dict) else []
         return [normalize_item(obj) for obj in objs]
 
+    def categories(self) -> list[dict[str, Any]]:
+        """Return the search category tree (same source as the web sidebar).
+
+        Each node is ``{"id": int, "name": str, "subcategories": [...]}``
+        (recursive). Backed by ``GET /api/v3/categories?context=search``, the
+        canonical menu the search page renders.
+        """
+        resp = self._request("GET", "/categories", params={"context": "search"})
+        if not resp.ok:
+            raise ApiError(f"categories failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        data = resp.data
+        raw = data.get("categories", []) if isinstance(data, dict) else []
+
+        def clean(node: dict) -> dict[str, Any]:
+            return {
+                "id": node.get("id"),
+                "name": node.get("name", ""),
+                "subcategories": [clean(s) for s in node.get("subcategories") or []],
+            }
+
+        return [clean(c) for c in raw]
+
     def item(self, item_id: str) -> Item:
         resp = self._request("GET", f"/items/{item_id}")
         if not resp.ok:

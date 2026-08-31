@@ -1,0 +1,1004 @@
+CATÁLOGO COMPLETO DE CATEGORÍAS DE WALLAPOP
+Fuente: GET /api/v3/categories?context=search (validado contra es.wallapop.com/search con Playwright)
+Nombres en español (locale del API). Las subcategorías se anidan según el árbol recursivo de la API.
+
+Categorías top-level: 18  |  Nodos totales en el árbol: 997
+==============================================================================
+
+[100] Coches
+[14000] Motos
+[12800] Motor y accesorios
+   [10164] GPS y electrónica
+   [10165] Herramientas
+   [10167] Recambios de coches y furgonetas
+      [10328] Accesorios
+      [10329] Aceites, lubricantes y líquidos
+      [10330] Carrocerías
+      [10331] Faros y luces indicadoras
+      [10332] Llantas
+      [10333] Motor y piezas de motor
+      [10334] Neumáticos
+      [10335] Seguridad
+      [10336] Suspensión y dirección
+      [10337] Transmisión
+      [10338] Tuning
+   [10168] Recambios de motos y cuatriciclos
+      [10339] Aceites, lubricantes y líquidos
+      [10340] Faros y luces indicadoras
+      [10439] Motor y piezas de motor
+      [10440] Neumáticos
+      [10341] Vestimenta y protección
+   [10166] Otros
+[12465] Moda y accesorios
+   [11002] Mujer
+      [11021] Calzado
+         [11022] Botas
+            [9839] Botas a media pantorrilla
+            [9843] Botas de agua
+            [9844] Botas de trabajo
+            [9840] Botas hasta la rodilla
+            [9842] Botas para la nieve
+            [9841] Botas por encima de la rodilla
+            [9838] Botines
+            [9845] Otras botas
+         [11028] Calzado deportivo
+            [9873] Botas de esquí
+            [9864] Botas de fútbol
+            [9868] Botas de fútbol sala
+            [9870] Botas de moto
+            [9874] Botas de snowboard
+            [9866] Botas y calzado de senderismo
+            [9862] Calzado de ciclismo
+            [9863] Calzado de danza
+            [9861] Calzado de escalada y búlder
+            [9865] Calzado de golf
+            [9875] Calzado de natación y agua
+            [9867] Patines de hielo
+            [9871] Patines de ruedas
+            [9860] Zapatillas de baloncesto
+            [9872] Zapatillas de correr
+            [9869] Zapatillas de gimnasio
+            [9876] Zapatillas de tenis
+            [9877] Otro calzado deportivo
+         [11027] Pantuflas
+         [11025] Sandalias y chanclas
+            [9855] Chanclas
+            [9854] Chanclas de dedo
+            [9853] Sandalias planas
+            [9856] Otras chanclas y sandalias
+         [11026] Tacones
+            [9858] Sandalias de tacón
+            [9857] Zapatos de salón
+            [9859] Otros tacones
+         [11029] Zapatillas
+         [11024] Zapatos planos
+            [9848] Alpargatas
+            [9846] Bailarinas
+            [9850] Merceditas
+            [9849] Zapatos con cordones
+            [9847] Zapatos náuticos y mocasines
+            [9851] Otros zapatos planos
+         [11023] Zuecos y mules
+         [11030] Otro calzado
+      [11004] Ropa
+         [11010] Camisetas y tops
+            [9757] Blusas
+            [9769] Blusas con peplum
+            [9766] Bodys
+            [9756] Camisas
+            [9759] Camisetas
+            [9763] Camisetas de manga corta
+            [9765] Camisetas de manga larga
+            [9764] Camisetas de manga ¾
+            [9760] Chalecos
+            [9762] Crop tops
+            [9768] Cuello alto
+            [9770] Cuello halter
+            [9758] Sin mangas
+            [9767] Tops sin hombros
+            [9761] Túnicas
+            [9771] Otros tops y camisetas
+         [11019] Disfraces y trajes especiales
+         [11009] Faldas
+            [9747] Faldas acampanadas
+            [9748] Faldas ajustadas
+            [9752] Faldas de cintura alta
+            [9754] Faldas de tubo
+            [9745] Faldas midi
+            [9751] Faldas plisadas
+            [9749] Faldas skater
+            [9753] Faldas tulipán
+            [9750] Faldas vaqueras
+            [9746] Maxifaldas
+            [9744] Minifaldas
+            [9755] Otras faldas
+         [11006] Jerséis y sudaderas
+            [9724] Boleros
+            [9725] Chalecos
+            [9723] Cárdigans
+            [9721] Jerséis
+            [9722] Kimonos
+            [9720] Sudaderas con y sin capucha
+            [9726] Otros jerséis y sudaderas
+         [11016] Lencería y pijamas
+            [9813] Accesorios de lencería
+            [9810] Batas
+            [9806] Braguitas
+            [9812] Calcetines
+            [9807] Conjuntos
+            [9808] Lencería moldeadora
+            [9811] Medias
+            [9809] Pijamas
+            [9805] Sujetadores
+            [9814] Otros
+         [11014] Monos cortos y largos
+            [9799] Monos cortos
+            [9798] Monos largos
+            [9800] Otros monos
+         [11013] Pantalones cortos
+            [9795] Pantalones cortos cargo
+            [9790] Pantalones cortos de cintura alta
+            [9789] Pantalones cortos de cintura baja
+            [9794] Pantalones cortos de cuero
+            [9793] Pantalones cortos de encaje
+            [9791] Pantalones cortos hasta la rodilla
+            [9792] Pantalones cortos vaqueros
+            [9796] Pantalones ¾
+            [9797] Otros pantalones cortos
+         [11012] Pantalones y leggings
+            [9786] Leggings
+            [9787] Pantalones  harén
+            [9781] Pantalones anchos
+            [9785] Pantalones de cuero
+            [9783] Pantalones de pinzas
+            [9782] Pantalones pitillo
+            [9784] Pantalones rectos
+            [9780] Pantalones tobilleros y chinos
+            [9788] Otros pantalones
+         [11017] Premamá
+            [9822] Abrigos y chaquetas premamá
+            [9823] Bañadores y ropa de playa premamá
+            [9817] Faldas premamá
+            [9821] Jerseys premamá
+            [9820] Monos y monos premamá
+            [9819] Pantalones cortos premamá
+            [9818] Pantalones premamá
+            [9825] Ropa deportiva
+            [9824] Ropa interior premamá
+            [9815] Tops premamá
+            [9816] Vestidos premamá
+            [9826] Otra ropa premamá
+         [11005] Ropa de abrigo
+            [9701] Abrigos
+            [9700] Capas y ponchos
+            [9702] Chalecos y gilets
+            [9705] Chaqueta bomber
+            [9703] Chaquetas
+            [9704] Chaquetas bolero
+            [9707] Chubasqueros
+            [9706] Gabardina
+            [9708] Parkas
+            [9709] Otras prendas exteriores
+         [11015] Ropa de baño
+            [9801] Bañadores de una pieza
+            [9802] Bikinis y tankinis
+            [9803] Camisetas y pareos
+            [9804] Otros bañadores y ropa de playa
+         [11018] Ropa deportiva
+            [9835] Accesorios deportivos
+            [9828] Chándales
+            [9832] Faldas
+            [9829] Pantalones
+            [9830] Pantalones cortos
+            [9827] Ropa de abrigo
+            [9834] Sudaderas con y sin capucha
+            [9836] Sujetadores deportivos
+            [9833] Tops y camisetas
+            [9831] Vestidos
+            [9837] Otra ropa deportiva
+         [11054] Trajes y blazers
+            [9727] Blazers
+            [9730] Piezas de traje
+            [9729] Trajes de falda
+            [9728] Trajes de pantalón
+            [9731] Otros trajes y blazers
+         [11011] Vaqueros
+            [9774] Vaqueros acampanados
+            [9772] Vaqueros boyfriend
+            [9775] Vaqueros de cintura alta
+            [9777] Vaqueros pitillo
+            [9773] Vaqueros recortados
+            [9778] Vaqueros rectos
+            [9776] Vaqueros rotos
+            [9779] Otros vaqueros
+         [11008] Vestidos
+            [9732] Minivestidos
+            [9737] Vestidos de invierno
+            [9736] Vestidos de verano
+            [9738] Vestidos formales y de oficina
+            [9739] Vestidos informales
+            [9734] Vestidos largos
+            [9733] Vestidos midi
+            [9741] Vestidos negros
+            [9735] Vestidos para ocasiones especiales
+            [9740] Vestidos sin tirantes
+            [9742] Vestidos vaqueros
+            [9743] Otros vestidos
+         [11020] Otras prendas
+   [11003] Hombre
+      [11044] Calzado
+         [11047] Alpargatas
+         [11046] Botas
+            [9928] Botas Chelsea y sin cordones
+            [9931] Botas de agua
+            [9930] Botas de nieve
+            [9932] Botas de trabajo
+            [9929] Botas safari y con cordones
+            [9933] Otras botas
+         [11051] Calzado deportivo
+            [9956] Botas de esquí
+            [9947] Botas de fútbol
+            [9951] Botas de fútbol sala
+            [9953] Botas de moto
+            [9957] Botas de snowboard
+            [9949] Botas y calzado de senderismo
+            [9945] Calzado de ciclismo
+            [9946] Calzado de danza
+            [9944] Calzado de escalada y búlder
+            [9948] Calzado de golf
+            [9958] Calzado de natación y agua
+            [9950] Patines de hielo
+            [9954] Patines de ruedas
+            [9943] Zapatillas de baloncesto
+            [9955] Zapatillas de correr
+            [9952] Zapatillas de gimnasio
+            [9959] Zapatillas de tenis
+            [9960] Otro calzado deportivo
+         [11050] Pantuflas
+         [11048] Sandalias y chanclas
+            [9937] Chanclas
+            [9935] Chanclas de dedo
+            [9936] Sandalias
+            [9934] Zuecos y mules
+            [9938] Otras sandalias y chanclas
+         [11052] Zapatillas
+         [11049] Zapatos de vestir
+            [9939] Zapatos con cordones
+            [9940] Zapatos con hebilla
+            [9941] Zapatos sin cordones
+            [9942] Otros zapatos formales
+         [11045] Zapatos náuticos y mocasines
+         [11053] Otro calzado
+      [11031] Ropa
+         [11040] Bañadores
+         [11039] Calcetines y ropa interior
+            [9916] Albornoces
+            [9915] Calcetines
+            [9914] Calzoncillos y bóxers
+            [9918] Pijamas
+            [9919] Otros calcetines y ropa interior
+         [11033] Camisas
+         [11042] Disfraces y trajes especiales
+         [11036] Jerséis y sudaderas
+            [9895] Cárdigans
+            [9892] Jerséis
+            [9897] Jerséis con cuello de pico
+            [9898] Jerséis con cuello de tortuga
+            [9896] Jerséis de cuello redondo
+            [9900] Jerséis de punto
+            [9899] Jerséis largos
+            [9901] Jerséis sin mangas
+            [9894] Sudaderas con cremallera
+            [9893] Sudaderas con y sin capucha
+            [9902] Otros jerséis
+         [11037] Pantalones
+            [9903] Chinos
+            [9904] Joggers
+            [9908] Pantalones anchos
+            [9906] Pantalones cortos
+            [9907] Pantalones de pinzas
+            [9905] Pantalones pitillo
+            [9909] Otros pantalones
+         [11038] Pantalones cortos
+            [9910] Pantalones cortos cargo
+            [9911] Pantalones cortos chinos
+            [9912] Pantalones cortos vaqueros
+            [9913] Otros pantalones cortos
+         [11007] Ropa de abrigo
+            [9711] Abrigos
+            [9710] Capas y ponchos
+            [9712] Chalecos y gilets
+            [9715] Chaqueta bomber
+            [9713] Chaquetas
+            [9714] Chaquetas bolero
+            [9717] Chubasqueros
+            [9716] Gabardina
+            [9718] Parkas
+            [9719] Otras prendas exteriores
+         [11041] Ropa deportiva
+            [9926] Accesorios deportivos
+            [9921] Chándales
+            [9922] Pantalones
+            [9923] Pantalones cortos
+            [9920] Ropa de abrigo
+            [9925] Sudaderas con y sin capucha
+            [9924] Tops y camisetas
+            [9927] Otra ropa deportiva
+         [11034] Tops y camisetas
+            [9883] Camisetas
+            [9884] Chalecos y camisetas sin mangas
+            [9885] Otros tops
+         [11035] Trajes y americanas
+            [9888] Chalecos
+            [9886] Chaquetas de traje y americanas
+            [9889] Conjuntos de traje
+            [9887] Pantalones de traje
+            [9890] Trajes de boda
+            [9891] Otros trajes y americanas
+         [11032] Vaqueros
+            [9880] Vaqueros ajustados
+            [9879] Vaqueros pitillo
+            [9881] Vaqueros rectos
+            [9878] Vaqueros rotos
+            [9882] Otros vaqueros
+         [11043] Otras prendas
+   [10436] Accesorios
+      [9645] Accesorios para el cabello
+      [10152] Bolsos y mochilas
+         [9649] Billeteras
+         [9600] Bolsa de aseo
+         [9626] Bolsas de viaje
+         [9622] Bolsos de fiesta
+         [9555] Bolsos de hombro
+         [9558] Bolsos de mano
+         [9625] Bolsos estampados y bordados
+         [9621] Bolsos tote
+         [9537] Carteras
+         [9614] Equipaje y maletas
+         [9597] Maletines
+         [9543] Mochilas
+         [9546] Monederos
+         [9623] Neceseres
+         [9596] Riñoneras
+         [9624] Satchels
+         [9578] Otros bolsos
+      [10153] Bufandas y chales
+         [9551] Bufandas
+         [9628] Bufandas y chales de gran tamaño
+         [9629] Chales
+         [9552] Pañuelos
+         [9627] Pañuelos de cabeza
+         [9630] Otras bufandas y chales
+      [9550] Cinturones
+      [9584] Corbatas y pañuelos
+      [9567] Gafas de sol
+      [9610] Guantes
+      [9635] Paraguas
+      [9562] Relojes
+      [10162] Sombreros y gorras
+         [9632] Boinas
+         [9633] Diademas y cintas
+         [9541] Gorras
+         [9553] Gorros
+         [9631] Gorros de invierno
+         [9618] Sombreros
+         [9634] Otros sombreros y gorras
+      [9607] Otros accesorios
+   [10156] Joyería
+      [9534] Anillos
+      [9579] Broches
+      [9581] Cadenas
+      [9539] Colgantes
+      [9572] Collares
+      [9637] Conjuntos de joyas
+      [9636] Cuentas
+      [9654] Gemelos
+      [9644] Joyeros
+      [9571] Pendientes
+      [9651] Piercings
+      [9570] Pulseras
+      [9638] Tobilleras
+      [9639] Otras joyas
+   [10437] Belleza
+      [9617] Colonia
+      [9662] Cuidado personal
+         [9672] Aftershave y colonia
+         [9671] Artículos y kits de cuidado personal
+         [9669] Cuidado corporal
+         [9667] Cuidado de las manos
+         [9668] Cuidado de las uñas
+         [9670] Cuidado del cabello
+         [9666] Cuidado facial
+         [9673] Otros productos de cuidado personal
+      [9590] Maquillaje
+      [9603] Perfume
+      [9660] Utensilios y accesorios
+         [9663] Utensilios de afeitado
+         [9643] Utensilios de maquillaje
+         [24000] Utensilios de peinado
+            [9652] Cepillos para el pelo
+            [9611] Planchas para el pelo
+            [9647] Rizadores
+            [9648] Secadores
+         [9641] Utensilios para el cuidado corporal
+         [9640] Utensilios para el cuidado facial
+         [9664] Utensilios para el cuidado personal
+         [9642] Utensilios para las uñas
+         [9665] Otros utensilios
+      [9674] Otros productos de belleza
+[200] Inmobiliaria
+[24200] Tecnología y electrónica
+   [10206] Imagen: televisores y proyectores
+      [10414] TV
+      [10406] Proyectores
+      [10405] Accesorios de televisores y proyectores
+         [24140] Lámparas proyector
+         [24141] Pantallas de proyección
+         [24142] Soportes para proyectores
+         [24144] DVD y Blu-Ray
+         [24145] Soportes TV
+         [10413] Mandos a distancia
+         [24146] TDT
+         [24147] Muebles de TV
+         [24148] Marcos para TV
+         [10409] Otros accesorios de televisores y proyectores
+      [24192] Otros artículos de imagen
+   [24149] Sonido: auriculares y altavoces
+      [10395] Auriculares
+      [24150] Altavoces
+      [24151] Home cinema y barras de sonido
+      [10205] Dispositivos de sonido
+         [24152] Despertadores digitales
+         [24153] Grabadoras de voz
+         [24154] Karaoke
+         [24155] MP3 y MP4
+         [24156] Radio
+         [24157] Radio CD
+         [24158] Reproductor CD
+         [24159] Otros dispositivos de audio
+      [10070] Tocadiscos
+      [24160] DJ y audio profesional
+         [24161] Accesorios de Grabación
+         [24162] Amplificadores
+         [24163] Receptores
+         [24164] Auriculares para DJ
+         [24165] Controladores MIDI
+         [24166] Grabadoras
+         [24167] Maletas de DJ
+         [24168] Mesa de mezclas / DJ
+         [24169] Micrófonos
+         [24170] Monitores de estudio
+         [24171] Pedales
+         [24172] Sintetizadores
+      [24173] Otros dispositivos de sonido
+   [10200] Fotografía: cámaras y drones
+      [10397] Cámaras
+         [24174] Reflex
+         [24175] Compactas
+         [24176] Sin espejo
+         [24177] Vintage
+         [24178] Instantáneas
+         [10417] Cámaras de video
+         [24179] Otras cámaras
+      [10401] Objetivos
+      [10201] Drones
+      [24180] Accesorios de fotografía
+         [10398] Flashes
+         [24181] Carretes fotográficos
+         [24182] Filtros fotograficos
+         [24183] Papel fotográfico
+         [24184] Grips
+         [24185] Tapas y parasoles
+         [10403] Trípodes y monopies
+         [24186] Fundas de objetivos
+         [24187] Fundas, mochilas y correas para cámara
+         [10203] Baterías y cargadores
+         [24188] Álbumes de fotos
+         [24189] Marcos de fotos
+         [24190] Libros de fotos
+         [24191] Otros accesorios de fotografía
+      [10199] Cámaras de vigilancia
+      [24193] Otros articulos de fotografía
+   [24201] Telefonía: móviles y smartwatches
+      [9447] Smartphones
+      [9487] Smartwatches y pulsera de actividad
+      [10175] Teléfonos vintage
+      [24102] Telefonos fijos
+      [24103] Otros teléfonos
+      [9375] Accesorios de móviles y smartwatches
+         [10427] Cargadores y cables para móviles
+         [24104] Powerbanks
+         [10428] Fundas y carcasas para móviles
+         [10423] Baterías para móviles
+         [24105] Soportes para móviles
+         [24106] Cristales templados para móviles
+         [24107] Palos selfies
+         [24108] Trípodes para móviles
+         [24109] Manos libres
+         [24110] Aros de luz para móviles
+         [24111] Estabilizadores para móviles
+         [24112] Amplificadores de pantalla para móviles
+         [24113] Localizadores para móvil
+         [9388] Piezas de recambio
+         [9370] Otros accesorios de móviles y smartwatches
+   [24202] Informática: ordenadores y tablets
+      [10310] Portátiles
+      [10309] Ordenadores de sobremesa
+      [10136] Realidad Virtual y aumentada
+         [24114] Gafas de realidad virtual
+         [24194] Otros accesorios de realidad virtual
+      [9374] Tablets
+      [24132] E-readers
+      [10134] Periféricos
+         [10307] Impresoras
+         [10133] Monitores
+         [10311] Ratones
+         [10312] Teclados
+         [24133] Escáners
+         [24134] Webcams
+         [24135] Otros periféricos
+      [10304] Componentes y piezas de ordenador
+      [24136] Accesorios de informática
+         [10305] Accesorios para portátiles
+         [24137] Accesorios para tablets
+         [10306] Accesorios consumibles para impresoras
+         [10137] Software
+         [24138] Redes y conectividad
+         [10308] Discos duros externos
+         [10130] Cables de informática
+         [24139] Pendrives y memorias USB
+         [10135] Otros accesorios de informática
+   [24203] Gaming: consolas y videojuegos
+      [10087] Consolas y accesorios
+         [10088] Consolas
+         [10092] Accesorios y recambios de consolas
+      [24115] PC gaming y streaming
+         [24116] Portátiles gaming
+         [24117] Ordenadores sobremesa gaming
+         [24118] Monitores gaming
+         [24119] Ratones gaming
+         [24120] Teclados gaming
+         [24121] Sillas gaming
+         [24122] Mesas gaming
+         [24123] Alfombrillas gaming
+         [24124] Mandos para PC
+         [24125] Volantes para PC
+         [24126] Altavoces gaming
+         [24127] Microfonos para PC gamer
+         [24128] Auriculares gaming
+         [24129] Juegos para PC
+         [24130] Accesorios de PC gaming
+      [24131] Videojuegos y más
+         [10093] Videojuegos
+         [10089] Manuales y guías de videojuegos
+         [10090] Merchandising de videojuegos
+      [10091] Otros artículos de gaming
+[12579] Deporte y ocio
+   [10094] Baloncesto
+   [10095] Balonmano
+   [10096] Estáticas y elípticas
+   [10097] Fitness, running y yoga
+   [10098] Fútbol
+   [10099] Golf
+   [10100] Juegos recreativos y de mesa
+   [10101] Manualidades
+   [10102] Montaña y esquí
+   [10103] Natación y accesorios piscina
+   [10105] Otros deportes
+   [10106] Patinetes y patinaje
+   [10107] Rugby
+   [10108] Tenis y pádel
+   [10109] Vóley
+   [10104] Otros
+[17000] Bicicletas
+   [10055] Accesorios para bicicletas
+      [10208] Bombas e infladores
+      [10209] Electrónica para bicicletas
+      [10210] Luces
+      [10211] Portabicicletas
+      [10212] Rodillos
+   [10056] Bicicletas y triciclos
+      [10216] Bicicletas Infantiles
+      [10213] Bicicletas ciudad
+      [10438] Bicicletas de carretera
+      [10215] Bicicletas eléctricas
+      [10217] Bicicletas plegables
+      [10218] Fixies
+      [10214] MTB
+      [10219] Monociclos
+      [10220] Triciclos
+   [10058] Piezas y recambios de bici
+      [10221] Cuadros
+      [10223] Herramientas
+      [10222] Neumáticos y cámaras
+      [10224] Piezas
+      [10225] Recambios
+      [10226] Ruedas
+      [10227] Sillín
+   [10059] Protección y vestimenta
+      [10230] Alforjas
+      [10228] Cascos
+      [10229] Gafas ciclismo y de sol
+      [10231] Ropa ciclismo
+      [10232] Zapatillas y cubrezapatillas
+   [10057] Otros
+[12467] Hogar y jardín
+   [10125] Muebles y organización
+      [24273] Camas y accesorios
+         [10269] Colchones
+         [10270] Ropa de cama
+         [24204] Estructura de camas
+         [24205] Cabeceros y pies de cama
+         [10268] Almohadas y cojines
+         [24206] Accesorios
+      [24207] Mesas y mesitas
+         [24208] Escritorios
+         [24209] Mesas de comedor
+         [24210] Mesas de centro y bajas
+         [24211] Mesitas de noche y auxiliares
+         [24212] Tocadores
+      [10127] Muebles de almacenaje
+         [10288] Almacenaje de oficina
+         [10292] Estanterías
+         [24268] Muebles de salón y televisión
+         [10289] Armarios
+         [24213] Vitrinas, aparadores y consolas
+         [24214] Cómodas y cajoneras
+         [24215] Zapateros
+      [24216] Sofás y sillones
+         [24217] Sofas y divanes
+         [24218] Sofa cama y futones
+         [24219] Sillones y mecedoras
+         [24220] Puffs
+      [24221] Sillas y taburetes
+      [24222] Set de muebles
+         [24223] Set de mesas y sillas
+         [24224] Set muebles habitación
+         [24225] Set de salón
+      [24226] Carritos
+      [10291] Cajas y organizadores
+         [24269] Colgadores, percheros y burras
+         [10290] Baúles, cajas y cubos
+         [24227] Cestas
+         [24228] Almacenaje de joyas y maquillaje
+         [24229] Basura y reciclaje
+         [24230] Organizadores
+      [10285] Antigüedades
+   [10119] Baño y accesorios
+      [24275] Inodoros y bidet
+      [24277] Duchas y bañeras
+      [10264] Picas y muebles baño
+      [24270] Grifería de baño
+      [10263] Textiles de baño
+      [10419] Accesorios baño
+   [10120] Cocina
+      [24231] Menaje para cocinar, comer y beber
+         [10267] Platos y vajilla
+         [10266] Utensilios para cocinar
+         [24271] Cristalería y jarras
+         [10420] Cubertería
+         [24272] Sartenes, ollas y batería de cocina
+      [24232] Picas y muebles cocina
+      [24233] Grifería de cocina
+      [24234] Textiles de cocina y comedor
+      [24235] Accesorios
+   [10122] Decoración y espejos
+      [24236] Fundas y cojines de sofá
+      [24237] Decoración para pared y colgar
+      [10271] Decoración para festividades
+      [24238] Espejos
+      [10273] Cortinas
+      [10272] Alfombras
+      [24239] Jarrones y figuras decorativas
+      [24240] Velas y portavelas
+      [24241] Otros
+   [10123] Iluminación
+      [24242] Apliques, lámparas, pantallas y bases
+      [24243] Bombillas
+      [10281] Luces decorativas y de exterior
+      [24244] Iluminación inteligente
+      [24245] Accesorios de iluminación
+   [10124] Jardín y exteriores
+      [10283] Muebles para exterior
+         [24246] Sets de muebles de exterior
+         [24247] Mesas de exterior
+         [24248] Sillas, sillones, sofás y tumbonas
+         [24249] Carpas, toldos y parasoles
+         [24250] Armarios y almacenaje
+      [24251] Decoración
+      [10282] Plantas y jardinería
+         [24252] Plantas
+         [24253] Semillas y sustratos
+         [24254] Insecticidas y tratamiento para plantas
+         [24255] Macetas
+         [24256] Invernaderos y riego
+         [24257] Herramientas de jardinería
+      [10280] Barbacoas
+      [10284] Piscinas, spa y duchas de exterior
+      [24258] Maquinaria de jardín
+      [24259] Cesped, vallas y paneles
+      [24260] Accesorios
+   [24276] Calefacción y climatización
+      [24261] Chimeneas, Estufas y radiadores
+      [24262] Aire acondicionado y ventiladores 
+      [24263] Combustibles y pellet
+      [24264] Termostatos y válvulas termostáticas
+      [24265] Calderas y termos eléctricos
+      [24266] Purificador y humificador
+      [24267] Otros
+   [10118] Artículos para mascotas
+      [10262] Accesorios de paseo
+      [10257] Camas
+      [10258] Corrales
+      [10259] Higiene
+      [10260] Jaulas
+      [10261] Juguetes
+[13100] Electrodomésticos
+   [10111] Electrodomésticos de cocina
+   [10112] Lavandería y plancha
+   [10113] Pequeños electrodomésticos
+   [10114] Piezas y recambios
+   [10115] Vitrocerámica
+   [10441] Otros
+[12463] Cine, libros y música
+   [24002] Cine y series
+      [10067] Películas y Series
+         [24008] Cine
+         [24010] Cine infantil
+         [24009] Series
+         [24011] Otras películas y series
+      [10068] Pósters y merchandising de cine y TV
+   [24003] Libros, cómics y revistas
+      [10061] Cómics y novelas gráficas
+         [24035] Artbooks
+         [24036] Arte original de cómics
+         [24037] Cómics americanos
+         [24038] Cómics francobelgas y europeos
+         [24039] Fanzines y clubs de fans
+         [24040] Guías de precios y del comprador
+         [24041] Manga
+         [24042] Merchandising y memorabilia
+         [24043] Otras tradiciones de cómics
+         [24044] Otros comics
+      [10064] Libros
+         [10251] Ficción
+            [24096] Ciencia ficción y fantasía
+            [24092] Crimen y misterio
+            [24093] Humor
+            [24090] Literatura clásica
+            [24091] Novela contemporánea
+            [24095] Novela romántica
+            [24094] Poesía y teatro
+            [24097] Otros libros de ficción
+         [10249] Infantil y juvenil
+            [24100] Bebés
+            [24098] Infantil
+            [24099] Juvenil
+         [10250] No ficción
+            [24080] Aficiones y manualidades
+            [24073] Arte y entretenimiento
+            [24101] Autoayuda
+            [24074] Biografías
+            [24086] Ciencias y naturaleza
+            [24087] Deportes
+            [24084] Diccionarios y libros de consulta
+            [24075] Economía y empresa
+            [24077] Gastronomía
+            [24079] Historia
+            [24076] Informática y tecnología
+            [24081] Pedagogía y familia
+            [24082] Política y sociología
+            [24083] Profesiones y especialidades
+            [24085] Religión
+            [24078] Salud y bienestar
+            [24088] Viajes
+            [24089] Otros (no ficción)
+            [10248] Escolares y de texto
+      [10069] Revistas
+         [24012] Antiguas y de coleccionista
+         [24014] Arquitectura, arte y diseño
+         [24016] Ciencia
+         [24018] Cine y televisión
+         [24020] Cocina
+         [24022] Deportes
+         [24024] Femeninas
+         [24026] Fotografía
+         [24030] Historia y política
+         [24013] Hogar y decoración
+         [24015] Infantiles y juveniles
+         [24017] Informática e internet
+         [24019] Jardinería
+         [24028] LGBTIQ+
+         [24021] Manualidades
+         [24023] Masculinas
+         [24025] Moda y estilo de vida
+         [24027] Música, danza y teatro
+         [24029] Naturaleza y geografía
+         [24031] Negocios
+         [24032] Transportes
+         [24033] Viajes y aventura
+         [24034] Otras revistas
+   [24001] Música
+      [10060] CDs, Vinilos y Casetes
+         [24005] Casetes
+         [24006] Otros formatos de audio
+         [10234] CDs Música
+         [10233] CDs idiomas
+         [10235] Vinilos
+      [10062] Equipo profesional de sonido
+         [10236] Cables
+         [10237] Compresores y ecualizadores
+         [10238] Dispositivos de grabación
+         [10239] Mesas de mezclas y DJ
+         [10240] Micrófonos y accesorios
+      [10063] Instrumentos musicales
+         [24007] Other type of instruments
+         [10245] Instrumentos de Percusión
+            [24064] Cajas
+            [24068] Claves
+            [24067] Pandereta
+            [24065] Platos
+            [24066] Tambores
+            [24069] Otros instrumentos de percusión
+         [10243] Instrumentos de cuerda
+            [24052] Arpa
+            [24049] Banjo
+            [24048] Contrabajo
+            [24050] Mandolina
+            [24051] Ukelele
+            [24046] Viola
+            [24047] Violonchelo
+            [24045] Violín
+            [24053] Otros instrumentos de cuerda
+            [10241] Bajos
+            [10242] Guitarras
+         [10244] Instrumentos de viento
+            [24057] Armónica
+            [24061] Bajón
+            [24058] Clarinete
+            [24060] Corneta
+            [24055] Flauta
+            [24054] Flauta dulce
+            [24056] Flautín
+            [24062] Saxofón
+            [24059] Trompeta
+            [24063] Otros instrumentos de viento
+         [10246] Pianos y teclados
+            [24070] Pianos
+            [24071] Teclados
+            [24072] Otros pianos y teclados
+      [10066] Partituras y libretos
+      [24004] Pósters y merchandising de música
+[12461] Niños y bebés
+   [10177] Accesorios de baño
+   [10178] Alimentación del bebé
+      [10342] Baberos y paños
+      [10343] Batidoras y mezcladores
+      [10344] Biberones & calientabiberones
+      [10345] Chupetes
+      [10346] Utensilios y cubertería
+   [10179] Artículos de maternidad
+      [10347] Lactancia
+      [10348] Libros para madres y padres
+   [10180] Artículos escolares
+      [10349] Mochilas
+      [10350] Porta meriendas
+      [10351] Uniformes
+   [10182] Cunas y camas
+      [10356] Camas infantiles
+      [10357] Cunas
+      [10358] Iluminación infantil
+      [10359] Ropa de cama infantil
+      [10360] Ropa de cuna
+      [10361] Sacos de dormir
+   [10183] Disfraces infantiles
+   [10184] Juguetes, juegos y peluches
+      [10362] Juegos de mesa
+      [10363] Juguetes
+      [10364] Peluches
+   [10185] Mobiliario infantil
+   [10187] Ropa infantil
+      [10365] 0-6 meses (68 cm)
+      [10374] 6-9 meses (74 cm)
+      [10376] 9-12 meses (80 cm)
+      [10367] 12-18 meses (86 cm)
+      [10369] 18-24 meses (92 cm)
+      [10370] 2-3 años (98 cm)
+      [10371] 3-4 años (104 cm)
+      [10372] 4-5 años (110 cm)
+      [10373] 6-7 años (116 cm)
+      [10375] 8-9 años (130 cm)
+      [10366] 10-12 años (150 cm)
+      [10368] 13-14 años (164 cm)
+   [10188] Seguridad y cuidado
+      [10377] Arneses de seguridad
+      [10378] Monitores para bebés
+      [10379] Pegatinas para el coche
+      [10380] Puertas de seguridad y parques
+      [10381] Termómetros para bebés
+   [10181] Transporte del bebé
+      [10352] Cochecitos
+      [10353] Portabebés
+      [10354] Sillas de coche
+      [10355] Sillas de paseo
+   [10189] Tronas y andadores
+      [10382] Andadores
+      [10383] Correpasillos
+      [10384] Tronas
+   [10186] Otros
+[18000] Coleccionismo
+   [10071] Antigüedades
+   [10072] Artesanías y decoración
+   [10073] Artículos de escritorio
+   [10074] Banderas
+   [10075] Coches y motocicletas
+   [10076] Coleccionismo deportivo
+   [10077] Coleccionismo militar
+   [10078] Filatelia y sellos
+   [10079] Imanes
+   [10080] Llaveros
+   [10081] Monedas y billetes
+   [10082] Muñecos
+   [10083] Naipes
+   [10085] Postales y suvenires
+   [10086] Relojes
+   [10084] Otros
+[19000] Construcción y reformas
+   [10138] Balcones
+   [10141] Electricidad e Iluminación
+   [10142] Escaleras y andamios
+   [10143] Ferretería
+   [10144] Herramientas y maquinaria
+      [10317] Herramientas
+      [10318] Herramientas eléctricas
+      [10319] Maquinaria
+   [10145] Madera y otros materiales
+   [10147] Pavimentos y revestimientos
+      [10320] Baldosas y azulejos
+      [10321] Parquet
+   [10148] Pinturas y barnices
+      [10322] Barnices
+      [10323] Pinturas
+   [10149] Puertas y ventanas
+      [10324] Cristales
+      [10325] Puertas
+      [10326] Puertas correderas
+      [10327] Ventanas
+   [10146] Otros
+[20000] Industria y agricultura
+   [10128] Agricultura
+      [10293] Herramientas agrícolas
+      [10294] Insumos agrícolas
+      [10295] Maquinaria
+      [10296] Repuestos
+      [10297] Tractores
+      [10298] Vehículos
+   [10129] Industria
+      [10299] Equipamiento industrial
+      [10300] Herramientas
+      [10301] Insumos industriales
+      [10302] Repuestos de herramientas
+      [10303] Repuestos de maquinaria
+[21000] Empleo
+   [10116] Busco empleo
+   [10117] Ofertas de empleo
+[13200] Servicios
+   [10190] Clases y entrenamiento
+      [10385] Clases de idiomas
+      [10386] Personal trainers
+      [10387] Tutores y soporte escolar
+   [10191] Cuidadoras y niñeras
+      [10388] Cuidadores de ancianos
+      [10389] Niñeras
+   [10192] Mudanzas y transporte
+      [10390] Mensajería
+      [10391] Mudanzas
+      [10392] Transporte
+   [10194] Reparaciones
+   [10195] Servicios de limpieza
+   [10196] Servicios del hogar
+      [10393] Albañil
+      [10394] Electricista
+   [10197] Terapia y crecimiento personal
+   [10193] Otros
+[12485] Otros

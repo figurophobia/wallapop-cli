@@ -1,0 +1,5128 @@
+{
+  "source": "GET /api/v3/categories?context=search (validado contra es.wallapop.com/search con Playwright)",
+  "categories": [
+    {
+      "id": 100,
+      "name": "Coches",
+      "subcategories": []
+    },
+    {
+      "id": 14000,
+      "name": "Motos",
+      "subcategories": []
+    },
+    {
+      "id": 12800,
+      "name": "Motor y accesorios",
+      "subcategories": [
+        {
+          "id": 10164,
+          "name": "GPS y electrónica",
+          "subcategories": []
+        },
+        {
+          "id": 10165,
+          "name": "Herramientas",
+          "subcategories": []
+        },
+        {
+          "id": 10167,
+          "name": "Recambios de coches y furgonetas",
+          "subcategories": [
+            {
+              "id": 10328,
+              "name": "Accesorios",
+              "subcategories": []
+            },
+            {
+              "id": 10329,
+              "name": "Aceites, lubricantes y líquidos",
+              "subcategories": []
+            },
+            {
+              "id": 10330,
+              "name": "Carrocerías",
+              "subcategories": []
+            },
+            {
+              "id": 10331,
+              "name": "Faros y luces indicadoras",
+              "subcategories": []
+            },
+            {
+              "id": 10332,
+              "name": "Llantas",
+              "subcategories": []
+            },
+            {
+              "id": 10333,
+              "name": "Motor y piezas de motor",
+              "subcategories": []
+            },
+            {
+              "id": 10334,
+              "name": "Neumáticos",
+              "subcategories": []
+            },
+            {
+              "id": 10335,
+              "name": "Seguridad",
+              "subcategories": []
+            },
+            {
+              "id": 10336,
+              "name": "Suspensión y dirección",
+              "subcategories": []
+            },
+            {
+              "id": 10337,
+              "name": "Transmisión",
+              "subcategories": []
+            },
+            {
+              "id": 10338,
+              "name": "Tuning",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10168,
+          "name": "Recambios de motos y cuatriciclos",
+          "subcategories": [
+            {
+              "id": 10339,
+              "name": "Aceites, lubricantes y líquidos",
+              "subcategories": []
+            },
+            {
+              "id": 10340,
+              "name": "Faros y luces indicadoras",
+              "subcategories": []
+            },
+            {
+              "id": 10439,
+              "name": "Motor y piezas de motor",
+              "subcategories": []
+            },
+            {
+              "id": 10440,
+              "name": "Neumáticos",
+              "subcategories": []
+            },
+            {
+              "id": 10341,
+              "name": "Vestimenta y protección",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10166,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 12465,
+      "name": "Moda y accesorios",
+      "subcategories": [
+        {
+          "id": 11002,
+          "name": "Mujer",
+          "subcategories": [
+            {
+              "id": 11021,
+              "name": "Calzado",
+              "subcategories": [
+                {
+                  "id": 11022,
+                  "name": "Botas",
+                  "subcategories": [
+                    {
+                      "id": 9839,
+                      "name": "Botas a media pantorrilla",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9843,
+                      "name": "Botas de agua",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9844,
+                      "name": "Botas de trabajo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9840,
+                      "name": "Botas hasta la rodilla",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9842,
+                      "name": "Botas para la nieve",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9841,
+                      "name": "Botas por encima de la rodilla",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9838,
+                      "name": "Botines",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9845,
+                      "name": "Otras botas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11028,
+                  "name": "Calzado deportivo",
+                  "subcategories": [
+                    {
+                      "id": 9873,
+                      "name": "Botas de esquí",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9864,
+                      "name": "Botas de fútbol",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9868,
+                      "name": "Botas de fútbol sala",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9870,
+                      "name": "Botas de moto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9874,
+                      "name": "Botas de snowboard",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9866,
+                      "name": "Botas y calzado de senderismo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9862,
+                      "name": "Calzado de ciclismo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9863,
+                      "name": "Calzado de danza",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9861,
+                      "name": "Calzado de escalada y búlder",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9865,
+                      "name": "Calzado de golf",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9875,
+                      "name": "Calzado de natación y agua",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9867,
+                      "name": "Patines de hielo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9871,
+                      "name": "Patines de ruedas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9860,
+                      "name": "Zapatillas de baloncesto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9872,
+                      "name": "Zapatillas de correr",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9869,
+                      "name": "Zapatillas de gimnasio",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9876,
+                      "name": "Zapatillas de tenis",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9877,
+                      "name": "Otro calzado deportivo",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11027,
+                  "name": "Pantuflas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11025,
+                  "name": "Sandalias y chanclas",
+                  "subcategories": [
+                    {
+                      "id": 9855,
+                      "name": "Chanclas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9854,
+                      "name": "Chanclas de dedo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9853,
+                      "name": "Sandalias planas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9856,
+                      "name": "Otras chanclas y sandalias",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11026,
+                  "name": "Tacones",
+                  "subcategories": [
+                    {
+                      "id": 9858,
+                      "name": "Sandalias de tacón",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9857,
+                      "name": "Zapatos de salón",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9859,
+                      "name": "Otros tacones",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11029,
+                  "name": "Zapatillas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11024,
+                  "name": "Zapatos planos",
+                  "subcategories": [
+                    {
+                      "id": 9848,
+                      "name": "Alpargatas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9846,
+                      "name": "Bailarinas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9850,
+                      "name": "Merceditas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9849,
+                      "name": "Zapatos con cordones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9847,
+                      "name": "Zapatos náuticos y mocasines",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9851,
+                      "name": "Otros zapatos planos",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11023,
+                  "name": "Zuecos y mules",
+                  "subcategories": []
+                },
+                {
+                  "id": 11030,
+                  "name": "Otro calzado",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 11004,
+              "name": "Ropa",
+              "subcategories": [
+                {
+                  "id": 11010,
+                  "name": "Camisetas y tops",
+                  "subcategories": [
+                    {
+                      "id": 9757,
+                      "name": "Blusas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9769,
+                      "name": "Blusas con peplum",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9766,
+                      "name": "Bodys",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9756,
+                      "name": "Camisas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9759,
+                      "name": "Camisetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9763,
+                      "name": "Camisetas de manga corta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9765,
+                      "name": "Camisetas de manga larga",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9764,
+                      "name": "Camisetas de manga ¾",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9760,
+                      "name": "Chalecos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9762,
+                      "name": "Crop tops",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9768,
+                      "name": "Cuello alto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9770,
+                      "name": "Cuello halter",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9758,
+                      "name": "Sin mangas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9767,
+                      "name": "Tops sin hombros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9761,
+                      "name": "Túnicas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9771,
+                      "name": "Otros tops y camisetas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11019,
+                  "name": "Disfraces y trajes especiales",
+                  "subcategories": []
+                },
+                {
+                  "id": 11009,
+                  "name": "Faldas",
+                  "subcategories": [
+                    {
+                      "id": 9747,
+                      "name": "Faldas acampanadas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9748,
+                      "name": "Faldas ajustadas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9752,
+                      "name": "Faldas de cintura alta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9754,
+                      "name": "Faldas de tubo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9745,
+                      "name": "Faldas midi",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9751,
+                      "name": "Faldas plisadas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9749,
+                      "name": "Faldas skater",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9753,
+                      "name": "Faldas tulipán",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9750,
+                      "name": "Faldas vaqueras",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9746,
+                      "name": "Maxifaldas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9744,
+                      "name": "Minifaldas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9755,
+                      "name": "Otras faldas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11006,
+                  "name": "Jerséis y sudaderas",
+                  "subcategories": [
+                    {
+                      "id": 9724,
+                      "name": "Boleros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9725,
+                      "name": "Chalecos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9723,
+                      "name": "Cárdigans",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9721,
+                      "name": "Jerséis",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9722,
+                      "name": "Kimonos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9720,
+                      "name": "Sudaderas con y sin capucha",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9726,
+                      "name": "Otros jerséis y sudaderas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11016,
+                  "name": "Lencería y pijamas",
+                  "subcategories": [
+                    {
+                      "id": 9813,
+                      "name": "Accesorios de lencería",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9810,
+                      "name": "Batas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9806,
+                      "name": "Braguitas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9812,
+                      "name": "Calcetines",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9807,
+                      "name": "Conjuntos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9808,
+                      "name": "Lencería moldeadora",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9811,
+                      "name": "Medias",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9809,
+                      "name": "Pijamas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9805,
+                      "name": "Sujetadores",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9814,
+                      "name": "Otros",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11014,
+                  "name": "Monos cortos y largos",
+                  "subcategories": [
+                    {
+                      "id": 9799,
+                      "name": "Monos cortos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9798,
+                      "name": "Monos largos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9800,
+                      "name": "Otros monos",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11013,
+                  "name": "Pantalones cortos",
+                  "subcategories": [
+                    {
+                      "id": 9795,
+                      "name": "Pantalones cortos cargo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9790,
+                      "name": "Pantalones cortos de cintura alta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9789,
+                      "name": "Pantalones cortos de cintura baja",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9794,
+                      "name": "Pantalones cortos de cuero",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9793,
+                      "name": "Pantalones cortos de encaje",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9791,
+                      "name": "Pantalones cortos hasta la rodilla",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9792,
+                      "name": "Pantalones cortos vaqueros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9796,
+                      "name": "Pantalones ¾",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9797,
+                      "name": "Otros pantalones cortos",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11012,
+                  "name": "Pantalones y leggings",
+                  "subcategories": [
+                    {
+                      "id": 9786,
+                      "name": "Leggings",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9787,
+                      "name": "Pantalones  harén",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9781,
+                      "name": "Pantalones anchos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9785,
+                      "name": "Pantalones de cuero",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9783,
+                      "name": "Pantalones de pinzas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9782,
+                      "name": "Pantalones pitillo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9784,
+                      "name": "Pantalones rectos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9780,
+                      "name": "Pantalones tobilleros y chinos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9788,
+                      "name": "Otros pantalones",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11017,
+                  "name": "Premamá",
+                  "subcategories": [
+                    {
+                      "id": 9822,
+                      "name": "Abrigos y chaquetas premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9823,
+                      "name": "Bañadores y ropa de playa premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9817,
+                      "name": "Faldas premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9821,
+                      "name": "Jerseys premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9820,
+                      "name": "Monos y monos premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9819,
+                      "name": "Pantalones cortos premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9818,
+                      "name": "Pantalones premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9825,
+                      "name": "Ropa deportiva",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9824,
+                      "name": "Ropa interior premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9815,
+                      "name": "Tops premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9816,
+                      "name": "Vestidos premamá",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9826,
+                      "name": "Otra ropa premamá",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11005,
+                  "name": "Ropa de abrigo",
+                  "subcategories": [
+                    {
+                      "id": 9701,
+                      "name": "Abrigos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9700,
+                      "name": "Capas y ponchos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9702,
+                      "name": "Chalecos y gilets",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9705,
+                      "name": "Chaqueta bomber",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9703,
+                      "name": "Chaquetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9704,
+                      "name": "Chaquetas bolero",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9707,
+                      "name": "Chubasqueros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9706,
+                      "name": "Gabardina",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9708,
+                      "name": "Parkas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9709,
+                      "name": "Otras prendas exteriores",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11015,
+                  "name": "Ropa de baño",
+                  "subcategories": [
+                    {
+                      "id": 9801,
+                      "name": "Bañadores de una pieza",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9802,
+                      "name": "Bikinis y tankinis",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9803,
+                      "name": "Camisetas y pareos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9804,
+                      "name": "Otros bañadores y ropa de playa",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11018,
+                  "name": "Ropa deportiva",
+                  "subcategories": [
+                    {
+                      "id": 9835,
+                      "name": "Accesorios deportivos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9828,
+                      "name": "Chándales",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9832,
+                      "name": "Faldas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9829,
+                      "name": "Pantalones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9830,
+                      "name": "Pantalones cortos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9827,
+                      "name": "Ropa de abrigo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9834,
+                      "name": "Sudaderas con y sin capucha",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9836,
+                      "name": "Sujetadores deportivos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9833,
+                      "name": "Tops y camisetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9831,
+                      "name": "Vestidos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9837,
+                      "name": "Otra ropa deportiva",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11054,
+                  "name": "Trajes y blazers",
+                  "subcategories": [
+                    {
+                      "id": 9727,
+                      "name": "Blazers",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9730,
+                      "name": "Piezas de traje",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9729,
+                      "name": "Trajes de falda",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9728,
+                      "name": "Trajes de pantalón",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9731,
+                      "name": "Otros trajes y blazers",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11011,
+                  "name": "Vaqueros",
+                  "subcategories": [
+                    {
+                      "id": 9774,
+                      "name": "Vaqueros acampanados",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9772,
+                      "name": "Vaqueros boyfriend",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9775,
+                      "name": "Vaqueros de cintura alta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9777,
+                      "name": "Vaqueros pitillo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9773,
+                      "name": "Vaqueros recortados",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9778,
+                      "name": "Vaqueros rectos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9776,
+                      "name": "Vaqueros rotos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9779,
+                      "name": "Otros vaqueros",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11008,
+                  "name": "Vestidos",
+                  "subcategories": [
+                    {
+                      "id": 9732,
+                      "name": "Minivestidos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9737,
+                      "name": "Vestidos de invierno",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9736,
+                      "name": "Vestidos de verano",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9738,
+                      "name": "Vestidos formales y de oficina",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9739,
+                      "name": "Vestidos informales",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9734,
+                      "name": "Vestidos largos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9733,
+                      "name": "Vestidos midi",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9741,
+                      "name": "Vestidos negros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9735,
+                      "name": "Vestidos para ocasiones especiales",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9740,
+                      "name": "Vestidos sin tirantes",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9742,
+                      "name": "Vestidos vaqueros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9743,
+                      "name": "Otros vestidos",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11020,
+                  "name": "Otras prendas",
+                  "subcategories": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 11003,
+          "name": "Hombre",
+          "subcategories": [
+            {
+              "id": 11044,
+              "name": "Calzado",
+              "subcategories": [
+                {
+                  "id": 11047,
+                  "name": "Alpargatas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11046,
+                  "name": "Botas",
+                  "subcategories": [
+                    {
+                      "id": 9928,
+                      "name": "Botas Chelsea y sin cordones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9931,
+                      "name": "Botas de agua",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9930,
+                      "name": "Botas de nieve",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9932,
+                      "name": "Botas de trabajo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9929,
+                      "name": "Botas safari y con cordones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9933,
+                      "name": "Otras botas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11051,
+                  "name": "Calzado deportivo",
+                  "subcategories": [
+                    {
+                      "id": 9956,
+                      "name": "Botas de esquí",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9947,
+                      "name": "Botas de fútbol",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9951,
+                      "name": "Botas de fútbol sala",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9953,
+                      "name": "Botas de moto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9957,
+                      "name": "Botas de snowboard",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9949,
+                      "name": "Botas y calzado de senderismo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9945,
+                      "name": "Calzado de ciclismo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9946,
+                      "name": "Calzado de danza",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9944,
+                      "name": "Calzado de escalada y búlder",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9948,
+                      "name": "Calzado de golf",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9958,
+                      "name": "Calzado de natación y agua",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9950,
+                      "name": "Patines de hielo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9954,
+                      "name": "Patines de ruedas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9943,
+                      "name": "Zapatillas de baloncesto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9955,
+                      "name": "Zapatillas de correr",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9952,
+                      "name": "Zapatillas de gimnasio",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9959,
+                      "name": "Zapatillas de tenis",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9960,
+                      "name": "Otro calzado deportivo",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11050,
+                  "name": "Pantuflas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11048,
+                  "name": "Sandalias y chanclas",
+                  "subcategories": [
+                    {
+                      "id": 9937,
+                      "name": "Chanclas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9935,
+                      "name": "Chanclas de dedo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9936,
+                      "name": "Sandalias",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9934,
+                      "name": "Zuecos y mules",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9938,
+                      "name": "Otras sandalias y chanclas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11052,
+                  "name": "Zapatillas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11049,
+                  "name": "Zapatos de vestir",
+                  "subcategories": [
+                    {
+                      "id": 9939,
+                      "name": "Zapatos con cordones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9940,
+                      "name": "Zapatos con hebilla",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9941,
+                      "name": "Zapatos sin cordones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9942,
+                      "name": "Otros zapatos formales",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11045,
+                  "name": "Zapatos náuticos y mocasines",
+                  "subcategories": []
+                },
+                {
+                  "id": 11053,
+                  "name": "Otro calzado",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 11031,
+              "name": "Ropa",
+              "subcategories": [
+                {
+                  "id": 11040,
+                  "name": "Bañadores",
+                  "subcategories": []
+                },
+                {
+                  "id": 11039,
+                  "name": "Calcetines y ropa interior",
+                  "subcategories": [
+                    {
+                      "id": 9916,
+                      "name": "Albornoces",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9915,
+                      "name": "Calcetines",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9914,
+                      "name": "Calzoncillos y bóxers",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9918,
+                      "name": "Pijamas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9919,
+                      "name": "Otros calcetines y ropa interior",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11033,
+                  "name": "Camisas",
+                  "subcategories": []
+                },
+                {
+                  "id": 11042,
+                  "name": "Disfraces y trajes especiales",
+                  "subcategories": []
+                },
+                {
+                  "id": 11036,
+                  "name": "Jerséis y sudaderas",
+                  "subcategories": [
+                    {
+                      "id": 9895,
+                      "name": "Cárdigans",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9892,
+                      "name": "Jerséis",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9897,
+                      "name": "Jerséis con cuello de pico",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9898,
+                      "name": "Jerséis con cuello de tortuga",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9896,
+                      "name": "Jerséis de cuello redondo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9900,
+                      "name": "Jerséis de punto",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9899,
+                      "name": "Jerséis largos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9901,
+                      "name": "Jerséis sin mangas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9894,
+                      "name": "Sudaderas con cremallera",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9893,
+                      "name": "Sudaderas con y sin capucha",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9902,
+                      "name": "Otros jerséis",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11037,
+                  "name": "Pantalones",
+                  "subcategories": [
+                    {
+                      "id": 9903,
+                      "name": "Chinos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9904,
+                      "name": "Joggers",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9908,
+                      "name": "Pantalones anchos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9906,
+                      "name": "Pantalones cortos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9907,
+                      "name": "Pantalones de pinzas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9905,
+                      "name": "Pantalones pitillo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9909,
+                      "name": "Otros pantalones",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11038,
+                  "name": "Pantalones cortos",
+                  "subcategories": [
+                    {
+                      "id": 9910,
+                      "name": "Pantalones cortos cargo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9911,
+                      "name": "Pantalones cortos chinos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9912,
+                      "name": "Pantalones cortos vaqueros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9913,
+                      "name": "Otros pantalones cortos",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11007,
+                  "name": "Ropa de abrigo",
+                  "subcategories": [
+                    {
+                      "id": 9711,
+                      "name": "Abrigos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9710,
+                      "name": "Capas y ponchos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9712,
+                      "name": "Chalecos y gilets",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9715,
+                      "name": "Chaqueta bomber",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9713,
+                      "name": "Chaquetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9714,
+                      "name": "Chaquetas bolero",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9717,
+                      "name": "Chubasqueros",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9716,
+                      "name": "Gabardina",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9718,
+                      "name": "Parkas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9719,
+                      "name": "Otras prendas exteriores",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11041,
+                  "name": "Ropa deportiva",
+                  "subcategories": [
+                    {
+                      "id": 9926,
+                      "name": "Accesorios deportivos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9921,
+                      "name": "Chándales",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9922,
+                      "name": "Pantalones",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9923,
+                      "name": "Pantalones cortos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9920,
+                      "name": "Ropa de abrigo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9925,
+                      "name": "Sudaderas con y sin capucha",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9924,
+                      "name": "Tops y camisetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9927,
+                      "name": "Otra ropa deportiva",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11034,
+                  "name": "Tops y camisetas",
+                  "subcategories": [
+                    {
+                      "id": 9883,
+                      "name": "Camisetas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9884,
+                      "name": "Chalecos y camisetas sin mangas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9885,
+                      "name": "Otros tops",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11035,
+                  "name": "Trajes y americanas",
+                  "subcategories": [
+                    {
+                      "id": 9888,
+                      "name": "Chalecos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9886,
+                      "name": "Chaquetas de traje y americanas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9889,
+                      "name": "Conjuntos de traje",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9887,
+                      "name": "Pantalones de traje",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9890,
+                      "name": "Trajes de boda",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9891,
+                      "name": "Otros trajes y americanas",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11032,
+                  "name": "Vaqueros",
+                  "subcategories": [
+                    {
+                      "id": 9880,
+                      "name": "Vaqueros ajustados",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9879,
+                      "name": "Vaqueros pitillo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9881,
+                      "name": "Vaqueros rectos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9878,
+                      "name": "Vaqueros rotos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9882,
+                      "name": "Otros vaqueros",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 11043,
+                  "name": "Otras prendas",
+                  "subcategories": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 10436,
+          "name": "Accesorios",
+          "subcategories": [
+            {
+              "id": 9645,
+              "name": "Accesorios para el cabello",
+              "subcategories": []
+            },
+            {
+              "id": 10152,
+              "name": "Bolsos y mochilas",
+              "subcategories": [
+                {
+                  "id": 9649,
+                  "name": "Billeteras",
+                  "subcategories": []
+                },
+                {
+                  "id": 9600,
+                  "name": "Bolsa de aseo",
+                  "subcategories": []
+                },
+                {
+                  "id": 9626,
+                  "name": "Bolsas de viaje",
+                  "subcategories": []
+                },
+                {
+                  "id": 9622,
+                  "name": "Bolsos de fiesta",
+                  "subcategories": []
+                },
+                {
+                  "id": 9555,
+                  "name": "Bolsos de hombro",
+                  "subcategories": []
+                },
+                {
+                  "id": 9558,
+                  "name": "Bolsos de mano",
+                  "subcategories": []
+                },
+                {
+                  "id": 9625,
+                  "name": "Bolsos estampados y bordados",
+                  "subcategories": []
+                },
+                {
+                  "id": 9621,
+                  "name": "Bolsos tote",
+                  "subcategories": []
+                },
+                {
+                  "id": 9537,
+                  "name": "Carteras",
+                  "subcategories": []
+                },
+                {
+                  "id": 9614,
+                  "name": "Equipaje y maletas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9597,
+                  "name": "Maletines",
+                  "subcategories": []
+                },
+                {
+                  "id": 9543,
+                  "name": "Mochilas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9546,
+                  "name": "Monederos",
+                  "subcategories": []
+                },
+                {
+                  "id": 9623,
+                  "name": "Neceseres",
+                  "subcategories": []
+                },
+                {
+                  "id": 9596,
+                  "name": "Riñoneras",
+                  "subcategories": []
+                },
+                {
+                  "id": 9624,
+                  "name": "Satchels",
+                  "subcategories": []
+                },
+                {
+                  "id": 9578,
+                  "name": "Otros bolsos",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10153,
+              "name": "Bufandas y chales",
+              "subcategories": [
+                {
+                  "id": 9551,
+                  "name": "Bufandas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9628,
+                  "name": "Bufandas y chales de gran tamaño",
+                  "subcategories": []
+                },
+                {
+                  "id": 9629,
+                  "name": "Chales",
+                  "subcategories": []
+                },
+                {
+                  "id": 9552,
+                  "name": "Pañuelos",
+                  "subcategories": []
+                },
+                {
+                  "id": 9627,
+                  "name": "Pañuelos de cabeza",
+                  "subcategories": []
+                },
+                {
+                  "id": 9630,
+                  "name": "Otras bufandas y chales",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 9550,
+              "name": "Cinturones",
+              "subcategories": []
+            },
+            {
+              "id": 9584,
+              "name": "Corbatas y pañuelos",
+              "subcategories": []
+            },
+            {
+              "id": 9567,
+              "name": "Gafas de sol",
+              "subcategories": []
+            },
+            {
+              "id": 9610,
+              "name": "Guantes",
+              "subcategories": []
+            },
+            {
+              "id": 9635,
+              "name": "Paraguas",
+              "subcategories": []
+            },
+            {
+              "id": 9562,
+              "name": "Relojes",
+              "subcategories": []
+            },
+            {
+              "id": 10162,
+              "name": "Sombreros y gorras",
+              "subcategories": [
+                {
+                  "id": 9632,
+                  "name": "Boinas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9633,
+                  "name": "Diademas y cintas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9541,
+                  "name": "Gorras",
+                  "subcategories": []
+                },
+                {
+                  "id": 9553,
+                  "name": "Gorros",
+                  "subcategories": []
+                },
+                {
+                  "id": 9631,
+                  "name": "Gorros de invierno",
+                  "subcategories": []
+                },
+                {
+                  "id": 9618,
+                  "name": "Sombreros",
+                  "subcategories": []
+                },
+                {
+                  "id": 9634,
+                  "name": "Otros sombreros y gorras",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 9607,
+              "name": "Otros accesorios",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10156,
+          "name": "Joyería",
+          "subcategories": [
+            {
+              "id": 9534,
+              "name": "Anillos",
+              "subcategories": []
+            },
+            {
+              "id": 9579,
+              "name": "Broches",
+              "subcategories": []
+            },
+            {
+              "id": 9581,
+              "name": "Cadenas",
+              "subcategories": []
+            },
+            {
+              "id": 9539,
+              "name": "Colgantes",
+              "subcategories": []
+            },
+            {
+              "id": 9572,
+              "name": "Collares",
+              "subcategories": []
+            },
+            {
+              "id": 9637,
+              "name": "Conjuntos de joyas",
+              "subcategories": []
+            },
+            {
+              "id": 9636,
+              "name": "Cuentas",
+              "subcategories": []
+            },
+            {
+              "id": 9654,
+              "name": "Gemelos",
+              "subcategories": []
+            },
+            {
+              "id": 9644,
+              "name": "Joyeros",
+              "subcategories": []
+            },
+            {
+              "id": 9571,
+              "name": "Pendientes",
+              "subcategories": []
+            },
+            {
+              "id": 9651,
+              "name": "Piercings",
+              "subcategories": []
+            },
+            {
+              "id": 9570,
+              "name": "Pulseras",
+              "subcategories": []
+            },
+            {
+              "id": 9638,
+              "name": "Tobilleras",
+              "subcategories": []
+            },
+            {
+              "id": 9639,
+              "name": "Otras joyas",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10437,
+          "name": "Belleza",
+          "subcategories": [
+            {
+              "id": 9617,
+              "name": "Colonia",
+              "subcategories": []
+            },
+            {
+              "id": 9662,
+              "name": "Cuidado personal",
+              "subcategories": [
+                {
+                  "id": 9672,
+                  "name": "Aftershave y colonia",
+                  "subcategories": []
+                },
+                {
+                  "id": 9671,
+                  "name": "Artículos y kits de cuidado personal",
+                  "subcategories": []
+                },
+                {
+                  "id": 9669,
+                  "name": "Cuidado corporal",
+                  "subcategories": []
+                },
+                {
+                  "id": 9667,
+                  "name": "Cuidado de las manos",
+                  "subcategories": []
+                },
+                {
+                  "id": 9668,
+                  "name": "Cuidado de las uñas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9670,
+                  "name": "Cuidado del cabello",
+                  "subcategories": []
+                },
+                {
+                  "id": 9666,
+                  "name": "Cuidado facial",
+                  "subcategories": []
+                },
+                {
+                  "id": 9673,
+                  "name": "Otros productos de cuidado personal",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 9590,
+              "name": "Maquillaje",
+              "subcategories": []
+            },
+            {
+              "id": 9603,
+              "name": "Perfume",
+              "subcategories": []
+            },
+            {
+              "id": 9660,
+              "name": "Utensilios y accesorios",
+              "subcategories": [
+                {
+                  "id": 9663,
+                  "name": "Utensilios de afeitado",
+                  "subcategories": []
+                },
+                {
+                  "id": 9643,
+                  "name": "Utensilios de maquillaje",
+                  "subcategories": []
+                },
+                {
+                  "id": 24000,
+                  "name": "Utensilios de peinado",
+                  "subcategories": [
+                    {
+                      "id": 9652,
+                      "name": "Cepillos para el pelo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9611,
+                      "name": "Planchas para el pelo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9647,
+                      "name": "Rizadores",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 9648,
+                      "name": "Secadores",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 9641,
+                  "name": "Utensilios para el cuidado corporal",
+                  "subcategories": []
+                },
+                {
+                  "id": 9640,
+                  "name": "Utensilios para el cuidado facial",
+                  "subcategories": []
+                },
+                {
+                  "id": 9664,
+                  "name": "Utensilios para el cuidado personal",
+                  "subcategories": []
+                },
+                {
+                  "id": 9642,
+                  "name": "Utensilios para las uñas",
+                  "subcategories": []
+                },
+                {
+                  "id": 9665,
+                  "name": "Otros utensilios",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 9674,
+              "name": "Otros productos de belleza",
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "name": "Inmobiliaria",
+      "subcategories": []
+    },
+    {
+      "id": 24200,
+      "name": "Tecnología y electrónica",
+      "subcategories": [
+        {
+          "id": 10206,
+          "name": "Imagen: televisores y proyectores",
+          "subcategories": [
+            {
+              "id": 10414,
+              "name": "TV",
+              "subcategories": []
+            },
+            {
+              "id": 10406,
+              "name": "Proyectores",
+              "subcategories": []
+            },
+            {
+              "id": 10405,
+              "name": "Accesorios de televisores y proyectores",
+              "subcategories": [
+                {
+                  "id": 24140,
+                  "name": "Lámparas proyector",
+                  "subcategories": []
+                },
+                {
+                  "id": 24141,
+                  "name": "Pantallas de proyección",
+                  "subcategories": []
+                },
+                {
+                  "id": 24142,
+                  "name": "Soportes para proyectores",
+                  "subcategories": []
+                },
+                {
+                  "id": 24144,
+                  "name": "DVD y Blu-Ray",
+                  "subcategories": []
+                },
+                {
+                  "id": 24145,
+                  "name": "Soportes TV",
+                  "subcategories": []
+                },
+                {
+                  "id": 10413,
+                  "name": "Mandos a distancia",
+                  "subcategories": []
+                },
+                {
+                  "id": 24146,
+                  "name": "TDT",
+                  "subcategories": []
+                },
+                {
+                  "id": 24147,
+                  "name": "Muebles de TV",
+                  "subcategories": []
+                },
+                {
+                  "id": 24148,
+                  "name": "Marcos para TV",
+                  "subcategories": []
+                },
+                {
+                  "id": 10409,
+                  "name": "Otros accesorios de televisores y proyectores",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24192,
+              "name": "Otros artículos de imagen",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 24149,
+          "name": "Sonido: auriculares y altavoces",
+          "subcategories": [
+            {
+              "id": 10395,
+              "name": "Auriculares",
+              "subcategories": []
+            },
+            {
+              "id": 24150,
+              "name": "Altavoces",
+              "subcategories": []
+            },
+            {
+              "id": 24151,
+              "name": "Home cinema y barras de sonido",
+              "subcategories": []
+            },
+            {
+              "id": 10205,
+              "name": "Dispositivos de sonido",
+              "subcategories": [
+                {
+                  "id": 24152,
+                  "name": "Despertadores digitales",
+                  "subcategories": []
+                },
+                {
+                  "id": 24153,
+                  "name": "Grabadoras de voz",
+                  "subcategories": []
+                },
+                {
+                  "id": 24154,
+                  "name": "Karaoke",
+                  "subcategories": []
+                },
+                {
+                  "id": 24155,
+                  "name": "MP3 y MP4",
+                  "subcategories": []
+                },
+                {
+                  "id": 24156,
+                  "name": "Radio",
+                  "subcategories": []
+                },
+                {
+                  "id": 24157,
+                  "name": "Radio CD",
+                  "subcategories": []
+                },
+                {
+                  "id": 24158,
+                  "name": "Reproductor CD",
+                  "subcategories": []
+                },
+                {
+                  "id": 24159,
+                  "name": "Otros dispositivos de audio",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10070,
+              "name": "Tocadiscos",
+              "subcategories": []
+            },
+            {
+              "id": 24160,
+              "name": "DJ y audio profesional",
+              "subcategories": [
+                {
+                  "id": 24161,
+                  "name": "Accesorios de Grabación",
+                  "subcategories": []
+                },
+                {
+                  "id": 24162,
+                  "name": "Amplificadores",
+                  "subcategories": []
+                },
+                {
+                  "id": 24163,
+                  "name": "Receptores",
+                  "subcategories": []
+                },
+                {
+                  "id": 24164,
+                  "name": "Auriculares para DJ",
+                  "subcategories": []
+                },
+                {
+                  "id": 24165,
+                  "name": "Controladores MIDI",
+                  "subcategories": []
+                },
+                {
+                  "id": 24166,
+                  "name": "Grabadoras",
+                  "subcategories": []
+                },
+                {
+                  "id": 24167,
+                  "name": "Maletas de DJ",
+                  "subcategories": []
+                },
+                {
+                  "id": 24168,
+                  "name": "Mesa de mezclas / DJ",
+                  "subcategories": []
+                },
+                {
+                  "id": 24169,
+                  "name": "Micrófonos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24170,
+                  "name": "Monitores de estudio",
+                  "subcategories": []
+                },
+                {
+                  "id": 24171,
+                  "name": "Pedales",
+                  "subcategories": []
+                },
+                {
+                  "id": 24172,
+                  "name": "Sintetizadores",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24173,
+              "name": "Otros dispositivos de sonido",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10200,
+          "name": "Fotografía: cámaras y drones",
+          "subcategories": [
+            {
+              "id": 10397,
+              "name": "Cámaras",
+              "subcategories": [
+                {
+                  "id": 24174,
+                  "name": "Reflex",
+                  "subcategories": []
+                },
+                {
+                  "id": 24175,
+                  "name": "Compactas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24176,
+                  "name": "Sin espejo",
+                  "subcategories": []
+                },
+                {
+                  "id": 24177,
+                  "name": "Vintage",
+                  "subcategories": []
+                },
+                {
+                  "id": 24178,
+                  "name": "Instantáneas",
+                  "subcategories": []
+                },
+                {
+                  "id": 10417,
+                  "name": "Cámaras de video",
+                  "subcategories": []
+                },
+                {
+                  "id": 24179,
+                  "name": "Otras cámaras",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10401,
+              "name": "Objetivos",
+              "subcategories": []
+            },
+            {
+              "id": 10201,
+              "name": "Drones",
+              "subcategories": []
+            },
+            {
+              "id": 24180,
+              "name": "Accesorios de fotografía",
+              "subcategories": [
+                {
+                  "id": 10398,
+                  "name": "Flashes",
+                  "subcategories": []
+                },
+                {
+                  "id": 24181,
+                  "name": "Carretes fotográficos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24182,
+                  "name": "Filtros fotograficos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24183,
+                  "name": "Papel fotográfico",
+                  "subcategories": []
+                },
+                {
+                  "id": 24184,
+                  "name": "Grips",
+                  "subcategories": []
+                },
+                {
+                  "id": 24185,
+                  "name": "Tapas y parasoles",
+                  "subcategories": []
+                },
+                {
+                  "id": 10403,
+                  "name": "Trípodes y monopies",
+                  "subcategories": []
+                },
+                {
+                  "id": 24186,
+                  "name": "Fundas de objetivos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24187,
+                  "name": "Fundas, mochilas y correas para cámara",
+                  "subcategories": []
+                },
+                {
+                  "id": 10203,
+                  "name": "Baterías y cargadores",
+                  "subcategories": []
+                },
+                {
+                  "id": 24188,
+                  "name": "Álbumes de fotos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24189,
+                  "name": "Marcos de fotos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24190,
+                  "name": "Libros de fotos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24191,
+                  "name": "Otros accesorios de fotografía",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10199,
+              "name": "Cámaras de vigilancia",
+              "subcategories": []
+            },
+            {
+              "id": 24193,
+              "name": "Otros articulos de fotografía",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 24201,
+          "name": "Telefonía: móviles y smartwatches",
+          "subcategories": [
+            {
+              "id": 9447,
+              "name": "Smartphones",
+              "subcategories": []
+            },
+            {
+              "id": 9487,
+              "name": "Smartwatches y pulsera de actividad",
+              "subcategories": []
+            },
+            {
+              "id": 10175,
+              "name": "Teléfonos vintage",
+              "subcategories": []
+            },
+            {
+              "id": 24102,
+              "name": "Telefonos fijos",
+              "subcategories": []
+            },
+            {
+              "id": 24103,
+              "name": "Otros teléfonos",
+              "subcategories": []
+            },
+            {
+              "id": 9375,
+              "name": "Accesorios de móviles y smartwatches",
+              "subcategories": [
+                {
+                  "id": 10427,
+                  "name": "Cargadores y cables para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24104,
+                  "name": "Powerbanks",
+                  "subcategories": []
+                },
+                {
+                  "id": 10428,
+                  "name": "Fundas y carcasas para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 10423,
+                  "name": "Baterías para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24105,
+                  "name": "Soportes para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24106,
+                  "name": "Cristales templados para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24107,
+                  "name": "Palos selfies",
+                  "subcategories": []
+                },
+                {
+                  "id": 24108,
+                  "name": "Trípodes para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24109,
+                  "name": "Manos libres",
+                  "subcategories": []
+                },
+                {
+                  "id": 24110,
+                  "name": "Aros de luz para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24111,
+                  "name": "Estabilizadores para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24112,
+                  "name": "Amplificadores de pantalla para móviles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24113,
+                  "name": "Localizadores para móvil",
+                  "subcategories": []
+                },
+                {
+                  "id": 9388,
+                  "name": "Piezas de recambio",
+                  "subcategories": []
+                },
+                {
+                  "id": 9370,
+                  "name": "Otros accesorios de móviles y smartwatches",
+                  "subcategories": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 24202,
+          "name": "Informática: ordenadores y tablets",
+          "subcategories": [
+            {
+              "id": 10310,
+              "name": "Portátiles",
+              "subcategories": []
+            },
+            {
+              "id": 10309,
+              "name": "Ordenadores de sobremesa",
+              "subcategories": []
+            },
+            {
+              "id": 10136,
+              "name": "Realidad Virtual y aumentada",
+              "subcategories": [
+                {
+                  "id": 24114,
+                  "name": "Gafas de realidad virtual",
+                  "subcategories": []
+                },
+                {
+                  "id": 24194,
+                  "name": "Otros accesorios de realidad virtual",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 9374,
+              "name": "Tablets",
+              "subcategories": []
+            },
+            {
+              "id": 24132,
+              "name": "E-readers",
+              "subcategories": []
+            },
+            {
+              "id": 10134,
+              "name": "Periféricos",
+              "subcategories": [
+                {
+                  "id": 10307,
+                  "name": "Impresoras",
+                  "subcategories": []
+                },
+                {
+                  "id": 10133,
+                  "name": "Monitores",
+                  "subcategories": []
+                },
+                {
+                  "id": 10311,
+                  "name": "Ratones",
+                  "subcategories": []
+                },
+                {
+                  "id": 10312,
+                  "name": "Teclados",
+                  "subcategories": []
+                },
+                {
+                  "id": 24133,
+                  "name": "Escáners",
+                  "subcategories": []
+                },
+                {
+                  "id": 24134,
+                  "name": "Webcams",
+                  "subcategories": []
+                },
+                {
+                  "id": 24135,
+                  "name": "Otros periféricos",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10304,
+              "name": "Componentes y piezas de ordenador",
+              "subcategories": []
+            },
+            {
+              "id": 24136,
+              "name": "Accesorios de informática",
+              "subcategories": [
+                {
+                  "id": 10305,
+                  "name": "Accesorios para portátiles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24137,
+                  "name": "Accesorios para tablets",
+                  "subcategories": []
+                },
+                {
+                  "id": 10306,
+                  "name": "Accesorios consumibles para impresoras",
+                  "subcategories": []
+                },
+                {
+                  "id": 10137,
+                  "name": "Software",
+                  "subcategories": []
+                },
+                {
+                  "id": 24138,
+                  "name": "Redes y conectividad",
+                  "subcategories": []
+                },
+                {
+                  "id": 10308,
+                  "name": "Discos duros externos",
+                  "subcategories": []
+                },
+                {
+                  "id": 10130,
+                  "name": "Cables de informática",
+                  "subcategories": []
+                },
+                {
+                  "id": 24139,
+                  "name": "Pendrives y memorias USB",
+                  "subcategories": []
+                },
+                {
+                  "id": 10135,
+                  "name": "Otros accesorios de informática",
+                  "subcategories": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 24203,
+          "name": "Gaming: consolas y videojuegos",
+          "subcategories": [
+            {
+              "id": 10087,
+              "name": "Consolas y accesorios",
+              "subcategories": [
+                {
+                  "id": 10088,
+                  "name": "Consolas",
+                  "subcategories": []
+                },
+                {
+                  "id": 10092,
+                  "name": "Accesorios y recambios de consolas",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24115,
+              "name": "PC gaming y streaming",
+              "subcategories": [
+                {
+                  "id": 24116,
+                  "name": "Portátiles gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24117,
+                  "name": "Ordenadores sobremesa gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24118,
+                  "name": "Monitores gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24119,
+                  "name": "Ratones gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24120,
+                  "name": "Teclados gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24121,
+                  "name": "Sillas gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24122,
+                  "name": "Mesas gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24123,
+                  "name": "Alfombrillas gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24124,
+                  "name": "Mandos para PC",
+                  "subcategories": []
+                },
+                {
+                  "id": 24125,
+                  "name": "Volantes para PC",
+                  "subcategories": []
+                },
+                {
+                  "id": 24126,
+                  "name": "Altavoces gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24127,
+                  "name": "Microfonos para PC gamer",
+                  "subcategories": []
+                },
+                {
+                  "id": 24128,
+                  "name": "Auriculares gaming",
+                  "subcategories": []
+                },
+                {
+                  "id": 24129,
+                  "name": "Juegos para PC",
+                  "subcategories": []
+                },
+                {
+                  "id": 24130,
+                  "name": "Accesorios de PC gaming",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24131,
+              "name": "Videojuegos y más",
+              "subcategories": [
+                {
+                  "id": 10093,
+                  "name": "Videojuegos",
+                  "subcategories": []
+                },
+                {
+                  "id": 10089,
+                  "name": "Manuales y guías de videojuegos",
+                  "subcategories": []
+                },
+                {
+                  "id": 10090,
+                  "name": "Merchandising de videojuegos",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10091,
+              "name": "Otros artículos de gaming",
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12579,
+      "name": "Deporte y ocio",
+      "subcategories": [
+        {
+          "id": 10094,
+          "name": "Baloncesto",
+          "subcategories": []
+        },
+        {
+          "id": 10095,
+          "name": "Balonmano",
+          "subcategories": []
+        },
+        {
+          "id": 10096,
+          "name": "Estáticas y elípticas",
+          "subcategories": []
+        },
+        {
+          "id": 10097,
+          "name": "Fitness, running y yoga",
+          "subcategories": []
+        },
+        {
+          "id": 10098,
+          "name": "Fútbol",
+          "subcategories": []
+        },
+        {
+          "id": 10099,
+          "name": "Golf",
+          "subcategories": []
+        },
+        {
+          "id": 10100,
+          "name": "Juegos recreativos y de mesa",
+          "subcategories": []
+        },
+        {
+          "id": 10101,
+          "name": "Manualidades",
+          "subcategories": []
+        },
+        {
+          "id": 10102,
+          "name": "Montaña y esquí",
+          "subcategories": []
+        },
+        {
+          "id": 10103,
+          "name": "Natación y accesorios piscina",
+          "subcategories": []
+        },
+        {
+          "id": 10105,
+          "name": "Otros deportes",
+          "subcategories": []
+        },
+        {
+          "id": 10106,
+          "name": "Patinetes y patinaje",
+          "subcategories": []
+        },
+        {
+          "id": 10107,
+          "name": "Rugby",
+          "subcategories": []
+        },
+        {
+          "id": 10108,
+          "name": "Tenis y pádel",
+          "subcategories": []
+        },
+        {
+          "id": 10109,
+          "name": "Vóley",
+          "subcategories": []
+        },
+        {
+          "id": 10104,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 17000,
+      "name": "Bicicletas",
+      "subcategories": [
+        {
+          "id": 10055,
+          "name": "Accesorios para bicicletas",
+          "subcategories": [
+            {
+              "id": 10208,
+              "name": "Bombas e infladores",
+              "subcategories": []
+            },
+            {
+              "id": 10209,
+              "name": "Electrónica para bicicletas",
+              "subcategories": []
+            },
+            {
+              "id": 10210,
+              "name": "Luces",
+              "subcategories": []
+            },
+            {
+              "id": 10211,
+              "name": "Portabicicletas",
+              "subcategories": []
+            },
+            {
+              "id": 10212,
+              "name": "Rodillos",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10056,
+          "name": "Bicicletas y triciclos",
+          "subcategories": [
+            {
+              "id": 10216,
+              "name": "Bicicletas Infantiles",
+              "subcategories": []
+            },
+            {
+              "id": 10213,
+              "name": "Bicicletas ciudad",
+              "subcategories": []
+            },
+            {
+              "id": 10438,
+              "name": "Bicicletas de carretera",
+              "subcategories": []
+            },
+            {
+              "id": 10215,
+              "name": "Bicicletas eléctricas",
+              "subcategories": []
+            },
+            {
+              "id": 10217,
+              "name": "Bicicletas plegables",
+              "subcategories": []
+            },
+            {
+              "id": 10218,
+              "name": "Fixies",
+              "subcategories": []
+            },
+            {
+              "id": 10214,
+              "name": "MTB",
+              "subcategories": []
+            },
+            {
+              "id": 10219,
+              "name": "Monociclos",
+              "subcategories": []
+            },
+            {
+              "id": 10220,
+              "name": "Triciclos",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10058,
+          "name": "Piezas y recambios de bici",
+          "subcategories": [
+            {
+              "id": 10221,
+              "name": "Cuadros",
+              "subcategories": []
+            },
+            {
+              "id": 10223,
+              "name": "Herramientas",
+              "subcategories": []
+            },
+            {
+              "id": 10222,
+              "name": "Neumáticos y cámaras",
+              "subcategories": []
+            },
+            {
+              "id": 10224,
+              "name": "Piezas",
+              "subcategories": []
+            },
+            {
+              "id": 10225,
+              "name": "Recambios",
+              "subcategories": []
+            },
+            {
+              "id": 10226,
+              "name": "Ruedas",
+              "subcategories": []
+            },
+            {
+              "id": 10227,
+              "name": "Sillín",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10059,
+          "name": "Protección y vestimenta",
+          "subcategories": [
+            {
+              "id": 10230,
+              "name": "Alforjas",
+              "subcategories": []
+            },
+            {
+              "id": 10228,
+              "name": "Cascos",
+              "subcategories": []
+            },
+            {
+              "id": 10229,
+              "name": "Gafas ciclismo y de sol",
+              "subcategories": []
+            },
+            {
+              "id": 10231,
+              "name": "Ropa ciclismo",
+              "subcategories": []
+            },
+            {
+              "id": 10232,
+              "name": "Zapatillas y cubrezapatillas",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10057,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 12467,
+      "name": "Hogar y jardín",
+      "subcategories": [
+        {
+          "id": 10125,
+          "name": "Muebles y organización",
+          "subcategories": [
+            {
+              "id": 24273,
+              "name": "Camas y accesorios",
+              "subcategories": [
+                {
+                  "id": 10269,
+                  "name": "Colchones",
+                  "subcategories": []
+                },
+                {
+                  "id": 10270,
+                  "name": "Ropa de cama",
+                  "subcategories": []
+                },
+                {
+                  "id": 24204,
+                  "name": "Estructura de camas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24205,
+                  "name": "Cabeceros y pies de cama",
+                  "subcategories": []
+                },
+                {
+                  "id": 10268,
+                  "name": "Almohadas y cojines",
+                  "subcategories": []
+                },
+                {
+                  "id": 24206,
+                  "name": "Accesorios",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24207,
+              "name": "Mesas y mesitas",
+              "subcategories": [
+                {
+                  "id": 24208,
+                  "name": "Escritorios",
+                  "subcategories": []
+                },
+                {
+                  "id": 24209,
+                  "name": "Mesas de comedor",
+                  "subcategories": []
+                },
+                {
+                  "id": 24210,
+                  "name": "Mesas de centro y bajas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24211,
+                  "name": "Mesitas de noche y auxiliares",
+                  "subcategories": []
+                },
+                {
+                  "id": 24212,
+                  "name": "Tocadores",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10127,
+              "name": "Muebles de almacenaje",
+              "subcategories": [
+                {
+                  "id": 10288,
+                  "name": "Almacenaje de oficina",
+                  "subcategories": []
+                },
+                {
+                  "id": 10292,
+                  "name": "Estanterías",
+                  "subcategories": []
+                },
+                {
+                  "id": 24268,
+                  "name": "Muebles de salón y televisión",
+                  "subcategories": []
+                },
+                {
+                  "id": 10289,
+                  "name": "Armarios",
+                  "subcategories": []
+                },
+                {
+                  "id": 24213,
+                  "name": "Vitrinas, aparadores y consolas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24214,
+                  "name": "Cómodas y cajoneras",
+                  "subcategories": []
+                },
+                {
+                  "id": 24215,
+                  "name": "Zapateros",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24216,
+              "name": "Sofás y sillones",
+              "subcategories": [
+                {
+                  "id": 24217,
+                  "name": "Sofas y divanes",
+                  "subcategories": []
+                },
+                {
+                  "id": 24218,
+                  "name": "Sofa cama y futones",
+                  "subcategories": []
+                },
+                {
+                  "id": 24219,
+                  "name": "Sillones y mecedoras",
+                  "subcategories": []
+                },
+                {
+                  "id": 24220,
+                  "name": "Puffs",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24221,
+              "name": "Sillas y taburetes",
+              "subcategories": []
+            },
+            {
+              "id": 24222,
+              "name": "Set de muebles",
+              "subcategories": [
+                {
+                  "id": 24223,
+                  "name": "Set de mesas y sillas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24224,
+                  "name": "Set muebles habitación",
+                  "subcategories": []
+                },
+                {
+                  "id": 24225,
+                  "name": "Set de salón",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24226,
+              "name": "Carritos",
+              "subcategories": []
+            },
+            {
+              "id": 10291,
+              "name": "Cajas y organizadores",
+              "subcategories": [
+                {
+                  "id": 24269,
+                  "name": "Colgadores, percheros y burras",
+                  "subcategories": []
+                },
+                {
+                  "id": 10290,
+                  "name": "Baúles, cajas y cubos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24227,
+                  "name": "Cestas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24228,
+                  "name": "Almacenaje de joyas y maquillaje",
+                  "subcategories": []
+                },
+                {
+                  "id": 24229,
+                  "name": "Basura y reciclaje",
+                  "subcategories": []
+                },
+                {
+                  "id": 24230,
+                  "name": "Organizadores",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10285,
+              "name": "Antigüedades",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10119,
+          "name": "Baño y accesorios",
+          "subcategories": [
+            {
+              "id": 24275,
+              "name": "Inodoros y bidet",
+              "subcategories": []
+            },
+            {
+              "id": 24277,
+              "name": "Duchas y bañeras",
+              "subcategories": []
+            },
+            {
+              "id": 10264,
+              "name": "Picas y muebles baño",
+              "subcategories": []
+            },
+            {
+              "id": 24270,
+              "name": "Grifería de baño",
+              "subcategories": []
+            },
+            {
+              "id": 10263,
+              "name": "Textiles de baño",
+              "subcategories": []
+            },
+            {
+              "id": 10419,
+              "name": "Accesorios baño",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10120,
+          "name": "Cocina",
+          "subcategories": [
+            {
+              "id": 24231,
+              "name": "Menaje para cocinar, comer y beber",
+              "subcategories": [
+                {
+                  "id": 10267,
+                  "name": "Platos y vajilla",
+                  "subcategories": []
+                },
+                {
+                  "id": 10266,
+                  "name": "Utensilios para cocinar",
+                  "subcategories": []
+                },
+                {
+                  "id": 24271,
+                  "name": "Cristalería y jarras",
+                  "subcategories": []
+                },
+                {
+                  "id": 10420,
+                  "name": "Cubertería",
+                  "subcategories": []
+                },
+                {
+                  "id": 24272,
+                  "name": "Sartenes, ollas y batería de cocina",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24232,
+              "name": "Picas y muebles cocina",
+              "subcategories": []
+            },
+            {
+              "id": 24233,
+              "name": "Grifería de cocina",
+              "subcategories": []
+            },
+            {
+              "id": 24234,
+              "name": "Textiles de cocina y comedor",
+              "subcategories": []
+            },
+            {
+              "id": 24235,
+              "name": "Accesorios",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10122,
+          "name": "Decoración y espejos",
+          "subcategories": [
+            {
+              "id": 24236,
+              "name": "Fundas y cojines de sofá",
+              "subcategories": []
+            },
+            {
+              "id": 24237,
+              "name": "Decoración para pared y colgar",
+              "subcategories": []
+            },
+            {
+              "id": 10271,
+              "name": "Decoración para festividades",
+              "subcategories": []
+            },
+            {
+              "id": 24238,
+              "name": "Espejos",
+              "subcategories": []
+            },
+            {
+              "id": 10273,
+              "name": "Cortinas",
+              "subcategories": []
+            },
+            {
+              "id": 10272,
+              "name": "Alfombras",
+              "subcategories": []
+            },
+            {
+              "id": 24239,
+              "name": "Jarrones y figuras decorativas",
+              "subcategories": []
+            },
+            {
+              "id": 24240,
+              "name": "Velas y portavelas",
+              "subcategories": []
+            },
+            {
+              "id": 24241,
+              "name": "Otros",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10123,
+          "name": "Iluminación",
+          "subcategories": [
+            {
+              "id": 24242,
+              "name": "Apliques, lámparas, pantallas y bases",
+              "subcategories": []
+            },
+            {
+              "id": 24243,
+              "name": "Bombillas",
+              "subcategories": []
+            },
+            {
+              "id": 10281,
+              "name": "Luces decorativas y de exterior",
+              "subcategories": []
+            },
+            {
+              "id": 24244,
+              "name": "Iluminación inteligente",
+              "subcategories": []
+            },
+            {
+              "id": 24245,
+              "name": "Accesorios de iluminación",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10124,
+          "name": "Jardín y exteriores",
+          "subcategories": [
+            {
+              "id": 10283,
+              "name": "Muebles para exterior",
+              "subcategories": [
+                {
+                  "id": 24246,
+                  "name": "Sets de muebles de exterior",
+                  "subcategories": []
+                },
+                {
+                  "id": 24247,
+                  "name": "Mesas de exterior",
+                  "subcategories": []
+                },
+                {
+                  "id": 24248,
+                  "name": "Sillas, sillones, sofás y tumbonas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24249,
+                  "name": "Carpas, toldos y parasoles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24250,
+                  "name": "Armarios y almacenaje",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 24251,
+              "name": "Decoración",
+              "subcategories": []
+            },
+            {
+              "id": 10282,
+              "name": "Plantas y jardinería",
+              "subcategories": [
+                {
+                  "id": 24252,
+                  "name": "Plantas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24253,
+                  "name": "Semillas y sustratos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24254,
+                  "name": "Insecticidas y tratamiento para plantas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24255,
+                  "name": "Macetas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24256,
+                  "name": "Invernaderos y riego",
+                  "subcategories": []
+                },
+                {
+                  "id": 24257,
+                  "name": "Herramientas de jardinería",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10280,
+              "name": "Barbacoas",
+              "subcategories": []
+            },
+            {
+              "id": 10284,
+              "name": "Piscinas, spa y duchas de exterior",
+              "subcategories": []
+            },
+            {
+              "id": 24258,
+              "name": "Maquinaria de jardín",
+              "subcategories": []
+            },
+            {
+              "id": 24259,
+              "name": "Cesped, vallas y paneles",
+              "subcategories": []
+            },
+            {
+              "id": 24260,
+              "name": "Accesorios",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 24276,
+          "name": "Calefacción y climatización",
+          "subcategories": [
+            {
+              "id": 24261,
+              "name": "Chimeneas, Estufas y radiadores",
+              "subcategories": []
+            },
+            {
+              "id": 24262,
+              "name": "Aire acondicionado y ventiladores ",
+              "subcategories": []
+            },
+            {
+              "id": 24263,
+              "name": "Combustibles y pellet",
+              "subcategories": []
+            },
+            {
+              "id": 24264,
+              "name": "Termostatos y válvulas termostáticas",
+              "subcategories": []
+            },
+            {
+              "id": 24265,
+              "name": "Calderas y termos eléctricos",
+              "subcategories": []
+            },
+            {
+              "id": 24266,
+              "name": "Purificador y humificador",
+              "subcategories": []
+            },
+            {
+              "id": 24267,
+              "name": "Otros",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10118,
+          "name": "Artículos para mascotas",
+          "subcategories": [
+            {
+              "id": 10262,
+              "name": "Accesorios de paseo",
+              "subcategories": []
+            },
+            {
+              "id": 10257,
+              "name": "Camas",
+              "subcategories": []
+            },
+            {
+              "id": 10258,
+              "name": "Corrales",
+              "subcategories": []
+            },
+            {
+              "id": 10259,
+              "name": "Higiene",
+              "subcategories": []
+            },
+            {
+              "id": 10260,
+              "name": "Jaulas",
+              "subcategories": []
+            },
+            {
+              "id": 10261,
+              "name": "Juguetes",
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13100,
+      "name": "Electrodomésticos",
+      "subcategories": [
+        {
+          "id": 10111,
+          "name": "Electrodomésticos de cocina",
+          "subcategories": []
+        },
+        {
+          "id": 10112,
+          "name": "Lavandería y plancha",
+          "subcategories": []
+        },
+        {
+          "id": 10113,
+          "name": "Pequeños electrodomésticos",
+          "subcategories": []
+        },
+        {
+          "id": 10114,
+          "name": "Piezas y recambios",
+          "subcategories": []
+        },
+        {
+          "id": 10115,
+          "name": "Vitrocerámica",
+          "subcategories": []
+        },
+        {
+          "id": 10441,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 12463,
+      "name": "Cine, libros y música",
+      "subcategories": [
+        {
+          "id": 24002,
+          "name": "Cine y series",
+          "subcategories": [
+            {
+              "id": 10067,
+              "name": "Películas y Series",
+              "subcategories": [
+                {
+                  "id": 24008,
+                  "name": "Cine",
+                  "subcategories": []
+                },
+                {
+                  "id": 24010,
+                  "name": "Cine infantil",
+                  "subcategories": []
+                },
+                {
+                  "id": 24009,
+                  "name": "Series",
+                  "subcategories": []
+                },
+                {
+                  "id": 24011,
+                  "name": "Otras películas y series",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10068,
+              "name": "Pósters y merchandising de cine y TV",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 24003,
+          "name": "Libros, cómics y revistas",
+          "subcategories": [
+            {
+              "id": 10061,
+              "name": "Cómics y novelas gráficas",
+              "subcategories": [
+                {
+                  "id": 24035,
+                  "name": "Artbooks",
+                  "subcategories": []
+                },
+                {
+                  "id": 24036,
+                  "name": "Arte original de cómics",
+                  "subcategories": []
+                },
+                {
+                  "id": 24037,
+                  "name": "Cómics americanos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24038,
+                  "name": "Cómics francobelgas y europeos",
+                  "subcategories": []
+                },
+                {
+                  "id": 24039,
+                  "name": "Fanzines y clubs de fans",
+                  "subcategories": []
+                },
+                {
+                  "id": 24040,
+                  "name": "Guías de precios y del comprador",
+                  "subcategories": []
+                },
+                {
+                  "id": 24041,
+                  "name": "Manga",
+                  "subcategories": []
+                },
+                {
+                  "id": 24042,
+                  "name": "Merchandising y memorabilia",
+                  "subcategories": []
+                },
+                {
+                  "id": 24043,
+                  "name": "Otras tradiciones de cómics",
+                  "subcategories": []
+                },
+                {
+                  "id": 24044,
+                  "name": "Otros comics",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10064,
+              "name": "Libros",
+              "subcategories": [
+                {
+                  "id": 10251,
+                  "name": "Ficción",
+                  "subcategories": [
+                    {
+                      "id": 24096,
+                      "name": "Ciencia ficción y fantasía",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24092,
+                      "name": "Crimen y misterio",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24093,
+                      "name": "Humor",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24090,
+                      "name": "Literatura clásica",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24091,
+                      "name": "Novela contemporánea",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24095,
+                      "name": "Novela romántica",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24094,
+                      "name": "Poesía y teatro",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24097,
+                      "name": "Otros libros de ficción",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 10249,
+                  "name": "Infantil y juvenil",
+                  "subcategories": [
+                    {
+                      "id": 24100,
+                      "name": "Bebés",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24098,
+                      "name": "Infantil",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24099,
+                      "name": "Juvenil",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 10250,
+                  "name": "No ficción",
+                  "subcategories": [
+                    {
+                      "id": 24080,
+                      "name": "Aficiones y manualidades",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24073,
+                      "name": "Arte y entretenimiento",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24101,
+                      "name": "Autoayuda",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24074,
+                      "name": "Biografías",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24086,
+                      "name": "Ciencias y naturaleza",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24087,
+                      "name": "Deportes",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24084,
+                      "name": "Diccionarios y libros de consulta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24075,
+                      "name": "Economía y empresa",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24077,
+                      "name": "Gastronomía",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24079,
+                      "name": "Historia",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24076,
+                      "name": "Informática y tecnología",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24081,
+                      "name": "Pedagogía y familia",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24082,
+                      "name": "Política y sociología",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24083,
+                      "name": "Profesiones y especialidades",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24085,
+                      "name": "Religión",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24078,
+                      "name": "Salud y bienestar",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24088,
+                      "name": "Viajes",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24089,
+                      "name": "Otros (no ficción)",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 10248,
+                      "name": "Escolares y de texto",
+                      "subcategories": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": 10069,
+              "name": "Revistas",
+              "subcategories": [
+                {
+                  "id": 24012,
+                  "name": "Antiguas y de coleccionista",
+                  "subcategories": []
+                },
+                {
+                  "id": 24014,
+                  "name": "Arquitectura, arte y diseño",
+                  "subcategories": []
+                },
+                {
+                  "id": 24016,
+                  "name": "Ciencia",
+                  "subcategories": []
+                },
+                {
+                  "id": 24018,
+                  "name": "Cine y televisión",
+                  "subcategories": []
+                },
+                {
+                  "id": 24020,
+                  "name": "Cocina",
+                  "subcategories": []
+                },
+                {
+                  "id": 24022,
+                  "name": "Deportes",
+                  "subcategories": []
+                },
+                {
+                  "id": 24024,
+                  "name": "Femeninas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24026,
+                  "name": "Fotografía",
+                  "subcategories": []
+                },
+                {
+                  "id": 24030,
+                  "name": "Historia y política",
+                  "subcategories": []
+                },
+                {
+                  "id": 24013,
+                  "name": "Hogar y decoración",
+                  "subcategories": []
+                },
+                {
+                  "id": 24015,
+                  "name": "Infantiles y juveniles",
+                  "subcategories": []
+                },
+                {
+                  "id": 24017,
+                  "name": "Informática e internet",
+                  "subcategories": []
+                },
+                {
+                  "id": 24019,
+                  "name": "Jardinería",
+                  "subcategories": []
+                },
+                {
+                  "id": 24028,
+                  "name": "LGBTIQ+",
+                  "subcategories": []
+                },
+                {
+                  "id": 24021,
+                  "name": "Manualidades",
+                  "subcategories": []
+                },
+                {
+                  "id": 24023,
+                  "name": "Masculinas",
+                  "subcategories": []
+                },
+                {
+                  "id": 24025,
+                  "name": "Moda y estilo de vida",
+                  "subcategories": []
+                },
+                {
+                  "id": 24027,
+                  "name": "Música, danza y teatro",
+                  "subcategories": []
+                },
+                {
+                  "id": 24029,
+                  "name": "Naturaleza y geografía",
+                  "subcategories": []
+                },
+                {
+                  "id": 24031,
+                  "name": "Negocios",
+                  "subcategories": []
+                },
+                {
+                  "id": 24032,
+                  "name": "Transportes",
+                  "subcategories": []
+                },
+                {
+                  "id": 24033,
+                  "name": "Viajes y aventura",
+                  "subcategories": []
+                },
+                {
+                  "id": 24034,
+                  "name": "Otras revistas",
+                  "subcategories": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 24001,
+          "name": "Música",
+          "subcategories": [
+            {
+              "id": 10060,
+              "name": "CDs, Vinilos y Casetes",
+              "subcategories": [
+                {
+                  "id": 24005,
+                  "name": "Casetes",
+                  "subcategories": []
+                },
+                {
+                  "id": 24006,
+                  "name": "Otros formatos de audio",
+                  "subcategories": []
+                },
+                {
+                  "id": 10234,
+                  "name": "CDs Música",
+                  "subcategories": []
+                },
+                {
+                  "id": 10233,
+                  "name": "CDs idiomas",
+                  "subcategories": []
+                },
+                {
+                  "id": 10235,
+                  "name": "Vinilos",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10062,
+              "name": "Equipo profesional de sonido",
+              "subcategories": [
+                {
+                  "id": 10236,
+                  "name": "Cables",
+                  "subcategories": []
+                },
+                {
+                  "id": 10237,
+                  "name": "Compresores y ecualizadores",
+                  "subcategories": []
+                },
+                {
+                  "id": 10238,
+                  "name": "Dispositivos de grabación",
+                  "subcategories": []
+                },
+                {
+                  "id": 10239,
+                  "name": "Mesas de mezclas y DJ",
+                  "subcategories": []
+                },
+                {
+                  "id": 10240,
+                  "name": "Micrófonos y accesorios",
+                  "subcategories": []
+                }
+              ]
+            },
+            {
+              "id": 10063,
+              "name": "Instrumentos musicales",
+              "subcategories": [
+                {
+                  "id": 24007,
+                  "name": "Other type of instruments",
+                  "subcategories": []
+                },
+                {
+                  "id": 10245,
+                  "name": "Instrumentos de Percusión",
+                  "subcategories": [
+                    {
+                      "id": 24064,
+                      "name": "Cajas",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24068,
+                      "name": "Claves",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24067,
+                      "name": "Pandereta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24065,
+                      "name": "Platos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24066,
+                      "name": "Tambores",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24069,
+                      "name": "Otros instrumentos de percusión",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 10243,
+                  "name": "Instrumentos de cuerda",
+                  "subcategories": [
+                    {
+                      "id": 24052,
+                      "name": "Arpa",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24049,
+                      "name": "Banjo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24048,
+                      "name": "Contrabajo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24050,
+                      "name": "Mandolina",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24051,
+                      "name": "Ukelele",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24046,
+                      "name": "Viola",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24047,
+                      "name": "Violonchelo",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24045,
+                      "name": "Violín",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24053,
+                      "name": "Otros instrumentos de cuerda",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 10241,
+                      "name": "Bajos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 10242,
+                      "name": "Guitarras",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 10244,
+                  "name": "Instrumentos de viento",
+                  "subcategories": [
+                    {
+                      "id": 24057,
+                      "name": "Armónica",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24061,
+                      "name": "Bajón",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24058,
+                      "name": "Clarinete",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24060,
+                      "name": "Corneta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24055,
+                      "name": "Flauta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24054,
+                      "name": "Flauta dulce",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24056,
+                      "name": "Flautín",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24062,
+                      "name": "Saxofón",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24059,
+                      "name": "Trompeta",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24063,
+                      "name": "Otros instrumentos de viento",
+                      "subcategories": []
+                    }
+                  ]
+                },
+                {
+                  "id": 10246,
+                  "name": "Pianos y teclados",
+                  "subcategories": [
+                    {
+                      "id": 24070,
+                      "name": "Pianos",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24071,
+                      "name": "Teclados",
+                      "subcategories": []
+                    },
+                    {
+                      "id": 24072,
+                      "name": "Otros pianos y teclados",
+                      "subcategories": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": 10066,
+              "name": "Partituras y libretos",
+              "subcategories": []
+            },
+            {
+              "id": 24004,
+              "name": "Pósters y merchandising de música",
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 12461,
+      "name": "Niños y bebés",
+      "subcategories": [
+        {
+          "id": 10177,
+          "name": "Accesorios de baño",
+          "subcategories": []
+        },
+        {
+          "id": 10178,
+          "name": "Alimentación del bebé",
+          "subcategories": [
+            {
+              "id": 10342,
+              "name": "Baberos y paños",
+              "subcategories": []
+            },
+            {
+              "id": 10343,
+              "name": "Batidoras y mezcladores",
+              "subcategories": []
+            },
+            {
+              "id": 10344,
+              "name": "Biberones & calientabiberones",
+              "subcategories": []
+            },
+            {
+              "id": 10345,
+              "name": "Chupetes",
+              "subcategories": []
+            },
+            {
+              "id": 10346,
+              "name": "Utensilios y cubertería",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10179,
+          "name": "Artículos de maternidad",
+          "subcategories": [
+            {
+              "id": 10347,
+              "name": "Lactancia",
+              "subcategories": []
+            },
+            {
+              "id": 10348,
+              "name": "Libros para madres y padres",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10180,
+          "name": "Artículos escolares",
+          "subcategories": [
+            {
+              "id": 10349,
+              "name": "Mochilas",
+              "subcategories": []
+            },
+            {
+              "id": 10350,
+              "name": "Porta meriendas",
+              "subcategories": []
+            },
+            {
+              "id": 10351,
+              "name": "Uniformes",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10182,
+          "name": "Cunas y camas",
+          "subcategories": [
+            {
+              "id": 10356,
+              "name": "Camas infantiles",
+              "subcategories": []
+            },
+            {
+              "id": 10357,
+              "name": "Cunas",
+              "subcategories": []
+            },
+            {
+              "id": 10358,
+              "name": "Iluminación infantil",
+              "subcategories": []
+            },
+            {
+              "id": 10359,
+              "name": "Ropa de cama infantil",
+              "subcategories": []
+            },
+            {
+              "id": 10360,
+              "name": "Ropa de cuna",
+              "subcategories": []
+            },
+            {
+              "id": 10361,
+              "name": "Sacos de dormir",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10183,
+          "name": "Disfraces infantiles",
+          "subcategories": []
+        },
+        {
+          "id": 10184,
+          "name": "Juguetes, juegos y peluches",
+          "subcategories": [
+            {
+              "id": 10362,
+              "name": "Juegos de mesa",
+              "subcategories": []
+            },
+            {
+              "id": 10363,
+              "name": "Juguetes",
+              "subcategories": []
+            },
+            {
+              "id": 10364,
+              "name": "Peluches",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10185,
+          "name": "Mobiliario infantil",
+          "subcategories": []
+        },
+        {
+          "id": 10187,
+          "name": "Ropa infantil",
+          "subcategories": [
+            {
+              "id": 10365,
+              "name": "0-6 meses (68 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10374,
+              "name": "6-9 meses (74 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10376,
+              "name": "9-12 meses (80 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10367,
+              "name": "12-18 meses (86 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10369,
+              "name": "18-24 meses (92 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10370,
+              "name": "2-3 años (98 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10371,
+              "name": "3-4 años (104 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10372,
+              "name": "4-5 años (110 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10373,
+              "name": "6-7 años (116 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10375,
+              "name": "8-9 años (130 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10366,
+              "name": "10-12 años (150 cm)",
+              "subcategories": []
+            },
+            {
+              "id": 10368,
+              "name": "13-14 años (164 cm)",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10188,
+          "name": "Seguridad y cuidado",
+          "subcategories": [
+            {
+              "id": 10377,
+              "name": "Arneses de seguridad",
+              "subcategories": []
+            },
+            {
+              "id": 10378,
+              "name": "Monitores para bebés",
+              "subcategories": []
+            },
+            {
+              "id": 10379,
+              "name": "Pegatinas para el coche",
+              "subcategories": []
+            },
+            {
+              "id": 10380,
+              "name": "Puertas de seguridad y parques",
+              "subcategories": []
+            },
+            {
+              "id": 10381,
+              "name": "Termómetros para bebés",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10181,
+          "name": "Transporte del bebé",
+          "subcategories": [
+            {
+              "id": 10352,
+              "name": "Cochecitos",
+              "subcategories": []
+            },
+            {
+              "id": 10353,
+              "name": "Portabebés",
+              "subcategories": []
+            },
+            {
+              "id": 10354,
+              "name": "Sillas de coche",
+              "subcategories": []
+            },
+            {
+              "id": 10355,
+              "name": "Sillas de paseo",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10189,
+          "name": "Tronas y andadores",
+          "subcategories": [
+            {
+              "id": 10382,
+              "name": "Andadores",
+              "subcategories": []
+            },
+            {
+              "id": 10383,
+              "name": "Correpasillos",
+              "subcategories": []
+            },
+            {
+              "id": 10384,
+              "name": "Tronas",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10186,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 18000,
+      "name": "Coleccionismo",
+      "subcategories": [
+        {
+          "id": 10071,
+          "name": "Antigüedades",
+          "subcategories": []
+        },
+        {
+          "id": 10072,
+          "name": "Artesanías y decoración",
+          "subcategories": []
+        },
+        {
+          "id": 10073,
+          "name": "Artículos de escritorio",
+          "subcategories": []
+        },
+        {
+          "id": 10074,
+          "name": "Banderas",
+          "subcategories": []
+        },
+        {
+          "id": 10075,
+          "name": "Coches y motocicletas",
+          "subcategories": []
+        },
+        {
+          "id": 10076,
+          "name": "Coleccionismo deportivo",
+          "subcategories": []
+        },
+        {
+          "id": 10077,
+          "name": "Coleccionismo militar",
+          "subcategories": []
+        },
+        {
+          "id": 10078,
+          "name": "Filatelia y sellos",
+          "subcategories": []
+        },
+        {
+          "id": 10079,
+          "name": "Imanes",
+          "subcategories": []
+        },
+        {
+          "id": 10080,
+          "name": "Llaveros",
+          "subcategories": []
+        },
+        {
+          "id": 10081,
+          "name": "Monedas y billetes",
+          "subcategories": []
+        },
+        {
+          "id": 10082,
+          "name": "Muñecos",
+          "subcategories": []
+        },
+        {
+          "id": 10083,
+          "name": "Naipes",
+          "subcategories": []
+        },
+        {
+          "id": 10085,
+          "name": "Postales y suvenires",
+          "subcategories": []
+        },
+        {
+          "id": 10086,
+          "name": "Relojes",
+          "subcategories": []
+        },
+        {
+          "id": 10084,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 19000,
+      "name": "Construcción y reformas",
+      "subcategories": [
+        {
+          "id": 10138,
+          "name": "Balcones",
+          "subcategories": []
+        },
+        {
+          "id": 10141,
+          "name": "Electricidad e Iluminación",
+          "subcategories": []
+        },
+        {
+          "id": 10142,
+          "name": "Escaleras y andamios",
+          "subcategories": []
+        },
+        {
+          "id": 10143,
+          "name": "Ferretería",
+          "subcategories": []
+        },
+        {
+          "id": 10144,
+          "name": "Herramientas y maquinaria",
+          "subcategories": [
+            {
+              "id": 10317,
+              "name": "Herramientas",
+              "subcategories": []
+            },
+            {
+              "id": 10318,
+              "name": "Herramientas eléctricas",
+              "subcategories": []
+            },
+            {
+              "id": 10319,
+              "name": "Maquinaria",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10145,
+          "name": "Madera y otros materiales",
+          "subcategories": []
+        },
+        {
+          "id": 10147,
+          "name": "Pavimentos y revestimientos",
+          "subcategories": [
+            {
+              "id": 10320,
+              "name": "Baldosas y azulejos",
+              "subcategories": []
+            },
+            {
+              "id": 10321,
+              "name": "Parquet",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10148,
+          "name": "Pinturas y barnices",
+          "subcategories": [
+            {
+              "id": 10322,
+              "name": "Barnices",
+              "subcategories": []
+            },
+            {
+              "id": 10323,
+              "name": "Pinturas",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10149,
+          "name": "Puertas y ventanas",
+          "subcategories": [
+            {
+              "id": 10324,
+              "name": "Cristales",
+              "subcategories": []
+            },
+            {
+              "id": 10325,
+              "name": "Puertas",
+              "subcategories": []
+            },
+            {
+              "id": 10326,
+              "name": "Puertas correderas",
+              "subcategories": []
+            },
+            {
+              "id": 10327,
+              "name": "Ventanas",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10146,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 20000,
+      "name": "Industria y agricultura",
+      "subcategories": [
+        {
+          "id": 10128,
+          "name": "Agricultura",
+          "subcategories": [
+            {
+              "id": 10293,
+              "name": "Herramientas agrícolas",
+              "subcategories": []
+            },
+            {
+              "id": 10294,
+              "name": "Insumos agrícolas",
+              "subcategories": []
+            },
+            {
+              "id": 10295,
+              "name": "Maquinaria",
+              "subcategories": []
+            },
+            {
+              "id": 10296,
+              "name": "Repuestos",
+              "subcategories": []
+            },
+            {
+              "id": 10297,
+              "name": "Tractores",
+              "subcategories": []
+            },
+            {
+              "id": 10298,
+              "name": "Vehículos",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10129,
+          "name": "Industria",
+          "subcategories": [
+            {
+              "id": 10299,
+              "name": "Equipamiento industrial",
+              "subcategories": []
+            },
+            {
+              "id": 10300,
+              "name": "Herramientas",
+              "subcategories": []
+            },
+            {
+              "id": 10301,
+              "name": "Insumos industriales",
+              "subcategories": []
+            },
+            {
+              "id": 10302,
+              "name": "Repuestos de herramientas",
+              "subcategories": []
+            },
+            {
+              "id": 10303,
+              "name": "Repuestos de maquinaria",
+              "subcategories": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 21000,
+      "name": "Empleo",
+      "subcategories": [
+        {
+          "id": 10116,
+          "name": "Busco empleo",
+          "subcategories": []
+        },
+        {
+          "id": 10117,
+          "name": "Ofertas de empleo",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 13200,
+      "name": "Servicios",
+      "subcategories": [
+        {
+          "id": 10190,
+          "name": "Clases y entrenamiento",
+          "subcategories": [
+            {
+              "id": 10385,
+              "name": "Clases de idiomas",
+              "subcategories": []
+            },
+            {
+              "id": 10386,
+              "name": "Personal trainers",
+              "subcategories": []
+            },
+            {
+              "id": 10387,
+              "name": "Tutores y soporte escolar",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10191,
+          "name": "Cuidadoras y niñeras",
+          "subcategories": [
+            {
+              "id": 10388,
+              "name": "Cuidadores de ancianos",
+              "subcategories": []
+            },
+            {
+              "id": 10389,
+              "name": "Niñeras",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10192,
+          "name": "Mudanzas y transporte",
+          "subcategories": [
+            {
+              "id": 10390,
+              "name": "Mensajería",
+              "subcategories": []
+            },
+            {
+              "id": 10391,
+              "name": "Mudanzas",
+              "subcategories": []
+            },
+            {
+              "id": 10392,
+              "name": "Transporte",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10194,
+          "name": "Reparaciones",
+          "subcategories": []
+        },
+        {
+          "id": 10195,
+          "name": "Servicios de limpieza",
+          "subcategories": []
+        },
+        {
+          "id": 10196,
+          "name": "Servicios del hogar",
+          "subcategories": [
+            {
+              "id": 10393,
+              "name": "Albañil",
+              "subcategories": []
+            },
+            {
+              "id": 10394,
+              "name": "Electricista",
+              "subcategories": []
+            }
+          ]
+        },
+        {
+          "id": 10197,
+          "name": "Terapia y crecimiento personal",
+          "subcategories": []
+        },
+        {
+          "id": 10193,
+          "name": "Otros",
+          "subcategories": []
+        }
+      ]
+    },
+    {
+      "id": 12485,
+      "name": "Otros",
+      "subcategories": []
+    }
+  ]
+}
