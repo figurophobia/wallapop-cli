@@ -32,6 +32,11 @@ def add_search_args(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--pages", type=int, default=1, help="result pages to fetch (default 1)")
     sp.add_argument("--delay", type=float, default=1.5, help="seconds to wait between page fetches")
     sp.add_argument("--ship-only", action="store_true", help="only keep listings that can be shipped")
+    sp.add_argument(
+        "--condition",
+        help="comma-separated item conditions, e.g. 'new,as_good_as_new,good'. values: "
+        "un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all",
+    )
     sp.add_argument("--json", action="store_true")
     sp.add_argument("--csv", action="store_true")
     sp.add_argument("--quiet", action="store_true")

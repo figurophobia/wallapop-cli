@@ -118,6 +118,7 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
         longitude=lon,
         pages=args.pages,
         delay=args.delay,
+        condition=getattr(args, "condition", None),
     )
     items = [it for it in items if not it.reserved and not it.sold]
     if args.subcat:
