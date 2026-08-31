@@ -195,10 +195,12 @@ wallapop show <item> --json          # dump crudo de todo el anuncio como JSON
 ```
 
 - `<item>` acepta url, slug web o hash interno (igual que `message`/`offer`).
-- Imprime título, precio, vendedor, ciudad, categoría, envío, estado y la
-  descripción completa del anuncio.
-- La descripción procede de `GET /items/{id}` (campo `description.original`),
-  que `search` no trae — por eso `show` consulta el anuncio individual.
+- Imprime título, precio, vendedor (y si es perfil top), ciudad con
+  coordenadas, categoría, marca, género, estado de conservación, envío,
+  vistas/favoritos, URL y la descripción completa del anuncio.
+- Todo sale de `GET /items/{id}` (campos `description.original`,
+  `type_attributes`, `counters`, `location`, …), que `search` no trae — por
+  eso `show` consulta el anuncio individual.
 
 ---
 

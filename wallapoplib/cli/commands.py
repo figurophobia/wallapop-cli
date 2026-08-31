@@ -273,10 +273,25 @@ def cmd_show(args: argparse.Namespace) -> int:
     print(paint.bold(str(it.title)))
     print(f"price:    {it.price:.2f} {it.currency}".rstrip("0").rstrip(".") if it.currency else f"price:    {it.price}")
     who = it.user_name or it.user_id or "?"
-    print(f"seller:   {who}")
-    print(f"city:     {it.city or '?'}")
+    profile = " (top)" if it.top_profile else ""
+    print(f"seller:   {who}{profile}")
+    city = it.city or "?"
+    if it.latitude or it.longitude:
+        city += f"  ({it.latitude:.4f}, {it.longitude:.4f})"
+    print(f"city:     {city}")
     print(f"category: {it.category_name or it.category or '?'}")
-    print(f"shipping: {'yes' if it.shippable else 'no'}  reserved: {'yes' if it.reserved else 'no'}  sold: {'yes' if it.sold else 'no'}")
+    extras = []
+    if it.brand:
+        extras.append(f"marca: {it.brand}")
+    if it.genre:
+        extras.append(f"género: {it.genre}")
+    if it.condition or it.condition_text:
+        extras.append(f"estado: {it.condition_text or it.condition}")
+    if extras:
+        print("  " + "  ·  ".join(extras))
+    shipped = "sí" if it.shippable else "no"
+    print(f"envío:    {shipped}  reservado: {'sí' if it.reserved else 'no'}  vendido: {'sí' if it.sold else 'no'}")
+    print(f"stats:    {it.views} vistas · {it.favorites} favs {'(te gusta)' if it.favorited else ''}")
     print(f"url:      {it.url}")
     if it.description:
         print()

@@ -142,6 +142,39 @@ def test_item_description_defaults_empty():
     assert normalize_item(RAW_ITEM).description == ""
 
 
+def test_item_extracts_type_attributes_and_stats():
+    raw = dict(RAW_ITEM)
+    raw["type_attributes"] = {
+        "brand": {"value": "Nintendo", "text": "Nintendo"},
+        "genre": {"value": "rpg", "text": "Rol (RPG)"},
+        "condition": {"value": "good", "text": "Buen estado"},
+    }
+    raw["counters"] = {"views": 12, "favorites": 3, "conversations": 1}
+    raw["favorited"] = {"flag": True}
+    raw["location"] = {"latitude": 41.39, "longitude": 2.17, "city": "Barcelona"}
+    raw["user"] = {"id": "wz0123456789", "is_top_profile": True}
+    item = normalize_item(raw)
+    assert item.brand == "Nintendo"
+    assert item.genre == "Rol (RPG)"
+    assert item.condition == "good"
+    assert item.condition_text == "Buen estado"
+    assert item.views == 12
+    assert item.favorites == 3
+    assert item.favorited is True
+    assert item.latitude == 41.39
+    assert item.longitude == 2.17
+    assert item.top_profile is True
+
+
+def test_item_type_attributes_defaults():
+    item = normalize_item(RAW_ITEM)
+    assert item.brand == ""
+    assert item.condition == ""
+    assert item.views == 0
+    assert item.favorited is False
+    assert item.latitude == 0.0
+
+
 # --- Deals / ranking -------------------------------------------------------
 
 def _items(*prices: float) -> list[Item]:

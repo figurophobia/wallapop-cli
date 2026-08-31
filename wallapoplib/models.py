@@ -87,6 +87,27 @@ def extract_shipping(raw: dict) -> bool:
     return False
 
 
+def _attr_value(attr) -> str:
+    if isinstance(attr, dict):
+        v = attr.get("value")
+        if v is not None:
+            return str(v).strip()
+        return str(attr.get("text") or "").strip()
+    return str(attr or "").strip()
+
+
+def _attr_text(attr) -> str:
+    if isinstance(attr, dict):
+        return str(attr.get("text") or attr.get("value") or "").strip()
+    return str(attr or "").strip()
+
+
+def _flag(obj) -> bool:
+    if isinstance(obj, dict):
+        return bool(obj.get("flag") or obj.get("value"))
+    return bool(obj)
+
+
 @dataclass
 class Item:
     """A listing as the CLI/library sees it (normalized from raw payloads)."""
@@ -106,6 +127,16 @@ class Item:
     category_name: str = ""
     created_at: str = ""
     description: str = ""
+    condition: str = ""
+    condition_text: str = ""
+    brand: str = ""
+    genre: str = ""
+    views: int = 0
+    favorites: int = 0
+    favorited: bool = False
+    latitude: float = 0.0
+    longitude: float = 0.0
+    top_profile: bool = False
     extra: dict = field(default_factory=dict)
 
     @classmethod
@@ -147,6 +178,20 @@ class Item:
             description = str(desc_raw.get("original") or desc_raw.get("value") or "")
         elif isinstance(desc_raw, str):
             description = desc_raw
+        attrs = raw.get("type_attributes") or {}
+        condition = _attr_value(attrs.get("condition"))
+        condition_text = _attr_text(attrs.get("condition"))
+        brand = _attr_value(attrs.get("brand"))
+        genre = _attr_text(attrs.get("genre"))
+        counters = raw.get("counters") or {}
+        views = int(counters.get("views") or 0) if isinstance(counters, dict) else 0
+        favorites = int(counters.get("favorites") or 0) if isinstance(counters, dict) else 0
+        favorited = _flag(raw.get("favorited"))
+        loc = raw.get("location") or {}
+        latitude = float(loc.get("latitude") or 0.0) if isinstance(loc, dict) else 0.0
+        longitude = float(loc.get("longitude") or 0.0) if isinstance(loc, dict) else 0.0
+        user = user or {}
+        top_profile = bool((user.get("is_top_profile") or raw.get("is_top_profile")) or False)
         return cls(
             id=item_id,
             user_id=user_id,
@@ -162,6 +207,16 @@ class Item:
             category_name=category_name,
             created_at=str(raw.get("created_at") or ""),
             description=description,
+            condition=condition,
+            condition_text=condition_text,
+            brand=brand,
+            genre=genre,
+            views=views,
+            favorites=favorites,
+            favorited=favorited,
+            latitude=latitude,
+            longitude=longitude,
+            top_profile=top_profile,
             url=f"{WEB_BASE}/item/{slug}" if slug else "",
         )
 
@@ -181,6 +236,16 @@ class Item:
             "category_name": self.category_name,
             "created_at": self.created_at,
             "description": self.description,
+            "condition": self.condition,
+            "condition_text": self.condition_text,
+            "brand": self.brand,
+            "genre": self.genre,
+            "views": self.views,
+            "favorites": self.favorites,
+            "favorited": self.favorited,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "top_profile": self.top_profile,
             "url": self.url,
         }
 
