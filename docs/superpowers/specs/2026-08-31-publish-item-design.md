@@ -100,6 +100,44 @@ Puntos clave:
 `listing` es el formulario de atributos/precio/descripción/estado/envío que hay
 que completar antes de publicar.
 
+**5. Formulario `listing` → `POST /api/v3/items/upload/components`**
+Este es el endpoint que sirve el esquema (components) del formulario del borrador
+de un artículo. `Content-Length: 484` (primer llamada) y `Content-Length: 165`
+(posteriores). Respuesta `200` con `{"components":[...]}`. Es un endpoint
+RESTful que hay que invocar cada vez que se cambia un campo "reloads_when_changed"
+(por ej. la condición/estado) para re-servir el formulario.
+
+Componentes observados (con `id`, `type` y dato) en el orden devuelto:
+- `suggested_data_banner` (`feature_banner`): "Revisa la información / Hemos
+  rellenado algunos detalles por ti." — no editable.
+- `photo` (`custom`): subida de fotos, `max_number_of_pictures: 10`.
+- `brand` (`combo_box`, **requerido**): valor sugerido `[{"title":"Nintendo","id":"Nintendo"}]`; el `path` de opciones viene del endpoint `GET /api/v3/attributes/brand/options?category_leaf_id=10088`.
+- `model` (`combo_box`, opcional): sugerido `"3ds xl"`; opciones en `GET /api/v3/attributes/model/options?brand=Nintendo&category_leaf_id=10088`.
+- `color` (`dropdown`, opcional): opciones estáticas (negro, azul, ...); sugerido `black`.
+- `title` (`text_input`, **requerido**): `max_length: 50`, autocompletado "Nintendo 3DS XL Negra". Valida: sin enlaces, sin solo espacios, sin emojis.
+- `description` (`text_area`, **requerido**): `max_length: 640`, autocompletada.
+- `condition` (`dropdown`, **requerido**, `reloads_when_changed: true`): opciones estáticas: `un_opened`, `in_box`, `new`, `as_good_as_new`, `good` ("En buen estado"), `fair`, `has_given_it_all`.
+- `price_amount` (`text_input`, **requerido**): moneda, `max_length: 11`; rango envío: 1–2500 €.
+- `lock_stocks` (`lock`, opcional): "Añadir más unidades" (`root_category_id: 24200`).
+
+Request con `price_amount` por debajo de 1 € / >2500 € no es envíable
+(`lock_stocks` no aplica aquí).
+
+**6. Geolocalización del anuncio** (ubicación del vendedor):
+```json
+{"approximated_latitude":43.66844411761024,"approximated_longitude":-7.605464501519192,"full_address":"","city":"Magazos","zip":"27850","country_code":"ES","approxRadius":1,"approximated_location":true,"title":"27850, Magazos"}
+```
+- `zip: 27850`, `city: Magazos`, `country_code: ES`.
+- `approximated_location: true` / `approxRadius: 1` → la ubicación es aproximada
+  (no se comparte la dirección exacta).
+- Es un dato que hay que mandar al publicar (y coincidir con la cuenta del
+  usuario).
+
+**7. Falta el paso final (Publicar)**
+El usuario tiene TODO listo en el wizard y solo le queda pulsar "Publicar". Ese
+último paso (el POST que crea el anuncio definitivo, su URL y su body) aún no
+está capturado. Es la pieza que cierra el flujo para la implementación por API.
+
 ### Headers comunes de `POST /api/v3/steps`
 
 - `Content-Type: application/json`
@@ -116,18 +154,21 @@ bodies concretos (72, 133, 163, 189 bytes) aún NO están capturados.
 
 ## Lo que falta para implementarlo por API pura
 
-1. **El body exacto de cada `POST /api/v3/steps`** (los 72/133/163/189 bytes).
-   Lo más fiable: capturarlos con Playwright interceptando la red mientras se
-   completa el formulario real (una vez resueltos los selectores del wizard).
-2. **Cómo se crea el `draft_id`** (¿`POST /api/v3/steps` inicial? ¿otro endpoint?
-   Aparece `53f620cf-...` en paths de upload y suggested-item-data).
+1. **El paso final de "Publicar"** — el último POST que crea el anuncio definitivo
+   (URL y body aún sin capturar). El usuario tiene todo listo en el wizard y solo
+   le falta pulsar "Publicar"; conviene capturar esa petición.
+2. **El body exacto de cada `POST /api/v3/steps`** (Content-Length 72/133/163/189
+   bytes: el estado acumulado del borrador). El esquema del formulario (endpoint
+   `POST /api/v3/items/upload/components`) ya está capturado arriba.
 3. **El formato del upload** de cada foto a `/api/v3/upload/<draft>/pictures`
-   (multipart con `file`? ¿`max_number_of_pictures: 1` por llamada?).
-4. **El cuerpo del `suggested-item-data`** (atributos sugeridos).
-5. **El formulario `listing`** completo y su esquema de envío/peso/ubicación
-   (headers observados: `GET /api/v3/delivery/weight/tiers/with-suggestion`,
-   `GET /api.wallapop.com/bff/delivery/rules`).
-6. **El paso final de publicación** (último `POST /api/v3/steps` o POST de item).
+   (multipart con `file`? ¿`max_number_of_pictures: 1` por llamada?). Se conoce el
+   esquema de fotos (`max_number_of_pictures: 10`).
+4. **Cómo se crea el `draft_id`** (¿`POST /api/v3/steps` inicial? Aparece
+   `53f620cf-...` en paths de upload y suggested-item-data).
+5. **El cuerpo del `suggested-item-data`** (GET de atributos/producto sugerido).
+6. **Los endpoints de envío**: `GET /api/v3/delivery/weight/tiers/with-suggestion`
+   y `GET /api.wallapop.com/bff/delivery/rules` — y el esquema de envío/peso que
+   acompaña a `listing`.
 
 ## Plan de acción
 
