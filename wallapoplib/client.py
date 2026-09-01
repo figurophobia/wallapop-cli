@@ -27,7 +27,7 @@ from .config import (
     load_session,
     save_session,
 )
-from .http import ApiError, Response, eprint, http_request
+from .http import ApiError, Response, eprint, http_request, http_request_raw
 from .models import Item, deep_find, extract_items, first, normalize_item
 from .tokens import user_hash_of
 
@@ -448,6 +448,118 @@ class Wallapop:
     def ensure_conversation(self, item_hash: str) -> Response:
         """Create (or fetch the existing) conversation for an item. Idempotent."""
         return self._authed("POST", "/instant-messaging/conversation", body={"item_hash_id": item_hash})
+
+    def publish(
+        self,
+        photo_path: str,
+        title: str,
+        price: float,
+        category_leaf_id: str = "10088",
+        condition: str = "good",
+        description: str = "",
+        brand: str = "",
+        model: str = "",
+        color: str = "",
+        max_weight_kg: int = 1,
+    ) -> Response:
+        """Publish an item through the pure API (no browser).
+
+        Mirrors the exact body the web wizard POSTs to ``/api/v3/items``:
+        a ``multipart/form-data`` request with two fields — ``image`` (the
+        photo bytes) and ``item`` (a JSON document with the attributes,
+        category leaf, seller location, delivery config and a fresh
+        ``upload_id``). The seller location is taken from ``GET /users/me``;
+        the delivery ``cost_configuration_id`` is our account's constant
+        (returned by published items' ``shipping``). On success the response
+        body is ``{"id":"<item id>","flags":{}}`` (``Response.data`` carries
+        the parsed JSON).
+        """
+        me = self._authed("GET", "/users/me")
+        loc = {}
+        if me.ok and isinstance(me.data, dict):
+            loc = me.data.get("location") or {}
+        latitude = loc.get("approximated_latitude")
+        longitude = loc.get("approximated_longitude")
+        approximated = bool(loc.get("approximated_location"))
+        if latitude is None or longitude is None:
+            return Response(me.status, {"error_message": "no location in /users/me; publish requires geolocation"}, False, False)
+
+        item = {
+            "attributes": {
+                "suggested_data_banner": None,
+                "brand": brand,
+                "model": model,
+                "color": color,
+                "title": title,
+                "description": description,
+                "condition": condition,
+                "price_amount": int(round(price)),
+            },
+            "category_leaf_id": category_leaf_id,
+            "apply_discount": False,
+            "location": {
+                "latitude": latitude,
+                "longitude": longitude,
+                "approximated": approximated,
+            },
+            "delivery": {
+                "allowed_by_user": True,
+                "max_weight_kg": max_weight_kg,
+                "cost_configuration_id": self._cost_configuration_id(),
+            },
+            "upload_id": str(uuid.uuid4()),
+        }
+
+        with open(photo_path, "rb") as fh:
+            photo = fh.read()
+        boundary = "----publishFormBoundary" + uuid.uuid4().hex[:14]
+        item_json = json.dumps(item, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        body = b"".join([
+            f"--{boundary}\r\n".encode(),
+            b'Content-Disposition: form-data; name="image"; filename="foto.jpg"\r\n',
+            b"Content-Type: image/jpeg\r\n\r\n",
+            photo, b"\r\n",
+            f"--{boundary}\r\n".encode(),
+            b'Content-Disposition: form-data; name="item"\r\n\r\n',
+            item_json, b"\r\n",
+            f"--{boundary}--\r\n".encode(),
+        ])
+
+        headers = self._headers(auth=True)
+        headers.update({
+            "Accept": "application/vnd.upload-v2+json",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        })
+        status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
+        if status == 401:
+            refreshed = self.refresh_web()
+            if refreshed:
+                headers = self._headers(auth=True)
+                headers.update({
+                    "Accept": "application/vnd.upload-v2+json",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
+                })
+                status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
+        if status != 200:
+            return Response(status, {"error_message": f"publish POST failed with status {status}"}, False, status == 401)
+        return Response(200, payload or {}, True, False)
+
+    def _cost_configuration_id(self) -> str:
+        """Our account's delivery cost configuration UUID (constant per account)."""
+        uid = self.user.get("id") or ""
+        if not uid:
+            me = self._authed("GET", "/users/me")
+            if me.ok and isinstance(me.data, dict):
+                uid = me.data.get("id") or ""
+        if uid:
+            items = self._authed("GET", f"/users/{uid}/items", params={"page": 0, "max_items": 25})
+            if items.ok and isinstance(items.data, dict):
+                for it in items.data.get("data") or []:
+                    shipping = (it or {}).get("shipping") or {}
+                    cfg = shipping.get("cost_configuration_id")
+                    if cfg:
+                        return str(cfg)
+        return "814429d6-7844-471d-97af-196cd4020f26"
 
     def conversation_thread(self, conversation_id: str) -> Response:
         """Fetch the full message thread (messages, item, with_user) for a conversation."""

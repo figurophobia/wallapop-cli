@@ -100,6 +100,7 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `offer_details(offer_id)` / `make_offer_info(item_id)` | BFF (sujetos a anti-bot) |
 | `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | mensajería |
 | `send_message(item_hash, message, report?)` | PubNub REST publish; fallback navegador (Playwright) |
+| `publish(photo_path, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
 | `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
 
 `report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.

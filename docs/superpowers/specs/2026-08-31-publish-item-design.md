@@ -1,11 +1,14 @@
 # Publicar artículos en Wallapop (publish item) — investigación y diseño
 
-Fecha: 2026-08-31
-Estado: **IMPLEMENTADO vía navegador real (Playwright)** — el wizard público
-desde CLI con la sesión del usuario. La variante **API pura queda bloqueada** por
-el body del POST final (ver "Lo que falta para implementarlo por API pura").
+Fecha: 2026-08-31 (actualizada 2026-09-01)
+Estado: **IMPLEMENTADO por API pura** (`wallapop publish`, HTTP plano sin
+navegador) — el body multipart del `POST /api/v3/items` se capturó con
+`page.route` + `request.post_data_buffer` (el `post_data` de CDP era `null` pero
+el buffer binario sí se expone) y el método `Wallapop.publish()` lo replica
+exactamente. También disponible `--mode browser` con el wizard Playwright.
 Publicaciones reales verificadas: 3DS XL 400€ (`0j28xpgxwvjy`), 3DS Azul Cobalto
-300€ (`xzog950kp2j9`), 310€ (`wzvgp13d71zl`) y 315€ (`w67v21ey386x`).
+300€ (`xzog950kp2j9`), 310€ (`wzvgp13d71zl`), 315€ (`w67v21ey386x`), 320€
+(`xzog950np7j9`), 330€ (`xzog95owy5j9`) y 331€/332€ por API pura.
 
 ## Objetivo
 
@@ -215,18 +218,22 @@ Nota: el `Content-Length` crece a medida que avanza el flujo, porque el **body**
 lleva el estado acumulado del borrador (el `draft` se va completando). Esos
 bodies concretos (72, 133, 163, 189 bytes) aún NO están capturados.
 
-## Lo que falta para implementarlo por API pura
+## Lo que faltaba para implementarlo por API pura (RESUELTO)
 
-El **único** punto bloqueante es el body del `POST /api/v3/items`:
+El **único** punto bloqueante era el body del `POST /api/v3/items`:
 
 1. El endpoint existe y el flujo completo de la web está mapeado (steps +
    components + upload + envío), pero el POST final va con **multipart/form-data**
-   cuyo body no se expone a CDP/Playwright (`postData: null`). Sin ese body exacto
-   no podemos replicarlo por HTTP plano: sin los headers correctos da 405 y con
-   ellos + JSON da 400.
-2. Atajos a probar para ver el body: interceptar con `Fetch.requestPaused` de CDP
-   (que sí devuelve `postData` del request antes de enviarlo) — es el siguiente
-   candidato si se quiere cerrar la vía API pura.
+   cuyo body no se exponía a CDP/Playwright (`postData: null` en
+   `requestWillBeSent` y en `page.on("request")`). Sin ese body exacto no se
+   podía replicar por HTTP plano: sin los headers correctos da 405 y con ellos +
+   JSON da 400.
+2. **Solución validada**: `page.route('**/api/v3/items')` +
+   `route.request.post_data_buffer` (bytes binarios, **sin** `.decode()` — el
+   decode rompía al cruzar un JPEG). Capturado el multipart completo (966 B sin
+   foto): campo `image` (la foto) + campo `item` (JSON con `attributes`,
+   `category_leaf_id`, `apply_discount`, `location` y `delivery`). Atajo
+   alternativo que se descartó: `Fetch.requestPaused` de CDP.
 
 ## Plan de acción
 
@@ -237,21 +244,28 @@ El **único** punto bloqueante es el body del `POST /api/v3/items`:
 - Rellenar: título → fotos → categoría → marca/modelo/color → descripción →
   estado → precio → envío/peso → ubicación.
 - **Interceptar TODAS las peticiones** guardando método + url + **body**.
-- Bonus: se acabó publicando de verdad (4 items reales) — lo que confirmó el 200
+- Bonus: se acabó publicando de verdad (items reales) — lo que confirmó el 200
   final y la estructura del anuncio creado.
 
 ### Fase B — Documentar los endpoints ✅ (hecho, en `docs/ENDPOINTS.md`)
 - Sección "Publicar artículos (upload / publish)" completa: steps, components
   (campos exactos), upload de fotos, config de envío y el paso final.
 
-### Fase C — Implementar `Wallapop.publish()` por API pura 🔲 (bloqueado)
-- Falta capturar el body multipart de `POST /api/v3/items` (único paso bloqueante).
-- Mientras tanto, la publicación funciona **vía navegador**: comando
-  `wallapop publish <fotos> --summary --price` (módulo `wallapoplib/publish.py`
-  usa Playwright headful con la sesión guardada).
+### Fase C — Implementar `Wallapop.publish()` por API pura ✅ (hecho)
+- `Wallapop.publish()` (`client.py`) construye el multipart (foto + JSON `item`)
+  y hace el POST con los headers exactos (`Accept: application/vnd.upload-v2+json`,
+  `X-DeviceOS: 0`, Origin/Referer, Bearer). Rellena `location` con
+  `GET /users/me` y `cost_configuration_id` con el de un item publicado
+  (constante por cuenta).
+- Bloqueadas/reventadas las vías CDP: `Network.requestWillBeSent.postData` y
+  `page.on('request').post_data` eran `null`; el buffer binario de `page.route`
+  sí se expuso.
+- Mandos extra CLI (modo API): `--description`, `--brand`, `--model`, `--color`,
+  `--max-weight-kg`. `--mode browser` conserva el wizard Playwright.
 
 ### Fase D — Publicar la 3DS real ✅ (hecho, con permiso implícito del usuario)
-- 3DS Azul Cobalto en 300€ y 310€ (una foto), más otras dos publicaciones de prueba.
+- 3DS Azul Cobalto en 300€, 310€, 315€, 320€ y 330€ (una foto), más
+  publicaciones de prueba por API pura (331€/332€).
 - Lección: subir **una sola foto** (o repetir el mismo producto con el mismo precio
   hace que el backend sospeche duplicado; cambia de foto/precio entre republishes).
 

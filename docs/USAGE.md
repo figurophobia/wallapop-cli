@@ -18,7 +18,7 @@ Referencia completa de `wallapop`. Se invoca como
 | `replies` | Ver el inbox y los hilos completos |
 | `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
 | `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
-| `publish` | Publicar un artículo vía el wizard real de la web (Playwright) |
+| `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ---
 
@@ -279,25 +279,33 @@ wallapop seller <user_id> --json      # dump crudo (profile + stats + reviews)
 
 ```
 wallapop publish /ruta/a/fotos --summary 'Nintendo 3DS Azul' --price 310
-wallapop publish ./fotos --summary '...' --price 200 --condition good --max-photos 3
+wallapop publish ./fotos --summary '...' --price 200 --condition good --brand Nintendo --model 3DS --color blue
+wallapop publish ./fotos --summary '...' --price 331 --mode browser     # wizard Playwright (vía antigua)
 ```
 
-- Publica un artículo abriendo el **wizard real** de `es.wallapop.com` con tu
-  sesión guardada (`wallapoplib/publish.py`, Playwright headful visible). Es la
-  vía actual porque el POST final (`/api/v3/items`) es multipart y aún no se
-  puede replicar por HTTP plano (doc: `docs/ENDPOINTS.md`).
-- `photos_dir`: carpeta con las imágenes jpg/png del artículo. Se sube **una
-  sola foto por defecto** (el algoritmo anti-duplicados de Wallapop sospecha al
-  publicar el mismo item varias veces con varias fotos); con `--max-photos`
-  subes hasta 10.
-- `summary`: título (máx 50). Marca/modelo/color/descripción se autocompletan
-  solos tras subir las fotos; precio y estado los pones tú.
+- **Por defecto publica por API pura** (`--mode api`), sin navegador: el método
+  `Wallapop.publish()` (`client.py`) replica el multipart exacto del POST final
+  `/api/v3/items` (campo `image` con la foto + campo `item` con el JSON de
+  atributos/precio/ubicación/envío), usando tu `upload_id` fresco. Doc del body:
+  `docs/ENDPOINTS.md` (sección "Paso final: publicar").
+- `--mode browser`: conserva la vía antigua del **wizard real** de
+  `es.wallapop.com` con tu sesión guardada (`wallapoplib/publish.py`, Playwright).
+  Úsalo si quieres ver/navegar la publicación, o por compatibilidad.
+- `photos_dir`: carpeta con las imágenes jpg/png del artículo. En modo API se
+  publica **la primera foto** (el algoritmo anti-duplicados de Wallapop sospecha
+  al publicar el mismo item varias veces con varias fotos); el modo browser sube
+  una foto por defecto (`--max-photos` sube hasta 10).
+- `summary`: título (máx 50).
+- En modo API completas marca/modelo/color/descripción tú (`--brand`, `--model`,
+  `--color`, `--description`); en modo browser la web los autocompleta al subir
+  las fotos y solo editas precio/estado.
 - `--condition`: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`
   (por defecto `good` = "En buen estado").
 - `--price`: precio de venta en EUR (entero, rango invertible 1–2500).
-- `--weight-tier`: tramo de peso envío (por defecto `0` = 0–1 kg).
-- `--headless`: ejecuta sin ventana (por defecto se abre el navegador para que
-  puedas ver/controlar la publicación).
+- `--max-weight-kg`: peso de envío en kg (por defecto 1, modo API).
+- `--weight-tier`: tramo de peso envío del wizard (por defecto `0` = 0–1 kg,
+  solo modo browser).
+- `--headless`: modo browser solo: ejecuta sin ventana.
 
 ---
 

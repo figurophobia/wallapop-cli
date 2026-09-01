@@ -2,8 +2,11 @@
 
 CLI de automatización para Wallapop: busca anuncios, detecta gangas (precio por
 debajo de la mediana), envía ofertas y mensajes, y gestiona ofertas recibidas
-(aceptar / rechazar / contraofertar). Todo se hace por HTTP plano (`urllib`),
-sin Playwright salvo en un fallback puntual del envío de chat.
+(aceptar / rechazar / contraofertar) y publicar artículos. Todo se hace por HTTP
+plano (`urllib`), incluida la publicación (`Wallapop.publish()` replica sin
+navegador el multipart de `POST /api/v3/items`); Playwright es solo opcional
+para `publish --mode browser` (wizard visible) y un fallback puntual del envío
+de chat.
 
 ## Estructura del repo
 

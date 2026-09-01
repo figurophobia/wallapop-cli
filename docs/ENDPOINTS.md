@@ -432,10 +432,13 @@ El estado de una negociación se deriva **offline** de los mensajes del hilo:
 
 ## Publicar artículos (upload / publish)
 
-> Estado: el flujo completo está mapeado y el endpoint final confirmado en vivo.
-> La publicación funciona desde CLI **vía navegador real** (`wallapop publish`,
-> módulo `wallapoplib/publish.py`), porque el body del `POST /api/v3/items` final
-> es multipart y no se expone a CDP/Playwright (ver "Paso final: publicar").
+> Estado: flujo completo mapeado y publicación funcionando por **API pura**
+> (`wallapop publish`, sin navegador) y también **vía navegador**
+> (`wallapop publish --mode browser`, módulo `wallapoplib/publish.py`).
+> El body multipart del `POST /api/v3/items` se capturó con
+> `page.route` + `request.post_data_buffer` (el `post_data` de CDP era `null`,
+> pero el buffer binario sí se expone) — ese es el plano que replica el método
+> `Wallapop.publish()` (ver "Paso final: publicar").
 
 ### POST `/api/v3/steps`  [state machine]
 
@@ -616,15 +619,46 @@ redirige a `/app/catalog/published`.
   boundary=...`, `Accept: application/vnd.upload-v2+json`, `x-deviceos: 0`,
   `Origin/Referer: https://es.wallapop.com`.
 
-**Bloqueo para API pura (AÚN NO REPLICABLE por HTTP plano):**
-- El body NO se expone a CDP/Playwright (`postData: null` en `requestWillBeSent`
-  y en `page.on("request")`): la web lo envía como cuerpo no serializable o como
-  finalización del draft servido por el backend (`mode.upload.id`).
-- Reproduciendo por API: sin `x-deviceos` + `Accept: application/vnd.upload-v2+json`
-  → **405**; añadiéndolos y mandando JSON → **400** (espera multipart/form-data).
-- Hasta capturar el body multipart exacto, **la publicación se hace con el navegador**
-  (comando `wallapop publish`, módulo `wallapoplib/publish.py`: juega el wizard real
-  con la sesión del usuario y deja que la web haga las llamadas).
+**Body multipart completo** (capturado con `page.route('**/api/v3/items')` +
+`request.post_data_buffer`, sin el decode que rompía con un JPEG; 966 B sin foto):
+
+```
+------WebKitFormBoundary<...>
+Content-Disposition: form-data; name="image"; filename="foto.jpg"
+Content-Type: image/jpeg
+
+<bytes de la foto>
+------WebKitFormBoundary<...>
+Content-Disposition: form-data; name="item"
+
+{"attributes":{"suggested_data_banner":null,"brand":"Nintendo","model":"3DS","color":"blue",
+  "title":"Nintendo 3DS Azul Cobalto","description":"...","condition":"good",
+  "price_amount":330},"category_leaf_id":"10088","apply_discount":false,
+  "location":{"latitude":43.66844411761024,"longitude":-7.605464501519192,"approximated":false},
+  "delivery":{"allowed_by_user":true,"max_weight_kg":1,
+    "cost_configuration_id":"814429d6-..."},"upload_id":"<uuid>"}
+------WebKitFormBoundary<...>--
+```
+
+Solo dos campos: **`image`** (la foto, filename genérico) y **`item`** (JSON):
+- `attributes.price_amount` es un **entero** ("330" sin comillas), a diferencia del
+  `"310"` (string) del esquema `components`.
+- `location` = lat/lon **no aproximados** del vendedor, que se obtienen de
+  `GET /api/v3/users/me` (`location.approximated_latitude`, `.approximated_longitude`,
+  `.approximated_location`).
+- `delivery.cost_configuration_id` es un **UUID constante por cuenta** (el mismo que
+  devuelve `shipping.cost_configuration_id` de cualquier item publicado del usuario).
+- `upload_id` = UUID generado por el cliente (el mismo `mode.upload.id`).
+- Respuesta 200: `{"id":"<item id>","flags":{}}` — **el id del anuncio viene en la
+  respuesta del POST** (no hay que hacer GET posterior para conocerlo).
+
+**Implementación — API pura sin navegador**: `Wallapop.publish()` (`client.py`)
+replica exactamente ese multipart (foto + JSON `item`) y publica con HTTP plano.
+Rellena `location` con `GET /users/me`, `cost_configuration_id` con el de cualquier
+item publicado de la cuenta (fallback a un valor conocido) y `upload_id` con un UUID
+fresco. Verificado en vivo: 200 `{"id":...}`, el anuncio aparece publicado y con la
+foto. Es el modo por defecto de `wallapop publish`; `--mode browser` conserva el
+wizard Playwright.
 
 El anuncio creado (estructura de un item publicado) revela:
 - `price: {cash: {amount, currency: "EUR"}}`

@@ -98,6 +98,56 @@ def http_request(
     return status, decode_payload(payload, ctype), ctype
 
 
+def http_request_raw(
+    method: str,
+    url: str,
+    raw_body: Optional[bytes] = None,
+    headers: Optional[dict] = None,
+    retries: int = 3,
+    timeout: int = 60,
+) -> tuple[int, Any]:
+    """Send a request with a raw (already-encoded) body, e.g. multipart bytes.
+
+    Returns ``(status, payload)``; the payload is the raw response body
+    decoded best-effort (JSON dict when the server answers JSON, else text).
+    Raises ``ApiError`` on network failure.
+    """
+    global LAST_REQUEST
+    if RATE_PACE > 0:
+        wait = RATE_PACE - (time.monotonic() - LAST_REQUEST)
+        if wait > 0:
+            time.sleep(wait)
+        LAST_REQUEST = time.monotonic()
+    hdrs = dict(headers or {})
+    if raw_body is not None and "Content-Type" not in hdrs:
+        hdrs["Content-Type"] = "application/json"
+    status = 0
+    payload = None
+    ctype = ""
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=raw_body, method=method, headers=hdrs)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = resp.getcode()
+                payload = resp.read()
+                ctype = resp.headers.get("Content-Type", "")
+            return status, decode_payload(payload, ctype)
+        except urllib.error.HTTPError as err:
+            status = err.code
+            payload = err.read()
+            ctype = err.headers.get("Content-Type", "")
+            if status in (403, 429) and attempt < retries - 1:
+                time.sleep(2 ** attempt + random.uniform(0.3, 1.2))
+                continue
+            return status, decode_payload(payload, ctype)
+        except urllib.error.URLError as err:
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt + random.uniform(0.3, 1.2))
+                continue
+            raise ApiError(f"network error: {err.reason}")
+    return status, decode_payload(payload, ctype)
+
+
 def decode_payload(payload: Optional[bytes], ctype: str) -> Any:
     if payload is None:
         return None

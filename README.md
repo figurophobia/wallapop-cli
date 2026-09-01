@@ -3,8 +3,9 @@
 CLI de automatización para Wallapop: busca anuncios, detecta gangas (precio por
 debajo de la mediana), envía ofertas y mensajes de chat, gestiona ofertas
 recibidas (aceptar / rechazar / contraofertar) y publica artículos. Todo por
-HTTP plano (`urllib`) salvo `publish`, que juega el wizard real de la web con
-Playwright (el POST de publicación aún no es replicable por API pura).
+HTTP plano (`urllib`), incluido `publish` (el body multipart del POST final
+`/api/v3/items` se capturó y se replica por API pura); el `--mode browser`
+conserva el wizard Playwright para quien quiera ver/navegar la publicación.
 
 ```
 python3 wallapop.py <comando> ...
@@ -21,7 +22,7 @@ python3 wallapop.py <comando> ...
 | `offer` | Hacer ofertas, responder y ver el panel de negociaciones |
 | `message` | Enviar mensaje de chat a un vendedor |
 | `replies` | Ver inbox y hilos completos |
-| `publish` | Publicar un artículo vía el wizard real de la web (Playwright) |
+| `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ## Documentación
 
@@ -86,15 +87,16 @@ Puedes usarla de dos formas:
    pip install -e '.[test]'     # desarrollo local
    ```
 
-### Playwright es opcional (excepto para `publish`)
+### Playwright es opcional (solo para `publish --mode browser`)
 
 El envío de mensajes de chat funciona por PubNub REST, sin navegador. Solo si
 PubNub no confirma la entrega se intenta un **fallback** que abre un navegador
 headless (Playwright + Firefox) con tus cookies de sesión. Para el flujo normal
 **no necesitas instalar Playwright**.
 
-El comando `publish` sí lo necesita: abre el **wizard de la web** headful para
-crear el anuncio (cromium vía Playwright):
+La publicación por defecto es **API pura** (sin navegador). `publish --mode
+browser` sí requiere Chromium vía Playwright para jugar el **wizard de la web**
+headful:
 
 ```
 pip install --user --break-system-packages playwright

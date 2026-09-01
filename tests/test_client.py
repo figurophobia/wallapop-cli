@@ -40,6 +40,18 @@ RAW_ITEM = {
 
 SEARCH_COMPONENTS = {"data": {"search_id": "abc123", "sections": {"organic": {"position": 1}}}}
 
+RAW_ME = {
+    "id": "wz0123456789",
+    "micro_name": "Daniel",
+    "location": {"approximated_latitude": 43.66, "approximated_longitude": -7.60, "approximated_location": True},
+}
+
+RAW_PUBLISHED_ITEM = {
+    "id": "v6gpwy9d476e",
+    "price": {"amount": 45.0, "currency": "EUR"},
+    "shipping": {"item_is_shippable": True, "user_allows_shipping": True, "cost_configuration_id": "814429d6-0000-0000-0000-000000000000"},
+}
+
 LEGACY_SEARCH = {
     "search_objects": [RAW_ITEM]
 }
@@ -171,6 +183,10 @@ class FakeTransport:
             return 200, {"offer_id": "created"}, "application/json"
         if url.endswith("/categories"):
             return 200, RAW_CATEGORIES, "application/json"
+        if url.endswith("/users/me"):
+            return 200, RAW_ME, "application/json"
+        if "/users/wz0123456789/items" in url:
+            return 200, {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
         raise AssertionError(f"unexpected call: {method} {url} params={params} body={body}")
 
 
@@ -456,3 +472,52 @@ def test_categories_returns_clean_tree(fake):
     assert mot["name"] == "Motor y accesorios"
     assert mot["subcategories"][1]["name"] == "Recambios de coches y furgonetas"
     assert mot["subcategories"][1]["subcategories"][0]["id"] == 10328
+
+
+# --- publish (pure API) ----------------------------------------------------
+
+def test_publish_builds_multipart_with_me_location_and_cost_cfg(fake, monkeypatch, tmp_path):
+    import json as _json
+
+    calls_raw: list[tuple[str, str, bytes, dict]] = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60):
+        calls_raw.append((method, url, raw_body, dict(headers or {})))
+        return 200, {"id": "ab12cd34ef56", "flags": {}}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photo = tmp_path / "foto.jpg"
+    photo.write_bytes(b"\xff\xd8\xff\xe0fakejpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish(str(photo), "GameCube", 40.0, brand="Nintendo", model="GC", color="black")
+    assert resp.ok and resp.data["id"] == "ab12cd34ef56"
+    method, url, raw, headers = calls_raw[0]
+    assert method == "POST"
+    assert url.endswith("/api/v3/items")
+    assert 'multipart/form-data; boundary=' in headers["Content-Type"]
+    assert headers.get("Accept") == "application/vnd.upload-v2+json"
+    text = raw.decode("utf-8", "replace")
+    assert 'name="image"; filename="foto.jpg"' in text
+    body = raw.replace(b"\xff\xd8\xff\xe0fakejpeg", b"")
+    import re as _re
+    item_part = _re.search(r'name="item"\r\n\r\n(\{.*?\})\r\n--', body.decode("utf-8", "replace"))
+    assert item_part is not None
+    item = _json.loads(item_part.group(1))
+    assert item["attributes"]["price_amount"] == 40
+    assert item["attributes"]["brand"] == "Nintendo"
+    assert item["location"]["latitude"] == 43.66
+    assert item["location"]["longitude"] == -7.60
+    assert item["delivery"]["cost_configuration_id"] == "814429d6-0000-0000-0000-000000000000"
+    assert item["upload_id"]
+
+
+def test_publish_sends_only_first_photo(fake, monkeypatch, tmp_path):
+    calls_raw = []
+    monkeypatch.setattr(client_mod, "http_request_raw", lambda *a, **k: calls_raw.append(a) or (200, {"id": "x"}))
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    client.user = {"id": "wz0123456789"}
+    resp = client.publish(str(photo), "T", 5.0)
+    assert resp.ok
+    assert len(calls_raw) == 1

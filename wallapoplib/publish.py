@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Optional
 
 from .client import persist_browser_session, refresh_web_session
 from .config import load_session
@@ -86,6 +87,7 @@ def publish_item(
     max_photos: int = 1,
     headless: bool = False,
     timeout_ms: int = 25_000,
+    capture_body_path: Optional[str] = None,
 ) -> dict:
     """Publish an item through the real web wizard.
 
@@ -95,6 +97,9 @@ def publish_item(
 
     Returns ``{"url": <final page url>, "item_id": <internal id if known>}`` or
     raises ``RuntimeError`` if the wizard fails to reach the publish call.
+
+    If ``capture_body_path`` is given, the raw multipart body of the final
+    ``POST /api/v3/items`` is written to that file (debug helper).
     """
     from playwright.sync_api import sync_playwright  # noqa: PLC0415 (optional dep)
 
@@ -134,6 +139,21 @@ def publish_item(
                 created["id"] = m.group(1)
 
         page.on("response", on_response)
+
+        def on_items(route) -> None:
+            try:
+                body = route.request.post_data_buffer
+                if capture_body_path and body is not None:
+                    with open(capture_body_path, "wb") as f:
+                        f.write(body)
+                    print(f"[capture] saved POST /api/v3/items body ({len(body)} B) -> {capture_body_path}", flush=True)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[capture] could not read body: {exc}", flush=True)
+            finally:
+                route.continue_()
+
+        if capture_body_path:
+            page.route("**/api/v3/items", on_items)
 
         page.goto(WEB_URL, wait_until="domcontentloaded", timeout=25_000)
         page.wait_for_timeout(2500)

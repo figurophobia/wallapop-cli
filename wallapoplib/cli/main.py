@@ -139,17 +139,25 @@ def build_parser() -> argparse.ArgumentParser:
     seller.add_argument("--json", action="store_true", help="dump the seller profile as JSON")
     seller.set_defaults(func=cmd_seller)
 
-    pub = sub.add_parser("publish", help="publish an item via the real web wizard (Playwright)")
-    pub.add_argument("photos_dir", help="directory with the item photos (jpg/png)")
+    pub = sub.add_parser("publish", help="publish an item (pure API by default, or the web wizard with --browser)")
+    pub.add_argument("photos_dir", help="directory with the item photos (jpg/png); pure-API mode uses the first photo")
     pub.add_argument("--summary", required=True, help="item title (max 50 chars)")
     pub.add_argument("--price", type=float, required=True, help="list price in EUR")
     pub.add_argument(
         "--condition", default="good",
         help="condition: un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all (default good)",
     )
-    pub.add_argument("--weight-tier", default="0", help="shipping weight tier radio name (default 0 = 0-1 kg)")
-    pub.add_argument("--max-photos", type=int, default=1, help="number of photos to upload (default 1, max 10)")
-    pub.add_argument("--headless", action="store_true", help="run Chromium headless (invisible)")
+    pub.add_argument("--mode", choices=["api", "browser"], default="api", help="how to publish (default api)")
+    pub.add_argument("--description", default="", help="item description (pure-API mode)")
+    pub.add_argument("--brand", default="", help="item brand, e.g. Nintendo (pure-API mode)")
+    pub.add_argument("--model", default="", help="item model, e.g. 3DS (pure-API mode)")
+    pub.add_argument("--color", default="", help="item color, e.g. blue (pure-API mode)")
+    pub.add_argument("--max-weight-kg", type=int, default=1, help="shipping weight in kg (pure-API mode, default 1)")
+    # browser-only flags (keep compat with the original wizard command)
+    pub.add_argument("--weight-tier", default="0", help="shipping weight tier radio name (browser mode only, default 0 = 0-1 kg)")
+    pub.add_argument("--max-photos", type=int, default=1, help="browser mode only: photos to upload (default 1, max 10)")
+    pub.add_argument("--headless", action="store_true", help="browser mode only: run Chromium headless (invisible)")
+    pub.add_argument("--capture-body", help="browser mode only: save the raw POST /api/v3/items body to this file (debug)")
     pub.set_defaults(func=cmd_publish)
 
     parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")

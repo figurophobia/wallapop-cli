@@ -790,11 +790,18 @@ def cmd_replies(args: argparse.Namespace) -> int:
 
 
 def cmd_publish(args: argparse.Namespace) -> int:
-    """Publish an item through the real web wizard (Playwright browser)."""
+    """Publish an item: pure API by default, or the real web wizard with --browser."""
+    price = int(round(args.price))
+    if args.mode == "browser":
+        return _cmd_publish_browser(args, price)
+    return _cmd_publish_api(args, price)
+
+
+def _cmd_publish_browser(args: argparse.Namespace, price: int) -> int:
     from ..publish import publish_item  # noqa: PLC0415 (optional playwright dep)
 
-    price = int(round(args.price))
     print(paint.bold(f"publishing {args.photos_dir} — {args.summary} @ {price} EUR ({args.condition})"))
+    capture = getattr(args, "capture_body", None)
     try:
         result = publish_item(
             photos_dir=args.photos_dir,
@@ -804,6 +811,7 @@ def cmd_publish(args: argparse.Namespace) -> int:
             weight_tier=args.weight_tier,
             max_photos=args.max_photos,
             headless=args.headless,
+            capture_body_path=capture,
         )
     except Exception as exc:  # noqa: BLE001
         eprint(paint.red(f"publish failed: {exc}"))
@@ -814,3 +822,40 @@ def cmd_publish(args: argparse.Namespace) -> int:
         print(paint.green(f"published item {item_id}"))
     print(paint.bold(f"final page: {url}"))
     return 0 if "/published" in url else 1
+
+
+def _pick_photo(photos_dir: str) -> Optional[str]:
+    exts = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+    files = sorted(
+        os.path.join(photos_dir, f)
+        for f in os.listdir(photos_dir)
+        if f.lower().endswith(exts) and not f.startswith(".")
+    )
+    return files[0] if files else None
+
+
+def _cmd_publish_api(args: argparse.Namespace, price: int) -> int:
+    photo = _pick_photo(args.photos_dir)
+    if not photo:
+        eprint(f"no photo found in {args.photos_dir}")
+        return 1
+    client, _ = authed_client()
+    print(paint.bold(f"publishing {photo} — {args.summary} @ {price} EUR ({args.condition})"))
+    resp = client.publish(
+        photo_path=photo,
+        title=args.summary,
+        price=price,
+        condition=args.condition,
+        description=args.description,
+        brand=args.brand,
+        model=args.model,
+        color=args.color,
+        max_weight_kg=args.max_weight_kg,
+    )
+    announce("published via API", resp)
+    if resp.ok:
+        item_id = (resp.data or {}).get("id") or ""
+        if item_id:
+            print(paint.green(f"item {item_id}"))
+        return 0
+    return 1
