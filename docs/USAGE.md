@@ -18,6 +18,7 @@ Referencia completa de `wallapop`. Se invoca como
 | `replies` | Ver el inbox y los hilos completos |
 | `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
 | `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
+| `publish` | Publicar un artículo vía el wizard real de la web (Playwright) |
 
 ---
 
@@ -274,6 +275,32 @@ wallapop seller <user_id> --json      # dump crudo (profile + stats + reviews)
 
 ---
 
+## Publicar un artículo
+
+```
+wallapop publish /ruta/a/fotos --summary 'Nintendo 3DS Azul' --price 310
+wallapop publish ./fotos --summary '...' --price 200 --condition good --max-photos 3
+```
+
+- Publica un artículo abriendo el **wizard real** de `es.wallapop.com` con tu
+  sesión guardada (`wallapoplib/publish.py`, Playwright headful visible). Es la
+  vía actual porque el POST final (`/api/v3/items`) es multipart y aún no se
+  puede replicar por HTTP plano (doc: `docs/ENDPOINTS.md`).
+- `photos_dir`: carpeta con las imágenes jpg/png del artículo. Se sube **una
+  sola foto por defecto** (el algoritmo anti-duplicados de Wallapop sospecha al
+  publicar el mismo item varias veces con varias fotos); con `--max-photos`
+  subes hasta 10.
+- `summary`: título (máx 50). Marca/modelo/color/descripción se autocompletan
+  solos tras subir las fotos; precio y estado los pones tú.
+- `--condition`: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`
+  (por defecto `good` = "En buen estado").
+- `--price`: precio de venta en EUR (entero, rango invertible 1–2500).
+- `--weight-tier`: tramo de peso envío (por defecto `0` = 0–1 kg).
+- `--headless`: ejecuta sin ventana (por defecto se abre el navegador para que
+  puedas ver/controlar la publicación).
+
+---
+
 ## Detalles generales
 
 - Guard de ritmo: `WALLAPOP_RATE_PACE` (segundos entre requests, 1.0 por
@@ -281,5 +308,6 @@ wallapop seller <user_id> --json      # dump crudo (profile + stats + reviews)
 - Salidas con color se autodesactivan si stdout no es una TTY (`Paint`).
 - Los errores salen por stderr con prefijo `error:`; los OK de acciones
   aparecen como `[ok] ...`, lo simulado como `[dry-run] would ...`.
-- Todo el transporte es HTTP plano (`urllib`); salvo el fallback de chat, no
-  se usa Playwright en ninguna llamada a la API.
+- Todo el transporte es HTTP plano (`urllib`) salvo `publish`, que usa
+  Playwright para jugar el wizard real de la web (el POST final de la
+  publicación no es replicable por HTTP plano de momento).

@@ -1,9 +1,10 @@
 # Wallapop CLI
 
 CLI de automatización para Wallapop: busca anuncios, detecta gangas (precio por
-debajo de la mediana), envía ofertas y mensajes de chat, y gestiona ofertas
-recibidas (aceptar / rechazar / contraofertar). Todo por HTTP plano (`urllib`),
-sin navegador salvo en un fallback puntual del envío de chat.
+debajo de la mediana), envía ofertas y mensajes de chat, gestiona ofertas
+recibidas (aceptar / rechazar / contraofertar) y publica artículos. Todo por
+HTTP plano (`urllib`) salvo `publish`, que juega el wizard real de la web con
+Playwright (el POST de publicación aún no es replicable por API pura).
 
 ```
 python3 wallapop.py <comando> ...
@@ -20,6 +21,7 @@ python3 wallapop.py <comando> ...
 | `offer` | Hacer ofertas, responder y ver el panel de negociaciones |
 | `message` | Enviar mensaje de chat a un vendedor |
 | `replies` | Ver inbox y hilos completos |
+| `publish` | Publicar un artículo vía el wizard real de la web (Playwright) |
 
 ## Documentación
 
@@ -84,18 +86,23 @@ Puedes usarla de dos formas:
    pip install -e '.[test]'     # desarrollo local
    ```
 
-### Playwright es opcional (y solo para el fallback de chat)
+### Playwright es opcional (excepto para `publish`)
 
 El envío de mensajes de chat funciona por PubNub REST, sin navegador. Solo si
 PubNub no confirma la entrega se intenta un **fallback** que abre un navegador
 headless (Playwright + Firefox) con tus cookies de sesión. Para el flujo normal
-**no necesitas instalar Playwright**; puedes ignorar este paso:
+**no necesitas instalar Playwright**.
+
+El comando `publish` sí lo necesita: abre el **wizard de la web** headful para
+crear el anuncio (cromium vía Playwright):
 
 ```
-# Solo si quieres el fallback del chat por navegador (opcional):
 pip install --user --break-system-packages playwright
-python3 -m playwright install firefox
+python3 -m playwright install chromium
 ```
+
+Añade `pip install -e '.[browser]'` para incluir la dependencia de Playwright
+en el entorno del paquete.
 
 ## Sesión
 

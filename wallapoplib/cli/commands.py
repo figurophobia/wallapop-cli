@@ -787,3 +787,30 @@ def cmd_replies(args: argparse.Namespace) -> int:
         if lastline:
             print(lastline)
     return 0
+
+
+def cmd_publish(args: argparse.Namespace) -> int:
+    """Publish an item through the real web wizard (Playwright browser)."""
+    from ..publish import publish_item  # noqa: PLC0415 (optional playwright dep)
+
+    price = int(round(args.price))
+    print(paint.bold(f"publishing {args.photos_dir} — {args.summary} @ {price} EUR ({args.condition})"))
+    try:
+        result = publish_item(
+            photos_dir=args.photos_dir,
+            summary=args.summary,
+            price=price,
+            condition=args.condition,
+            weight_tier=args.weight_tier,
+            max_photos=args.max_photos,
+            headless=args.headless,
+        )
+    except Exception as exc:  # noqa: BLE001
+        eprint(paint.red(f"publish failed: {exc}"))
+        return 1
+    url = result["url"]
+    item_id = result["item_id"]
+    if item_id:
+        print(paint.green(f"published item {item_id}"))
+    print(paint.bold(f"final page: {url}"))
+    return 0 if "/published" in url else 1

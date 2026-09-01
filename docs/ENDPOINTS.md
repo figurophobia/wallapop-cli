@@ -432,6 +432,11 @@ El estado de una negociación se deriva **offline** de los mensajes del hilo:
 
 ## Publicar artículos (upload / publish)
 
+> Estado: el flujo completo está mapeado y el endpoint final confirmado en vivo.
+> La publicación funciona desde CLI **vía navegador real** (`wallapop publish`,
+> módulo `wallapoplib/publish.py`), porque el body del `POST /api/v3/items` final
+> es multipart y no se expone a CDP/Playwright (ver "Paso final: publicar").
+
 ### POST `/api/v3/steps`  [state machine]
 
 Motor del wizard de publicación. Máquina de estados sin estado: cada petición
@@ -535,10 +540,32 @@ Una llamada por foto (máx 10). Multipart `file` (image/jpeg).
 Sirve el esquema (components) del formulario `listing` para el borrador actual.
 Se invoca cada vez que cambia un campo con `reloads_when_changed: true` (ej. `condition`).
 
-Request observado (desde el navegador real):
+Request real (**formato confirmado desde el navegador**):
 ```json
-{"category_leaf_id": 10088, "brand": "Nintendo", "model": "3DS XL"}
+{
+  "fields": {
+    "summary": "Nintendo 3DS Azul Cobalto",
+    "category_leaf_id": "10088",
+    "root_category_id": "24200",
+    "brand": "Nintendo",
+    "model": "3DS",
+    "color": "blue",
+    "title": "Nintendo 3DS Azul Cobalto",
+    "description": "Consola Nintendo 3DS en color Azul Cobalto...",
+    "condition": "good",
+    "price_amount": "310"
+  },
+  "mode": {"action": "upload", "id": "<upload_id>"}
+}
 ```
+
+- El cuerpo va en **`fields`** + `mode` (misma estructura que `/steps`).
+- Todos los valores son **strings** (`category_leaf_id` "10088", `price_amount` "310").
+- Se hace un primer POST solo con `summary`/`category` al llegar a `listing`, y
+  un segundo POST **con todos los campos** (precio, condición, marca, modelo…)
+  justo antes de publicar. Ambos devuelven `200`.
+- Marca/modelo/color/título/descripción se autocompletan solos tras subir las
+  fotos (suggested-item-data); el usuario solo edita precio + condición + envío.
 
 Respuesta 200 con array de components (`text_input`, `combo_box`, `dropdown`, `custom`, `feature_banner`).
 Campos observados en orden:
@@ -572,21 +599,39 @@ Campos observados en orden:
 
 ### Paso final: publicar
 
-El POST que crea el anuncio definitivo (extraído de `chunk-B5DKKJDO.js`, fn `ce`):
+El POST que crea el anuncio definitivo (confirmado con publicaciones reales):
+
 ```http
 POST /api/v3/items
 ```
-Body (multipart/form-data para subida final de imágenes):
-```json
-{
-  "attributes": {"description": "...", "title": "...", "price_amount": "400", "brand": "Nintendo", "model": "Nintendo 3DS XL", "size": "3ds xl", "condition": "good", ...},
-  "category_leaf_id": 10088,
-  "apply_discount": false,
-  "location": {"latitude": 40.0, "longitude": -3.5, "approximated": false},
-  "delivery": {"allowed_by_user": true, "max_weight_kg": 1, "cost_configuration_id": "..."},
-  "image": [...], "pictures": [...], "upload_id": "<upload_id>"
-}
-```
+
+**Verificado en vivo**: 200 y crea el item (hemos publicado artículos reales). Tras el
+POST la web hace `GET /api/v3/items/<id>?language=es` (el nuevo id) y sube las fotos
+finales con `POST /api/v3/items/<id>/picture2` (una por foto, todas 200), luego
+redirige a `/app/catalog/published`.
+
+**Headers reales del POST** (captura CDP del navegador):
+- Preflight OPTIONS pide `Access-Control-Request-Headers: authorization,x-deviceos`.
+- El POST manda `Authorization: Bearer <token>`, `Content-Type: multipart/form-data;
+  boundary=...`, `Accept: application/vnd.upload-v2+json`, `x-deviceos: 0`,
+  `Origin/Referer: https://es.wallapop.com`.
+
+**Bloqueo para API pura (AÚN NO REPLICABLE por HTTP plano):**
+- El body NO se expone a CDP/Playwright (`postData: null` en `requestWillBeSent`
+  y en `page.on("request")`): la web lo envía como cuerpo no serializable o como
+  finalización del draft servido por el backend (`mode.upload.id`).
+- Reproduciendo por API: sin `x-deviceos` + `Accept: application/vnd.upload-v2+json`
+  → **405**; añadiéndolos y mandando JSON → **400** (espera multipart/form-data).
+- Hasta capturar el body multipart exacto, **la publicación se hace con el navegador**
+  (comando `wallapop publish`, módulo `wallapoplib/publish.py`: juega el wizard real
+  con la sesión del usuario y deja que la web haga las llamadas).
+
+El anuncio creado (estructura de un item publicado) revela:
+- `price: {cash: {amount, currency: "EUR"}}`
+- `shipping: {item_is_shippable: true, user_allows_shipping: true, cost_configuration_id: "..."}`
+- `location: {lat, lon, city, postal_code}`
+- `type_attributes` incluye `up_to_kg: "1.0"` (tramo de peso elegido)
+- `condition`, `brand`, `model`, `color` (los mismos del formulario)
 
 Endpoints de referencia en bundle JS:
 - `chunk-B5DKKJDO.js` — payload builder `ce` → POST `/api/v3/items`
