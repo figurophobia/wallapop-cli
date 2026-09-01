@@ -427,3 +427,168 @@ El estado de una negociación se deriva **offline** de los mensajes del hilo:
   se hace *forward-fill* del `amount`/`offer_id` desde el último evento
   anterior con valor.
 - Código: `parse_offer_events()` + `offer_state_summary()` (`models.py`).
+
+---
+
+## Publicar artículos (upload / publish)
+
+### POST `/api/v3/steps`  [state machine]
+
+Motor del wizard de publicación. Máquina de estados sin estado: cada petición
+envía el borrador completo y devuelve el siguiente `step.id` a resolver.
+
+**Headers comunes**: `Authorization: Bearer <token>`, `Content-Type: application/json`,
+`Origin: https://es.wallapop.com`, `X-AppVersion: 826590`, `X-DeviceOS: 0`,
+`X-DeviceID: <device_id>`.
+
+#### 1. Init → title
+
+```http
+POST /api/v3/steps
+{"mode": {"action": "upload", "id": "<upload_id>"}}
+```
+
+- `upload_id` = UUID generado por el cliente (identifica el borrador).
+- Respuesta: `{"step": {"id": "title", "components": [], "metadata": {}}}`.
+
+#### 2. title → photo
+
+```http
+POST /api/v3/steps
+{
+  "mode": {"action": "upload", "id": "<upload_id>"},
+  "current_step": "title",
+  "draft": {"summary": "Nintendo 3DS XL Azul Yveltal Edicion Pokemon"}
+}
+```
+
+- `summary` = título (máx 50 chars, valida: sin enlaces, no solo espacios, no emojis).
+- Respuesta: `step.id: "photo"` con `picture_upload.path` = `/api/v3/upload/<upload_id>/pictures`,
+  `max_number_of_pictures: 1` (una foto por llamada), `timeout_ms: 20000`, `max_size_px: 768`,
+  y `pictures_item.max_number_of_pictures: 10` (máx 10 fotos por anuncio).
+
+#### 3. photo → category
+
+```http
+POST /api/v3/steps
+{
+  "mode": {"action": "upload", "id": "<upload_id>"},
+  "current_step": "photo",
+  "draft": {"summary": "Nintendo 3DS XL Azul Yveltal Edicion Pokemon"}
+}
+```
+
+- El body usa el **mismo draft** que title (no se mandan IDs de foto; la subida es aparte).
+- Respuesta: `step.id: "category"` con `components: [{"id": "category", "type": "custom", ...}]`.
+
+#### 4. category → listing
+
+```http
+POST /api/v3/steps
+{
+  "mode": {"action": "upload", "id": "<upload_id>"},
+  "current_step": "category",
+  "draft": {"category_leaf_id": "10088", "root_category_id": "24200"}
+}
+```
+
+- **`category_leaf_id` y `root_category_id` son STRINGS** ("10088", "24200"), no enteros.
+- `category_leaf_id` = hoja (ej. 10088 = Consolas), `root_category_id` = raíz (24200 = Tecnología y electrónica).
+- Respuesta: `step.id: "listing"`, `components: []`.
+
+#### 5. listing → (shipping → publish)
+
+El step `listing` es el formulario de atributos/precio/descripción/estado/envío.
+La estructura del draft validada:
+
+```json
+{
+  "summary": "Nintendo 3DS XL Azul Yveltal Edicion Pokemon",
+  "description": "Nintendo 3DS XL en buen estado. Edicion Pokemon Yveltal azul. Con cargador. Envio disponible.",
+  "price_amount": "400",
+  "category_id": "10088",
+  "brand": "Nintendo",
+  "model": "Nintendo 3DS XL",
+  "condition": "good",
+  "pictures": []
+}
+```
+
+**Campos críticos:**
+- `price_amount` = **string** "400" (no int, no objeto `price: {amount, currency}`).
+- `category_id` = string "10088".
+- `condition` = string "good" (valores: `un_opened`, `in_box`, `new`, `as_good_as_new`, `good`, `fair`, `has_given_it_all`).
+- `color` = string "blue" (no array).
+- `brand`, `model` = strings opcionales.
+- `description` = string (máx 640).
+
+Enviar `draft` con todos los campos → 200 pero **no avanza** (siguiente step sigue siendo `listing`).
+
+### Subida de fotos: `POST /api/v3/upload/<upload_id>/pictures`
+
+Una llamada por foto (máx 10). Multipart `file` (image/jpeg).
+- Respuesta: **204 No Content** (sin IDs de foto en respuesta ni headers).
+- Límite: `pictures_item.max_number_of_pictures: 10` (la carpeta puede tener más, solo suben 10).
+
+### POST `/api/v3/items/upload/components`  [BDUI form schema]
+
+Sirve el esquema (components) del formulario `listing` para el borrador actual.
+Se invoca cada vez que cambia un campo con `reloads_when_changed: true` (ej. `condition`).
+
+Request observado (desde el navegador real):
+```json
+{"category_leaf_id": 10088, "brand": "Nintendo", "model": "3DS XL"}
+```
+
+Respuesta 200 con array de components (`text_input`, `combo_box`, `dropdown`, `custom`, `feature_banner`).
+Campos observados en orden:
+1. `suggested_data_banner` (feature_banner, no editable)
+2. `photo` (custom, `max_number_of_pictures: 10`)
+3. `brand` (combo_box, requerido, opciones via `/api/v3/attributes/brand/options?category_leaf_id=...`)
+4. `model` (combo_box, opcional, opciones via `/api/v3/attributes/model/options?brand=...&category_leaf_id=...`)
+5. `color` (dropdown, opcional)
+6. `title` (text_input, requerido, max_length: 50, valida: sin enlaces)
+7. `description` (text_area, requerido, max_length: 640)
+8. `condition` (dropdown, requerido, `reloads_when_changed: true`)
+9. `price_amount` (text_input, requerido, rango envío 1–2500 €)
+10. `lock_stocks` (lock, opcional, "Añadir más unidades", `root_category_id: 24200`)
+
+### Config de envío (consumida por el formulario listing)
+
+**GET `/api/v3/delivery/weight/tiers/with-suggestion`**
+```json
+{"weight_tiers": [
+  {"min_weight_in_kg": 0, "max_weight_in_kg": 1, "min_cost": {"amount": 2.99, "currency": "EUR"}, "max_cost": {"amount": 6.49, "currency": "EUR"}, "suggested": false},
+  ...
+]}
+```
+
+**GET `/bff/delivery/rules`**
+```json
+{"categories_with_shipping_not_allowed": [100, 14000, ...],
+ "subcategories_with_shipping_not_allowed": [10119, 10120, ...],
+ "price_range_allowed": {"min_price": 1.0, "max_price": 2500.0}}
+```
+
+### Paso final: publicar
+
+El POST que crea el anuncio definitivo (extraído de `chunk-B5DKKJDO.js`, fn `ce`):
+```http
+POST /api/v3/items
+```
+Body (multipart/form-data para subida final de imágenes):
+```json
+{
+  "attributes": {"description": "...", "title": "...", "price_amount": "400", "brand": "Nintendo", "model": "Nintendo 3DS XL", "size": "3ds xl", "condition": "good", ...},
+  "category_leaf_id": 10088,
+  "apply_discount": false,
+  "location": {"latitude": 40.0, "longitude": -3.5, "approximated": false},
+  "delivery": {"allowed_by_user": true, "max_weight_kg": 1, "cost_configuration_id": "..."},
+  "image": [...], "pictures": [...], "upload_id": "<upload_id>"
+}
+```
+
+Endpoints de referencia en bundle JS:
+- `chunk-B5DKKJDO.js` — payload builder `ce` → POST `/api/v3/items`
+- `chunk-IQHJVPZ3.js` — wizard steps (`POST /api/v3/steps`, `suggested-item-data`, constantes `SUMMARY, CATEGORY, PHOTO, LOADING, LISTING, ISBN`)
+- `chunk-3WKBKU6R.js` — `api/v3/items/upload/components`
