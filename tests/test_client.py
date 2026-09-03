@@ -183,6 +183,8 @@ class FakeTransport:
             return 200, {"offer_id": "created"}, "application/json"
         if url.endswith("/categories"):
             return 200, RAW_CATEGORIES, "application/json"
+        if url.endswith("/steps"):
+            return 200, {"step": {"id": "title", "components": [], "metadata": {}}}, "application/json"
         if url.endswith("/users/me"):
             return 200, RAW_ME, "application/json"
         if "/users/wz0123456789/items" in url:
@@ -489,7 +491,7 @@ def test_publish_builds_multipart_with_me_location_and_cost_cfg(fake, monkeypatc
     photo = tmp_path / "foto.jpg"
     photo.write_bytes(b"\xff\xd8\xff\xe0fakejpeg")
     client = Wallapop(token="tk")
-    resp = client.publish(str(photo), "GameCube", 40.0, brand="Nintendo", model="GC", color="black")
+    resp = client.publish([str(photo)], "GameCube", 40.0, brand="Nintendo", model="GC", color="black")
     assert resp.ok and resp.data["id"] == "ab12cd34ef56"
     method, url, raw, headers = calls_raw[0]
     assert method == "POST"
@@ -518,6 +520,31 @@ def test_publish_sends_only_first_photo(fake, monkeypatch, tmp_path):
     photo.write_bytes(b"jpeg")
     client = Wallapop(token="tk")
     client.user = {"id": "wz0123456789"}
-    resp = client.publish(str(photo), "T", 5.0)
+    resp = client.publish([str(photo)], "T", 5.0)
     assert resp.ok
     assert len(calls_raw) == 1
+
+
+def test_publish_uploads_extra_photos(fake, monkeypatch, tmp_path):
+    calls_raw = []
+    def track_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60):
+        calls_raw.append((method, url))
+        if "/upload/" in url:
+            return 204, ""
+        if "/items" in url:
+            return 200, {"id": "abc123"}
+        return 200, {}
+    monkeypatch.setattr(client_mod, "http_request_raw", track_raw)
+    photos = []
+    for i in range(3):
+        p = tmp_path / f"p{i}.jpg"
+        p.write_bytes(b"jpeg")
+        photos.append(str(p))
+    client = Wallapop(token="tk")
+    resp = client.publish(photos, "T", 5.0)
+    assert resp.ok
+    raw_urls = [u for _, u in calls_raw]
+    assert len([u for u in raw_urls if "/upload/" in u]) == 2
+    steps_calls = [c for c in fake.calls if "/steps" in c[1]]
+    assert len(steps_calls) == 2
+    assert any(u.endswith("/api/v3/items") for u in raw_urls)

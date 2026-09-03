@@ -824,25 +824,25 @@ def _cmd_publish_browser(args: argparse.Namespace, price: int) -> int:
     return 0 if "/published" in url else 1
 
 
-def _pick_photo(photos_dir: str) -> Optional[str]:
+def _pick_photos(photos_dir: str, max_n: int = 10) -> list[str]:
     exts = (".jpg", ".jpeg", ".png", ".webp", ".gif")
     files = sorted(
         os.path.join(photos_dir, f)
         for f in os.listdir(photos_dir)
         if f.lower().endswith(exts) and not f.startswith(".")
     )
-    return files[0] if files else None
+    return files[:max_n]
 
 
 def _cmd_publish_api(args: argparse.Namespace, price: int) -> int:
-    photo = _pick_photo(args.photos_dir)
-    if not photo:
+    photos = _pick_photos(args.photos_dir, max_n=10)
+    if not photos:
         eprint(f"no photo found in {args.photos_dir}")
         return 1
     client, _ = authed_client()
-    print(paint.bold(f"publishing {photo} — {args.summary} @ {price} EUR ({args.condition})"))
+    print(paint.bold(f"publishing {len(photos)} photo(s) from {args.photos_dir} — {args.summary} @ {price} EUR ({args.condition})"))
     resp = client.publish(
-        photo_path=photo,
+        photo_paths=photos,
         title=args.summary,
         price=price,
         condition=args.condition,
