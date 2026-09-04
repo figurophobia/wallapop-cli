@@ -470,18 +470,18 @@ class Wallapop:
         category leaf, seller location, delivery config and a fresh
         ``upload_id``).
 
-        When ``photo_paths`` has more than one entry, the extra photos are
-        first uploaded to the draft for ``upload_id`` via
-        ``POST /api/v3/upload/<upload_id>/pictures`` (field ``image``, one per
-        photo) while the upload wizard is on the ``title`` step, and only the
-        first photo is sent as the ``image`` of the final POST.
+        When ``photo_paths`` has more than one entry, the cover is sent as the
+        ``image`` of the final POST and each remaining photo is linked to the
+        created item with ``POST /api/v3/items/<id>/picture2`` (multipart
+        ``image`` with the full bytes + an ``order`` field). This is the pure-API
+        path that reproduces the browser's multi-photo publish (resolved
+        2026-09-03; see ``docs/multi-photo-upload.md``).
 
-        .. warning:: Multi-photo is NOT yet fully resolved for the pure API: as
-           of 2026-09-03 the resulting item is created with only the cover
-           photo (1 image). Uploading extras to the draft does NOT associate
-           them to the final item. The browser wizard (`Wallapop`` CLI
-           ``publish``) is the working path for N photos. See
-           ``docs/multi-photo-upload.md`` for the research and open paths.
+        .. note:: Wallapop's POST ``/api/v3/items`` rejects the body with
+           ``400 INVALID_ATTRIBUTE`` when ``color`` is empty (verified 2026-09-03
+           on several categories). Pass a ``color`` value (the web wizard fills
+           it via suggested-item-data, but the pure API POST must include it);
+           ``brand``/``model`` may stay empty.
 
         The seller location is taken from ``GET /users/me``; the delivery
         ``cost_configuration_id`` is the account's constant (returned by
@@ -504,22 +504,6 @@ class Wallapop:
             return Response(me.status, {"error_message": "no location in /users/me; publish requires geolocation"}, False, False)
 
         upload_id = str(uuid.uuid4())
-
-        if len(photo_paths) > 1:
-            init = self._authed("POST", "/steps", body={"mode": {"action": "upload", "id": upload_id}})
-            if not init.ok:
-                return Response(init.status, {"error_message": f"steps init failed: {init.data}"}, False, init.unauthorized)
-            title_resp = self._authed("POST", "/steps", body={
-                "mode": {"action": "upload", "id": upload_id},
-                "current_step": "title",
-                "draft": {"summary": title[:50]},
-            })
-            if not title_resp.ok:
-                return Response(title_resp.status, {"error_message": f"steps title failed: {title_resp.data}"}, False, title_resp.unauthorized)
-            for extra_photo in photo_paths[1:]:
-                up_resp = self._upload_photo(upload_id, extra_photo)
-                if not up_resp.ok:
-                    return Response(up_resp.status, {"error_message": f"extra photo upload failed: {up_resp.data}"}, False, up_resp.unauthorized)
 
         item = {
             "attributes": {
@@ -579,43 +563,57 @@ class Wallapop:
                 status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
         if status != 200:
             return Response(status, {"error_message": f"publish POST failed with status {status}"}, False, status == 401)
+
+        item_id = payload.get("id") if isinstance(payload, dict) else None
+
+        if len(photo_paths) > 1 and item_id:
+            for order, extra_photo in enumerate(photo_paths[1:], start=2):
+                pic_resp = self._add_picture(item_id, extra_photo, order)
+                if not pic_resp.ok:
+                    return Response(pic_resp.status, {"error_message": f"picture {order} failed: {pic_resp.data}"}, False, pic_resp.unauthorized)
+
         return Response(200, payload or {}, True, False)
 
-    def _upload_photo(self, upload_id: str, photo_path: str) -> Response:
-        """Upload a single photo to the draft for ``upload_id``.
+    def _add_picture(self, item_id: str, photo_path: str, order: int) -> Response:
+        """Link a photo to an already-created item via picture2.
 
-        ``POST /api/v3/upload/<upload_id>/pictures`` mirrors the wizard's photo
-        step: a multipart with an ``image`` field (image/jpeg) and the app
-        headers (``x-appversion``, ``x-deviceos``, ``x-deviceid``). Returns 204
-        on success.
+        ``POST /api/v3/items/<id>/picture2`` with a multipart body of ``image``
+        (the full JPEG bytes) and ``order`` (its position, starting at 2, as a
+        string). Returns 200 with a short photo id. This is how the browser adds
+        the extra photos after the item is created (resolved 2026-09-03).
         """
         with open(photo_path, "rb") as fh:
             photo = fh.read()
-        boundary = "----uploadBoundary" + uuid.uuid4().hex[:22]
+        boundary = "----pictureBoundary" + uuid.uuid4().hex[:16]
         body = b"".join([
             f"--{boundary}\r\n".encode(),
             b'Content-Disposition: form-data; name="image"; filename="foto.jpg"\r\n',
             b"Content-Type: image/jpeg\r\n\r\n",
             photo, b"\r\n",
+            f"--{boundary}\r\n".encode(),
+            b'Content-Disposition: form-data; name="order"\r\n\r\n',
+            str(order).encode(), b"\r\n",
             f"--{boundary}--\r\n".encode(),
         ])
-        device_id = (self.web_cookies or {}).get("device_id", "")
         headers = self._headers(auth=True)
         headers.update({
             "Accept": "application/json",
-            "x-appversion": "826740",
-            "x-deviceos": "0",
             "Content-Type": f"multipart/form-data; boundary={boundary}",
         })
-        if device_id:
-            headers["x-deviceid"] = device_id
-        status, _ = http_request_raw(
-            "POST", f"{API_BASE}/upload/{upload_id}/pictures",
+        status, payload = http_request_raw(
+            "POST", f"{API_BASE}/items/{item_id}/picture2",
             raw_body=body, headers=headers, timeout=60,
         )
-        if status in (200, 201, 204):
-            return Response(status, {}, True, False)
-        return Response(status, {"error_message": f"photo upload failed with status {status}"}, False, status == 401)
+        if status == 401 and self.refresh_web():
+            headers = self._headers(auth=True)
+            headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+            status, payload = http_request_raw(
+                "POST", f"{API_BASE}/items/{item_id}/picture2",
+                raw_body=body, headers=headers, timeout=60,
+            )
+        if status == 200:
+            return Response(status, payload or {}, True, False)
+        return Response(status, {"error_message": f"picture2 failed with status {status}"}, False, status == 401)
 
     def _cost_configuration_id(self) -> str:
         """Our account's delivery cost configuration UUID (constant per account)."""

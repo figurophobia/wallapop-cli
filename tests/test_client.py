@@ -529,8 +529,8 @@ def test_publish_uploads_extra_photos(fake, monkeypatch, tmp_path):
     calls_raw = []
     def track_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60):
         calls_raw.append((method, url))
-        if "/upload/" in url:
-            return 204, ""
+        if "/picture2" in url:
+            return 200, "abc123"
         if "/items" in url:
             return 200, {"id": "abc123"}
         return 200, {}
@@ -544,7 +544,7 @@ def test_publish_uploads_extra_photos(fake, monkeypatch, tmp_path):
     resp = client.publish(photos, "T", 5.0)
     assert resp.ok
     raw_urls = [u for _, u in calls_raw]
-    assert len([u for u in raw_urls if "/upload/" in u]) == 2
+    assert len([u for u in raw_urls if "/picture2" in u]) == 2
     steps_calls = [c for c in fake.calls if "/steps" in c[1]]
-    assert len(steps_calls) == 2
+    assert len(steps_calls) == 0
     assert any(u.endswith("/api/v3/items") for u in raw_urls)

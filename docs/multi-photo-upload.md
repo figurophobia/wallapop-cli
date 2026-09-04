@@ -1,11 +1,11 @@
-# Subir múltiples fotos por API pura: estado de la investigación
+# Subir múltiples fotos por API pura
 
 Fecha: 2026-09-03. Objetivo: publicar artículos con **varias fotos** por API pura
-(`Wallapop.publish()`), replicando el flujo del navegador. estados:
+(`Wallapop.publish()`), replicando el flujo del navegador.
 
-- ✅ El **navegador** (Playwright → wizard) publica con N fotos sin problema.
-- ⚠️ La **API pura** (`requests`/`urllib`) publica el item con **1 sola foto**.
-  La asociación multi-foto por API pura **aún NO está resuelta**.
+- ✅ **RESUELTO (2026-09-03 tarde)**: `Wallapop.publish(photo_paths=[...])` ya
+  publica con **N fotos** por API pura, sin navegador, vía `picture2`.
+  Ver sección "✅ RESUELTO" más abajo.
 
 Esto es una nota viva: los hallazgos van fechados; la evidencias crudas (bodies
 capturados, scripts) viven en este directorio cuando se mencionan.
@@ -42,50 +42,93 @@ observado dependiente del cliente:
 Hay DOS interpretaciones posibles (referencia del `order` ya subido vs subida
 directa). En ambos casos 200.
 
-## Lo que NO funciona (bloqueo actual)
-- `POST /api/v3/items/<id>/picture2` por HTTP plano (`requests`/`urllib`) → **400
-  SIEMPRE**, replicando headers exactas de Firefox (Accept, Accept-Language,
-  Origin, Referer, User-Agent FF, Content-Type multipart) e incluso la imagen
-  completa. También 400 desde `fetch` JS con `FormData` dentro del navegador
-  (`page.evaluate`). Solo responde bien dentro del flujo real de la app web
-  (preflight CORS + auth/device implícitos).
+## Lo que NO funciona (y por qué — resuelto en la sección RESUELTO)
+- `POST /api/v3/items/<id>/picture2` daba **400 SIEMPRE** por HTTP plano porque el
+  body no era el correcto: faltaba el campo `order` (o la imagen iba vacía =
+  `INVALID_PICTURE_SIZE`). Con `image` completa + `order` + headers de la app →
+  **200**. (Los 400 previos de `fetch`/urllib eran por body/headers incompletos,
+  no por CORS/preflight.)
 - El **draft-upload path** (steps init+title + `_upload_photo` a
   `/api/v3/upload/<id>/pictures` con field `image`, 204) crea el item con **1
-  sola imagen** — **no** asocia las fotos extra aunque se suban al draft.
+  sola imagen** — el draft **no** arrastra las fotos al anuncio. Las extras hay
+  que enlazarlas con `picture2` después de crear el item. (Ya no se usa.)
 
-## Items usados en alas (creados, el usuario los borró a mano)
+## Items de prueba (creados, el usuario los borró a mano)
 nz08e9myy36o, 8z887v1351z3, 9jdwyd73v96k, e65qnmyxdg6o, wzyrkend3x65,
-ejkmy2998qzx, pzpk0812y5j3 (éste, browser, con 3 fotos → 3 imágenes reales).
+ejkmy2998qzx, pzpk0812y5j3 (browser, 3 fotos), 9jdwydreql6k (API: 1→2→3 pics),
+w67v08lrv86x (API: 1→2 pics sin draft), 36e5y9ro4q6d (API integrada: 3 pics),
+w67v21ey386x (browser capture).
 
-## Recomendación operativa para hoy
-- Para publicaciones que requieran más de 1 foto **sin reiventar la rueda**: usar
-  el wizard del navegador (`wallapop publish` con Playwright), que ya funciona
-  con N fotos.
-- `Wallapop.publish()` por API pura sigue siendo válido para artículos de **1
-  foto** y sirve de base para seguir investigando el multi-foto.
+## Recomendación operativa
+- `Wallapop.publish(photo_paths=[...])` por API pura ya publica con **N fotos**
+  (cover en POST /items + picture2 por extra). Es el modo recomendado.
+- El wizard del navegador sigue disponible con `--mode browser`, pero ya no es
+  necesario para multi-foto.
 
-## Pistas para el próximo intento
-1. Capturar el body EXACTO del `POST /api/v3/items` del navegador con N fotos
-   (por ahora solo se capturó para 1 foto, en ENDPOINTS.md) y el body del
-   `picture2` REAL de la app (no el de 291 B de Chromium sino el completo de
-   Firefox). La diferencia Firefox vs Chromium puede ser la clave.
-2. Verificar si `picture2` requiere el preflight OPTIONS CORS con
-   `Access-Control-Request-Headers: authorization` y algún header de sesión/
-   device (`x-deviceid`, cookie JSESSIONID, etc.) aún no replicado.
-3. En el draft upload, la cover va al `upload_id`. Probar `POST /api/v3/items`
-   **sin** el campo `image` cuando el upload_id del draft ya contiene las fotos
-   — tal vez el POST /items del navegador no re-sube la cover sino que solo la
-   referencia, y nuestra réplica con `image` siempre pisa el draft.
+---
+
+## ✅ RESUELTO (2026-09-03 tarde): MULTI-FOTO funciona por API pura con `picture2`
+
+**Hallazgo clave**: el endpoint `POST /api/v3/items/<id>/picture2` SÍ se puede
+replicar por HTTP plano con el cuerpo **correcto**:
+
+- **body**: `multipart/form-data` con dos campos:
+  - `image` = **bytes JPEG completos** de la foto extra (NO vacío).
+  - `order` = **string** con la posición (p.ej. `"2"`, `"3"`).
+- **headers**: las de la app (`Authorization: Bearer <token>`,
+  `Origin: https://es.wallapop.com`, `x-deviceos: 0`, `x-deviceid`, `x-appversion`,
+  `Accept: application/json, ...`, `Content-Type: multipart/form-data; boundary=...`).
+- **respuesta 200** `text/plain` con un **mini-id** de estilo `k3jfhh2122d`
+  (p.ej. `4z4ykv5508vz`, `ejkxr4yyedq6`).
+- Tras cada picture2 200, `GET /items/<id>` confirma que el anuncio **gana una
+  imagen más** (1 → 2 → 3 ...).
+
+### Flujo completo que funciona
+1. `POST /api/v3/items` (multipart `image` cover + `item` JSON) → 200, item con 1 foto.
+2. Por **cada foto extra**, `POST /api/v3/items/<id>/picture2` (image completa +
+   `order` progresivo) → 200. Repetir N-1 veces.
+
+### Por qué fallaban los intentos previos
+- Variante "Chromium 291 B" (imagen **vacía** + `order`) → **400
+  `INVALID_PICTURE_SIZE`**: la imagen debe ir **completa** (bytes reales).
+- Imagen completa **sin** `order` → 400. `order` es **obligatorio**.
+- Solo `order` sin image → 500.
+- Hay que usar un **token fresco** (si caduca da `401 ACCESS_TOKEN_EXPIRED`;
+  refrescar con `refresh_web()` / `refresh_web_session()` antes).
+- Los headers de la app (`x-deviceos`, etc.) los añade ya `_headers(auth=True)`.
+
+### Verificación (item real, borrado a mano por el usuario)
+`9jdwydreql6k`: tras POST /items → 1 imagen; tras picture2 order=2 → 2 imágenes;
+tras picture2 order=3 → 3 imágenes. ids devueltos: `4z4ykv5508vz`, `ejkxr4yyedq6`.
+
+### Integración (HECHA, 2026-09-03)
+`Wallapop.publish(photo_paths=[...])` crea el item (POST /items con la cover) y
+luego llama `_add_picture()` (picture2) por cada foto extra. Verificado en vivo:
+`36e5y9ro4q6d` salió con 3 imágenes. picture2 funciona **sin** subir las extras
+al draft (el paso `_upload_photo` al draft ya no se usa y se eliminó).
+
+## ⚠️ Verificado (2026-09-03 tarde): POST /items exige al menos `color`
+- `POST /api/v3/items` con `brand=""`,`model=""`,`color=""` → **400
+  `INVALID_ATTRIBUTE`** (verificado en cat. 10088 y 12463).
+- No depende del título: el backend **no** autocompleta marca/modelo/color del
+  título en el POST final (el "suggested-item-data" que deduce esos valores del
+  título lo hace el **frontend** de la web antes de mandar el POST).
+- Basta con que **`color` no esté vacío** para que dé 200 (brand/model pueden ir
+  vacíos). Con `color` vacío falla aunque brand/model estén rellenos.
+- Implicación: `Wallapop.publish()` con los tres vacíos siempre fallará a día de
+  hoy; la web no lo nota porque su wizard rellena `color` por ti. Para usar la
+  API pura hay que pasar un `color` (o `--color` en el CLI).
 
 ## Código en el repo
-- `wallapoplib/client.py` → `Wallapop.publish(photo_paths)`, `_upload_photo`
-  (draft path, field `image`), `_cost_configuration_id()`, `_request`, `_authed`.
-- `wallapoplib/publish.py` → publish browser (Playwright, N fotos OK).
+- `wallapoplib/client.py` → `Wallapop.publish(photo_paths)`, `_add_picture`
+  (picture2: image completa + `order`), `_cost_configuration_id()`, `_request`, `_authed`.
+- `wallapoplib/publish.py` → publish browser (Playwright, N fotos OK; ya no es
+  necesario para multi-foto).
 - `wallapoplib/cli/commands.py` → `_pick_photos` (hasta 10), `publish` (API por
   defecto).
 - `wallapoplib/http.py` → `http_request_raw()` (bodies binarios multipart).
-- `tests/test_client.py` → tests de publish incl. multi-foto (steps + upload +
-  POST /items).
+- `tests/test_client.py` → tests de publish incl. multi-foto (POST /items +
+  picture2).
 
 ## Evidencias crudas (research/)
 - `publish_INSTRUMENTADO.py` — publish.py instrumentado (log a /tmp/opencode/flow.log).
