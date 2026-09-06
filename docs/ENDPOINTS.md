@@ -744,3 +744,39 @@ body debe ir como estaba (la web reenvía el formulario completo).
   La foto que se omite deja de aparecer en el anuncio (verificado en vivo:
   sustituir la imagen de `p618gorvp5z5` y añadir 2 más, quedando 3 fotos con la
   nueva como portada).
+
+### Reservar un artículo: `PUT /api/v3/items/<id>/reserve`
+
+```http
+PUT /api/v3/items/<id>/reserve
+Content-Type: application/json
+Body: {"reserved": true}     # para desreservar: {"reserved": false}
+```
+
+- Devuelve **204**. Se verifica con `GET /items/<id>` → el campo `reserved`
+  pasa a `{"flag": true}` o queda `null` al desreservar.
+- Validado por API pura con los headers base del CLI (2026-09-06): publicado
+  un item de prueba y marcado reservado con este PUT → 204. Confirmado además
+  que el botón "Reservar" de la web vendedor manda exactamente el mismo.
+- No exige el `Accept: application/vnd.upload-v2+json` del PUT de edición.
+
+### Marcar un artículo como vendido: `PUT /api/v3/items/<id>/sold`
+
+```http
+PUT /api/v3/items/<id>/sold
+Content-Type: application/json
+Body: {}                                  # vacío
+```
+
+- Devuelve **204** sin body. Verificado con `GET /items/<id>` → el campo
+  `sold` pasa a `{"flag": true}`, tanto por el flujo de la web como por API
+  pura (`PUT /items/<id>/sold` con `body={}` y headers base del CLI).
+- Capturado en vivo desde la web vendedor: el botón "Marcar como vendido"
+  abre un modal y el confirm final dispara justo este `PUT /items/<id>/sold`
+  (con la cookie de sesión; mismo request que manda la API con auth bearer).
+- Es distinto de `reserve`: aquí el body es vacío y el flag resultante es
+  `sold`, no `reserved`. No se capturó des-marcar (no hay botón de
+  "desvender" en la web).
+- Verificado en tres anuncios de prueba (2026-09-06): `p618gorvp5z5`,
+  `8z8871mrqdz3` y `8z8871mpkdz3` (web) y `mzn3nlyqq2jn` (API pura,
+  vendido además con `body={}` quedando `sold: {"flag": true}`).
