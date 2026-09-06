@@ -671,3 +671,76 @@ Endpoints de referencia en bundle JS:
 - `chunk-B5DKKJDO.js` — payload builder `ce` → POST `/api/v3/items`
 - `chunk-IQHJVPZ3.js` — wizard steps (`POST /api/v3/steps`, `suggested-item-data`, constantes `SUMMARY, CATEGORY, PHOTO, LOADING, LISTING, ISBN`)
 - `chunk-3WKBKU6R.js` — `api/v3/items/upload/components`
+
+## Editar un anuncio publicado
+
+### PUT `/api/v3/items/{id}`  [editar/actualizar]
+
+Edita un anuncio ya publicado (lo que hace la web al pulsar "Actualizar" en el
+editor). Capturado con `page.on("request")` durante una edición real (2026-09-06).
+
+**Verificado en vivo**: todos los atributos editables devuelven **204** y el
+cambio se refleja al hacer `GET /items/<id>`.
+
+**Headers reales del PUT** (imprescindibles — sin ellos da 404 `null for uri`):
+```http
+PUT /api/v3/items/<id>
+Accept: application/vnd.upload-v2+json       # el MÁS importante
+Accept-Language: es,es-ES;q=0.9
+Authorization: Bearer <token>
+Content-Type: application/json
+Origin: https://es.wallapop.com
+Referer: https://es.wallapop.com/
+User-Agent: Mozilla/5.0
+X-AppVersion: 826800
+X-DeviceID: <device_id>
+X-DeviceOS: 0
+mpid: <mpid>
+trackinguserid: <mpid>
+```
+- `PATCH /items/<id>` y el mismo PUT **sin** `Accept: application/vnd.upload-v2+json`
+  → `404 null for uri` (no es CORS ni auth: es el header que selecciona el handler).
+- `pictures[].id` son los ids de las fotos del item (de `GET /items/<id>` → `images[].id`),
+  no el id del item.
+
+**Body JSON completo** (la web manda SIEMPRE todos los campos, con cada atributo
+propuesto en el form):
+```json
+{
+  "attributes": {
+    "brand": "Nintendo",
+    "model": "3DS",
+    "color": "blue",
+    "title": "Nintendo 3DS Azul Cobalto",
+    "description": "Consola en buen estado...",   // STRING plano, no el dict {original}
+    "condition": "good",
+    "price_amount": 520                            // entero
+  },
+  "category_leaf_id": "10088",
+  "apply_discount": false,
+  "location": {"latitude": 43.66, "longitude": -7.60, "approximated": false},
+  "delivery": {"allowed_by_user": true, "max_weight_kg": 1,
+               "cost_configuration_id": "<uuid del item>"},
+  "pictures": [{"id": "<foto_id>", "order": 0}]
+}
+```
+- `description` debe ir como **string plano**. `GET /items/<id>` la devuelve como
+  `{"original": "..."}`; si reenvías ese dict, el backend responde `400`.
+- `location` y `cost_configuration_id` se toman de `GET /users/me` y del item.
+
+**Atributos verificados editables uno por uno (todos 204, 2026-09-06)**:
+`brand`, `model`, `color`, `title`, `description`, `condition`, `price_amount`,
+`max_weight_kg`, `category_leaf_id` (mueve el anuncio de categoría). El resto del
+body debe ir como estaba (la web reenvía el formulario completo).
+
+### Añadir imágenes y cambiar la principal
+
+- **Añadir**: `POST /api/v3/items/<id>/picture2` (multipart `image` = bytes JPEG
+  completos + `order` como string) → 200 con el **id de la foto nueva**. El item
+  gana una imagen por llamada. (Misma receta que para publicar multi-foto; ver
+  `docs/multi-photo-upload.md`.)
+- **Cambiar la principal / reordenar**: `PUT /api/v3/items/<id>` con
+  `pictures` listando las fotos en el orden deseado: `order: 0` = principal.
+  La foto que se omite deja de aparecer en el anuncio (verificado en vivo:
+  sustituir la imagen de `p618gorvp5z5` y añadir 2 más, quedando 3 fotos con la
+  nueva como portada).

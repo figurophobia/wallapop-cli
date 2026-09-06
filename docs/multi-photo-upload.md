@@ -115,9 +115,19 @@ al draft (el paso `_upload_photo` al draft ya no se usa y se eliminó).
   título lo hace el **frontend** de la web antes de mandar el POST).
 - Basta con que **`color` no esté vacío** para que dé 200 (brand/model pueden ir
   vacíos). Con `color` vacío falla aunque brand/model estén rellenos.
+- **El valor de `color` va en inglés** en el POST (`blue`), aunque la web lo
+  muestre en español ("Azul"). `azul` → 400, `blue` → 200 (verificado 2026-09-06).
+  Los valores válidos son los del form de la web.
 - Implicación: `Wallapop.publish()` con los tres vacíos siempre fallará a día de
   hoy; la web no lo nota porque su wizard rellena `color` por ti. Para usar la
   API pura hay que pasar un `color` (o `--color` en el CLI).
+
+## ✅ Editar anuncio publicado y gestionar fotos (verificado 2026-09-06)
+- Editar cualquier atributo (incl. cambiar fotos): `PUT /api/v3/items/<id>`, headers
+  con `Accept: application/vnd.upload-v2+json`, body completo con `pictures`.
+  Todos los atributos prueban 204. Receta completa en `docs/ENDPOINTS.md`.
+- Añadir fotos: `picture2` (misma receta que arriba). Cambiar la principal:
+  reordenar `pictures` en el PUT (`order: 0` = portada).
 
 ## Código en el repo
 - `wallapoplib/client.py` → `Wallapop.publish(photo_paths)`, `_add_picture`
