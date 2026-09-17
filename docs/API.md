@@ -42,6 +42,13 @@ client.send_message(items[0].id, "Hola! Tiene cargador?")
 # Marcar/desmarcar favorito
 client.favorite(items[0].id)            # marca como favorito (PUT .../favorite → 204)
 client.favorite(items[0].id, False)     # desmarca
+
+# Compras y ventas (API SDUI de los centros de la web)
+from wallapoplib import parse_sdui_transactions
+
+raw = client.purchases("finished")      # GET /sdui/purchases/finished (widget tree)
+rows = parse_sdui_transactions(raw)     # list[dict]: id, title, detail, price, ...
+ventas = client.selling("ongoing")      # GET /sdui/selling/ongoing
 ```
 
 ### Imágenes de un item
@@ -85,6 +92,8 @@ deals, median = rank_deals(items, min_discount=0.15, max_price=None)
 - `offer_state_summary`: estado puro (sin colores de terminal); `actionable`
   solo es `True` cuando hay que responder a una contraoferta.
 - `rank_deals`: mediana del conjunto de candidatos + ranking por descuento.
+- `parse_sdui_transactions`: aplana las tarjetas `list_item_transaction` del
+  árbol SDUI de Compras/Ventas (ignora cabeceras de agrupación y `empty_state`).
 
 ## Cliente (`Wallapop`)
 
@@ -106,6 +115,7 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `send_message(item_hash, message, report?)` | PubNub REST publish; fallback navegador (Playwright) |
 | `publish(photo_path, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
 | `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
+| `purchases(tab)` / `selling(tab)` → `dict` | centros **Compras/Ventas** de la web por SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parsea el árbol con `parse_sdui_transactions` |
 | `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
 
 `report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.

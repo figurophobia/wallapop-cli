@@ -24,6 +24,8 @@ python3 wallapop.py <comando> ...
 | `replies` | Ver inbox y hilos completos |
 | `show` / `seller` | Ver detalles completos de un anuncio o perfil de vendedor |
 | `favorite` | Marcar/desmarcar un anuncio como favorito |
+| `purchases` | Ver tus compras (en curso / finalizadas) |
+| `selling` | Ver tus ventas (en curso / finalizadas) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ## Documentación
@@ -109,14 +111,23 @@ en el entorno del paquete.
 
 ## Sesión
 
-- `wallapop login your@email.com` (pedirá contraseña de forma segura)
-- `wallapop login --browser firefox` — importa la sesión de Firefox
-  (funciona para cuentas registradas con Google)
-- `wallapop login` (con `cookies.txt` en el directorio) — login pegando el
-  valor del campo `Cookie` de una request (F12 → Cabeceras → Copiar valor);
-  ver `cookies.txt.example` y `docs/USAGE.md`.
-- Los tokens y cookies se guardan en `~/.config/wallapop_cli/`, **fuera del
-  repo** (no se suben a git).
+Hay cuatro formas de iniciar sesión; usa la que te encaje:
+
+| Vía | Cuándo usarla | Cómo |
+| --- | --- | --- |
+| **Email + contraseña** | Tienes cuenta normal (no registrada con Google) | `wallapop login tu@email.com` (te pedirá la contraseña) o inline: `wallapop login tu@email.com PASSWORD` |
+| **Wizard de navegador** | Cuenta de Google o cualquier navegador | `wallapop login --wizard` abre `es.wallapop.com` en Chromium, te logueas una vez y captura la sesión automáticamente |
+| **Importar de Firefox** | Ya estás logueado en Firefox | `wallapop login --browser firefox` |
+| **Pegar cookies** | Cualquier navegador (F12) | `wallapop login --cookies '...'` o un fichero `cookies.txt` en el directorio |
+
+Detalle de las vías:
+
+- `wallapop login tu@email.com` — pide contraseña de forma segura; `login tu@email.com PASS` la acepta inline. Pero **si la cuenta se registró con Google no tiene contraseña de Wallapop** y `/access/login` dará 401: usa el wizard o la importación de navegador.
+- `wallapop login --wizard` — abre un Chromium visible con `es.wallapop.com` (pantalla de login). Haces tu login normal (Google, email…), y la CLI captura las cookies de sesión y genera el token. No depende del navegador de donde venga tu cuenta; necesitas `playwright` (`pip install -e '.[browser]'`).
+- `wallapop login --browser firefox` — importa la sesión de Firefox (vale para cuentas Google).
+- `wallapop login` (con `cookies.txt` en el directorio) — login pegando el valor del campo `Cookie` de una request (F12 → Cabeceras → Copiar valor); ver `cookies.txt.example` y `docs/USAGE.md`.
+
+- Los tokens y cookies se guardan en `~/.config/wallapop_cli/`, **fuera del repo** (no se suben a git).
 
 ## Seguridad (qué hay en el repo y qué no)
 

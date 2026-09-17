@@ -480,3 +480,89 @@ def offer_payload_summary(payload: Any) -> str:
     loc = payload.get("loc", {}) if isinstance(payload.get("loc"), dict) else {}
     cur = loc.get("current", "") or payload.get("text") or ""
     return f" {amount} · {cur}" if amount or cur else ""
+
+
+# --- SDUI (purchases / selling) -------------------------------------------------
+# The web's "Compras" and "Ventas" pages are server-driven UI: the endpoints
+# GET /api.wallapop.com/sdui/{purchases|selling}/{ongoing|finished} return a
+# widget tree (main -> tab_container -> directory -> content[]). We only care
+# about the "list_item_transaction" cards (and the empty_state fallback).
+
+
+def _sdui_text(node: Any) -> str:
+    if not isinstance(node, dict):
+        return ""
+    data = node.get("data")
+    if isinstance(data, dict):
+        content = data.get("content")
+        if isinstance(content, str):
+            return content
+    return ""
+
+
+def _sdui_url(node: Any) -> str:
+    if not isinstance(node, dict):
+        return ""
+    events = node.get("events")
+    if isinstance(events, dict):
+        click = events.get("on_click") or events.get("on_click_secondary")
+        if isinstance(click, dict):
+            data = click.get("data")
+            if isinstance(data, dict):
+                url = data.get("url")
+                if isinstance(url, str):
+                    return url
+    return ""
+
+
+def parse_sdui_transactions(payload: Any) -> list[dict]:
+    """Flatten the transactions of a SDUI purchases/selling response.
+
+    Each entry is a clean dict with ``id``, ``title``, ``detail``, ``price``,
+    ``details`` (list of ``{"title", "description"}``) and ``url`` (tracking or
+    item link when the card is clickable). Group headers (year/month) are
+    dropped; returns ``[]`` for an empty_state or a malformed payload.
+    """
+    result: list[dict] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "list_item_transaction":
+                data = node.get("data")
+                if not isinstance(data, dict):
+                    return
+                details = []
+                for extra in data.get("extra_details") or []:
+                    if not isinstance(extra, dict):
+                        continue
+                    edata = extra.get("data")
+                    if not isinstance(edata, dict):
+                        continue
+                    title = _sdui_text(edata.get("title"))
+                    description = _sdui_text(edata.get("description")) or _sdui_text(edata.get("label"))
+                    if description:
+                        details.append({"title": title, "description": description})
+                result.append(
+                    {
+                        "id": node.get("id") or "",
+                        "title": _sdui_text(data.get("main")),
+                        "detail": _sdui_text(data.get("detail")),
+                        "price": _sdui_text(data.get("detail_price")),
+                        "details": details,
+                        "url": _sdui_url(node),
+                    }
+                )
+                return
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+        return
+
+    if isinstance(payload, dict):
+        walk(payload.get("main", payload))
+    elif isinstance(payload, list):
+        for item in payload:
+            walk(item)
+    return result

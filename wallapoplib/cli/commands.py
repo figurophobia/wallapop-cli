@@ -31,7 +31,7 @@ from ..config import (
 )
 from ..http import ApiError
 from ..ids import resolve_internal_id
-from ..models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, rank_deals
+from ..models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, parse_sdui_transactions, rank_deals
 from .output import (
     announce,
     clock,
@@ -165,6 +165,21 @@ def maybe_deliver_all(client: Wallapop, args: argparse.Namespace, deals: list[De
 
 
 def cmd_login(args: argparse.Namespace) -> int:
+    if getattr(args, "wizard", False):
+        from ..weblogin import wizard_login  # noqa: PLC0415 (optional dep)
+
+        try:
+            session, token = wizard_login(timeout_s=args.timeout)
+        except RuntimeError as exc:
+            eprint(f"{exc}")
+            return 1
+        save_credentials(
+            {"email": "browser-session", "access_token": token, "refresh_token": "", "user": {}}
+        )
+        print(f"session captured from browser ({', '.join(sorted(session))})")
+        print(f"session stored in {SESSION_PATH}")
+        return 0
+
     if getattr(args, "browser", None) == "firefox":
         cookies = read_firefox_cookies()
         if not cookies:
@@ -220,7 +235,7 @@ def cmd_login(args: argparse.Namespace) -> int:
         return 0
 
     if not args.email:
-        eprint("provide an email, or use --browser firefox / --cookies")
+        eprint("provide an email, or use --browser firefox / --wizard / --cookies / cookies.txt")
         return 1
     password = args.password
     if not password:
@@ -799,6 +814,63 @@ def cmd_replies(args: argparse.Namespace) -> int:
         print(f"      {title}{f' x{items_n}' if items_n > 1 else ''} price {amount or '?'}{cur}{status}{un}")
         if lastline:
             print(lastline)
+    return 0
+
+
+def _print_transactions(kind: str, tab: str, items: list[dict]) -> None:
+    print(paint.bold(f"{kind} · {tab}"))
+    if not items:
+        print("   (no hay nada aquí)")
+        return
+    for t in items:
+        price = t.get("price") or ""
+        title = t.get("title") or "?"
+        head = f"{price}  {title}" if price else title
+        print(head.strip())
+        detail = t.get("detail") or ""
+        url = t.get("url") or ""
+        lines = []
+        if detail:
+            lines.append(detail)
+        for d in t.get("details") or []:
+            if d.get("title"):
+                lines.append(f"{d['title']}: {d['description']}")
+            else:
+                lines.append(d["description"])
+        if url:
+            lines.append(url)
+        for line in lines:
+            print(paint.dim(f"     {line}"))
+        print()
+
+
+def cmd_purchases(args: argparse.Namespace) -> int:
+    tab = "finished" if args.finished else "ongoing"
+    client, _ = authed_client()
+    resp = client.purchases(tab)
+    if not resp.ok:
+        eprint(f"purchases failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        return 1
+    items = parse_sdui_transactions(resp.data)
+    if args.json:
+        emit_json(items)
+        return 0
+    _print_transactions("purchases", "en curso" if tab == "ongoing" else "finalizadas", items)
+    return 0
+
+
+def cmd_selling(args: argparse.Namespace) -> int:
+    tab = "finished" if args.finished else "ongoing"
+    client, _ = authed_client()
+    resp = client.selling(tab)
+    if not resp.ok:
+        eprint(f"selling failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        return 1
+    items = parse_sdui_transactions(resp.data)
+    if args.json:
+        emit_json(items)
+        return 0
+    _print_transactions("selling", "en curso" if tab == "ongoing" else "finalizadas", items)
     return 0
 
 

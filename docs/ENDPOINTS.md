@@ -799,3 +799,43 @@ Body: {"favorited": true}     # para desmarcar: {"favorited": false}
 - El bundle JS de la web define la ruta como `api/v3/items/{id}/favorite`
   (chunk 23852, exportado como `itemFavoriteUrl`).
 - Código: `Wallapop.favorite(item_id, favorited)` (client.py).
+
+---
+
+## Centro de compras y ventas (SDUI)
+
+Las páginas **Compras** (`/app/purchases?selectedTab=...`) y **Ventas**
+(`/app/selling?selectedTab=...`) de la web son *server-driven UI*: el endpoint
+devuelve un árbol de widgets y el frontend lo pinta tal cual.
+
+### GET `/sdui/purchases/{ongoing|finished}`  [root, auth]
+### GET `/sdui/selling/{ongoing|finished}`   [root, auth]
+
+- **Viven en la raíz del host** (`https://api.wallapop.com/sdui/...`), **sin**
+  `/api/v3` — como los `bff`. Con `/api/v3` delante devuelven
+  `404 null for uri .../api/v3/sdui/...`.
+- Requieren `Authorization: Bearer`. Sin params de query extra (capturado en
+  vivo del navegador): GET plano con las cabeceras base del CLI.
+- Estructura de la respuesta (widget tree):
+  - `main.data.content[0]` → `tab_container` con las dos `tabs`
+    (`id: ongoing`/`finished`, `label` localizado según `Accept-Language`) y
+    `content` (spacer + `directory`).
+  - `directory.data.content[]` es la lista: nodos `text` (cabeceras de
+    año/mes), `list_item_transaction` (las tarjetas de pedido) o
+    `empty_state` (pestaña vacía, con título/subtítulo/botón).
+- Cada `list_item_transaction`:
+  - `id` (uuid del pedido), aunque el enlace real va en `events.on_click.data.url`
+    (tracking `app/delivery/tracking/<uuid>` para compras con envío, o la URL
+    del item en las ventas vendidas en persona).
+  - `data.main.data.content` (título del artículo),
+    `data.detail.data.content` (p. ej. "Transacción completada 25 abr 2025"),
+    `data.detail_price.data.content` ("14,88 €").
+  - `data.extra_details[]`: detalles `list_item_transaction_plain_detail`
+    (label/valor: fecha de pedido, código de envío, método de entrega) y
+    `list_item_transaction_contact_detail` (avatar + `label` = la otra parte).
+  - `data.avatar.data.main_image_url` (foto del producto).
+- La CLI **no pinta el árbol**: `parse_sdui_transactions()` (`models.py`)
+  aplana solo las tarjetas (`id`, `title`, `detail`, `price`, `details[]`,
+  `url`), descartando cabeceras de agrupación y `empty_state`.
+- Código: `Wallapop.purchases(tab)`, `Wallapop.selling(tab)` (client.py) y los
+  comandos CLI `wallapop purchases [--finished]` / `wallapop selling [--finished]`.

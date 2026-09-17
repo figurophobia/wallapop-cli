@@ -18,6 +18,8 @@ Referencia completa de `wallapop`. Se invoca como
 | `replies` | Ver el inbox y los hilos completos |
 | `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
 | `favorite` | Marcar/desmarcar un anuncio como favorito |
+| `purchases` | Ver tus compras: en curso o finalizadas (centro de compras) |
+| `selling` | Ver tus ventas: en curso o finalizadas (centro de ventas) |
 | `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
@@ -25,26 +27,66 @@ Referencia completa de `wallapop`. Se invoca como
 
 ## Login y sesión
 
+Tienes **cuatro vías** de login; elige según el tipo de cuenta:
+
+| Vía | Comando | Vale para |
+| --- | --- | --- |
+| Email + contraseña | `wallapop login your@email.com` | Cuentas normales |
+| Wizard de navegador | `wallapop login --wizard` | **Google o cualquier navegador** |
+| Importar de Firefox | `wallapop login --browser firefox` | Google (si ya estás logueado en Firefox) |
+| Pegar cookies | `wallapop login --cookies '...'` o con `cookies.txt` | Cualquier navegador (F12) |
+
+### 1. Email + contraseña
+
 ```
 wallapop login your@email.com              # pide contraseña de forma segura
 wallapop login your@email.com PASSWORD      # o inline
+```
+
+> **Importante:** si tu cuenta se registró con Google **no tiene contraseña de
+> Wallapop**; este login responderá 401. Usa el wizard de navegador o la
+> importación de Firefox.
+
+### 2. Wizard de navegador (`--wizard`)
+
+La vía universal para cuentas Google (o cualquier sesión que solo exista en un
+navegador), sin depender de qué navegador uses:
+
+```
+wallapop login --wizard            # espera 300 s
+wallapop login --wizard --timeout 600
+```
+
+Abre un **Chromium visible** en `es.wallapop.com` (pantalla de acceso). Haz tu
+login normal (Google, email, …) y al terminar la CLI captura la sesión y
+genera el token; puedes cerrar el navegador con `Ctrl+C` si te equivocas
+(no guardará nada). Requiere `playwright`:
+
+```
+pip install -e '.[browser]'
+```
+
+### 3. Importar de Firefox (`--browser firefox`)
+
+```
 wallapop login --browser firefox           # importa tu sesión de Firefox (sirve con cuentas Google)
-wallapop login --cookies 'accessToken=...; __Secure-next-auth.session-token=...; device_id=...; device_fgp=...'
-wallapop session                           # origen de la sesión y caducidad del token
-wallapop logout                            # borra los ficheros de credenciales
 ```
 
 Con `--browser firefox` la CLI lee `cookies.sqlite` del perfil de Firefox más
 reciente y guarda la sesión bajo `~/.config/wallapop_cli/session.json`. Es la
-vía que funciona cuando la cuenta se registró con Google.
+vía que funcionaba antes de existir el wizard; el wizard sirve para cualquier
+navegador y también funciona con cuentas Google.
 
-**La vía fácil con cookies (cualquier navegador / Windows):** no copies cookies
-a mano. Pega en un fichero el valor del campo `Cookie` de una request y haz
-`login`, que lo lee automáticamente.
+### 4. Cookies pegadas (cualquier navegador / Windows)
+
+**La vía fácil con cookies:** no copies cookies a mano. Pega en un fichero el
+valor del campo `Cookie` de una request y haz `login`, que lo lee
+automáticamente.
 
 ```
 python3 wallapop.py login                    # lee cookies.txt si existe
 python3 wallapop.py login --cookies-file mi.txt
+python3 wallapop.py login --cookies 'accessToken=...; __Secure-next-auth.session-token=...; device_id=...; device_fgp=...'
 ```
 
 1. Abre `https://es.wallapop.com` logueado → `F12` → pestaña **Red**.
@@ -56,8 +98,14 @@ python3 wallapop.py login --cookies-file mi.txt
 
 La CLI se queda solo con las cookies que necesita (`accessToken`,
 `__Secure-next-auth.session-token`, `device_id`, `device_fgp`). No depende del
-shell ni del SO: `login` busca el fichero directamente. Sigue existiendo
-`--cookies '...'` si prefieres pegar el valor inline.
+shell ni del SO: `login` busca el fichero directamente.
+
+### Estado de la sesión
+
+```
+wallapop session                           # origen de la sesión y caducidad del token
+wallapop logout                            # borra los ficheros de credenciales
+```
 
 ---
 
@@ -272,6 +320,29 @@ wallapop favorite <item> --remove # quitar de favoritos
   `{"favorited": true|false}`. Devuelve 204 sin body.
 - Para verificar el estado de favorito, usa `show <item>` — la línea de stats
   muestra `(te gusta)` cuando el item está en favoritos.
+
+---
+
+## Compras y ventas (centros de gestión)
+
+```
+wallapop purchases                  # compras en curso
+wallapop purchases --finished       # compras finalizadas
+wallapop purchases --json           # dump crudo de las transacciones
+wallapop selling                    # ventas en curso
+wallapop selling --finished         # ventas finalizadas
+wallapop selling --finished --json  # dump crudo
+```
+
+- Replican los centros **Compras** (`/app/purchases?selectedTab=ongoing|finished`) y
+  **Ventas** (`/app/selling?selectedTab=ongoing|finished`) de la web, por API
+  pura (`GET /sdui/purchases/{ongoing|finished}` y `GET /sdui/selling/...`).
+- Cada tarjeta muestra título, precio, detalle del estado (p. ej. "Transacción
+  completada 25 abr 2025"), campos extra (fecha de pedido, código de envío,
+  método de entrega, contacto) y el enlace del pedido/anuncio.
+- Si no hay nada en la pestaña se muestra `(no hay nada aquí)`.
+- `--json` devuelve la lista de transacciones aplanadas (`id`, `title`,
+  `detail`, `price`, `details[]`, `url`).
 
 ---
 

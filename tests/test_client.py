@@ -183,6 +183,14 @@ class FakeTransport:
             return 200, {"offer_id": "created"}, "application/json"
         if url.endswith("/categories"):
             return 200, RAW_CATEGORIES, "application/json"
+        if url.endswith("/access/login"):
+            return 200, {
+                "data": {
+                    "access_token": "access-123",
+                    "refresh_token": "refresh-123",
+                    "user": {"id": "wz0123456789", "micro_name": "Daniel"},
+                }
+            }, "application/json"
         if url.endswith("/steps"):
             return 200, {"step": {"id": "title", "components": [], "metadata": {}}}, "application/json"
         if url.endswith("/users/me"):
@@ -326,6 +334,18 @@ def test_unfavorite_sends_false(fake):
     assert resp.status == 204
     put_calls = [c for c in fake.calls if "/favorite" in c[1] and c[0] == "PUT"]
     assert put_calls[0][3] == {"favorited": False}
+
+
+def test_login_sends_client_id_and_stores_tokens(fake):
+    client = Wallapop()
+    access, refresh = client.login("daniel@example.com", "secret123")
+    login_calls = [c for c in fake.calls if c[1].endswith("/access/login")]
+    assert len(login_calls) == 1
+    body = login_calls[0][3]
+    assert body == {"email": "daniel@example.com", "password": "secret123", "client_id": "wallapop"}
+    assert access == "access-123"
+    assert refresh == "refresh-123"
+    assert client.user["micro_name"] == "Daniel"
 
 
 def test_download_images(tmp_path, fake, monkeypatch):

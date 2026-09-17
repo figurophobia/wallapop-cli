@@ -60,7 +60,12 @@ Hay dos vías, ambas guardadas bajo `~/.config/wallapop_cli/`:
 | Vía | Flujo | Storage |
 | --- | --- | --- |
 | Email/password | `POST /api/v3/access/login` → `access_token` + `refresh_token` | `credentials.json` |
-| Navegador | Importa cookies `__Secure-next-auth.session-token` (+`device_id`/`device_fgp`) desde Firefox, y genera el `accessToken` vía `GET https://es.wallapop.com/api/auth/session` | `session.json` |
+| Wizard de navegador | Chromium visible en `es.wallapop.com`; el usuario hace su login (Google, email…) y la CLI captura las cookies de sesión del contexto y genera el `accessToken` vía `GET https://es.wallapop.com/api/auth/session` | `session.json` |
+| Importación de navegador | Importa cookies `__Secure-next-auth.session-token` (+`device_id`/`device_fgp`) desde Firefox, y genera el `accessToken` vía `GET https://es.wallapop.com/api/auth/session` | `session.json` |
+
+El wizard (`wallapoplib/weblogin.py`, `wallapop login --wizard`) es la vía
+recomendada para cuentas Google desde cualquier navegador: no depende del
+perfil de Firefox y solo necesita `playwright`.
 
 `authed_client()` (en `commands.py`) une ambas fuentes en una instancia de
 `Wallapop` y registra el token de sesión web como credencial principal. El

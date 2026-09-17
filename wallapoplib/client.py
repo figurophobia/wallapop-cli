@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 from .config import (
     API_BASE,
     API_ROOT,
+    CLIENT_ID,
     DEFAULT_GEO,
     PNSDK,
     PUB_KEY,
@@ -440,6 +441,125 @@ class Wallapop:
         with body ``{"favorited": <bool>}``.  Returns 204 on success.
         """
         return self._authed("PUT", f"/items/{item_id}/favorite", body={"favorited": favorited})
+
+    def purchases(self, tab: str = "ongoing") -> Response:
+        """Fetch the purchases center (SDUI card tree).
+
+        ``tab`` is ``"ongoing"`` (default) or ``"finished"``.  Hits
+        ``GET /sdui/purchases/{tab}`` (root, not under /api/v3).  The
+        transactions live in the response's ``list_item_transaction`` nodes;
+        flatten them with ``parse_sdui_transactions``.
+        """
+        return self._bff("GET", f"/sdui/purchases/{tab}")
+
+    def selling(self, tab: str = "ongoing") -> Response:
+        """Fetch the selling center (SDUI card tree).
+
+        Same contract as ``purchases`` but for ``GET /sdui/selling/{tab}``.
+        """
+        return self._bff("GET", f"/sdui/selling/{tab}")
+
+    def reserve(self, item_id: str, reserved: bool = True) -> Response:
+        """Reserve/unreserve an owned item via ``PUT /api/v3/items/{id}/reserve``.
+
+        Body ``{"reserved": <bool>}``; returns 204 on success.
+        """
+        return self._authed("PUT", f"/items/{item_id}/reserve", body={"reserved": reserved})
+
+    def mark_sold(self, item_id: str, sold: bool = True) -> Response:
+        """Mark an owned item as sold (or unsold) via ``PUT /api/v3/items/{id}/sold``.
+
+        The web sends an empty body to mark as sold; ``{"sold": false}``
+        unmarks it (no UI button exists for un-selling, but the API accepts it).
+        Returns 204 on success.
+        """
+        body = {} if sold else {"sold": False}
+        return self._authed("PUT", f"/items/{item_id}/sold", body=body)
+
+    def edit_item(
+        self,
+        item_id: str,
+        price: Optional[float] = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        condition: Optional[str] = None,
+        brand: Optional[str] = None,
+        model: Optional[str] = None,
+        color: Optional[str] = None,
+        category_leaf_id: Optional[str] = None,
+        max_weight_kg: Optional[int] = None,
+    ) -> Response:
+        """Edit an owned, published item (what the web does on "Actualizar").
+
+        Uses ``PUT /api/v3/items/{id}`` with the ``Accept:
+        application/vnd.upload-v2+json`` header (which selects the edit
+        handler; without it the API answers 404).  The body is built by
+        merging the requested changes over the item's current state fetched
+        from ``GET /items/{id}``, so every editable attribute is always sent
+        (same as the web form).
+
+        Returns 204 on success; ``Response.data`` then carries the updated
+        item (from a follow-up GET).
+        """
+        current = self._authed("GET", f"/items/{item_id}", extra_headers={"Accept": "application/vnd.upload-v2+json"})
+        if not current.ok:
+            return Response(current.status, current.data, False, current.unauthorized)
+        raw = current.data if isinstance(current.data, dict) else {}
+
+        def text(v) -> str:
+            if isinstance(v, dict):
+                return v.get("original") or v.get("value") or ""
+            return v or ""
+
+        price_raw = raw.get("price") or {}
+        if isinstance(price_raw, dict) and "cash" in price_raw:
+            price_raw = price_raw.get("cash") or {}
+        attributes = {
+            "brand": brand if brand is not None else text(raw.get("brand")),
+            "model": model if model is not None else text(raw.get("model")),
+            "color": color if color is not None else text(raw.get("color")),
+            "title": title if title is not None else text(raw.get("title")),
+            "description": description if description is not None else text(raw.get("description")),
+            "condition": condition if condition is not None else text(raw.get("condition")) or "good",
+            "price_amount": int(round(price if price is not None else (price_raw.get("amount") or 0))),
+        }
+
+        me = self._authed("GET", "/users/me")
+        loc = {}
+        if me.ok and isinstance(me.data, dict):
+            loc = me.data.get("location") or {}
+        latitude = loc.get("approximated_latitude")
+        longitude = loc.get("approximated_longitude")
+        approximated = bool(loc.get("approximated_location"))
+        if latitude is None or longitude is None:
+            return Response(me.status, {"error_message": "no location in /users/me; edit requires geolocation"}, False, False)
+
+        shipping = raw.get("shipping") or {}
+        pictures = [{"id": img.get("id"), "order": i} for i, img in enumerate(raw.get("images") or []) if img.get("id")]
+
+        item = {
+            "attributes": attributes,
+            "category_leaf_id": category_leaf_id or text(raw.get("category_leaf_id")) or "10088",
+            "apply_discount": False,
+            "location": {
+                "latitude": latitude,
+                "longitude": longitude,
+                "approximated": approximated,
+            },
+            "delivery": {
+                "allowed_by_user": True,
+                "max_weight_kg": max_weight_kg if max_weight_kg is not None else int(shipping.get("max_weight_kg") or 1),
+                "cost_configuration_id": shipping.get("cost_configuration_id") or self._cost_configuration_id(),
+            },
+            "pictures": pictures,
+        }
+
+        headers = {
+            "Accept": "application/vnd.upload-v2+json",
+            "Content-Type": "application/json",
+            "X-AppVersion": "826800",
+        }
+        return self._authed("PUT", f"/items/{item_id}", body=item, extra_headers=headers)
 
     def _item_currency(self, item_id: str) -> str:
         return self.item(item_id).currency

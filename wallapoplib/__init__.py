@@ -7,7 +7,8 @@ Public surface (the v1 contract):
   ``offer_response``/``counter_offer``/``send_message``/``conversation_thread``/
   ``inbox``/``make_offer_info`` and login/session helpers.
 - Domain dataclasses ``Item``, ``Deal``, ``OfferEvent``, ``OfferState`` and the
-  derivations ``parse_offer_events``, ``offer_state_summary``, ``rank_deals``.
+  derivations ``parse_offer_events``, ``offer_state_summary``, ``rank_deals``,
+  ``parse_sdui_transactions``.
 - ``resolve_internal_id`` for item references.
 - ``ApiError`` / ``Response`` from the HTTP layer.
 - Session aids ``load_credentials`` / ``load_session`` / ``save_session``.
@@ -28,6 +29,7 @@ from .models import (
     OfferState,
     offer_state_summary,
     parse_offer_events,
+    parse_sdui_transactions,
     rank_deals,
 )
 from .client import Wallapop
@@ -41,6 +43,7 @@ __all__ = [
     "parse_offer_events",
     "offer_state_summary",
     "rank_deals",
+    "parse_sdui_transactions",
     "resolve_internal_id",
     "ApiError",
     "Response",

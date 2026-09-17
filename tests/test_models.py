@@ -12,6 +12,7 @@ from wallapoplib.models import (
     normalize_item,
     offer_state_summary,
     parse_offer_events,
+    parse_sdui_transactions,
     rank_deals,
 )
 
@@ -248,3 +249,96 @@ def test_deep_find_and_extract_items():
 
 def first_flow(gen):
     return next(gen, None)
+
+
+# --- SDUI purchases / selling -------------------------------------------------
+# The web's Comp/Ventas pages are server-driven UI: GET /sdui/{purchases|selling}/{ongoing|finished}
+# returns a widget tree; only the list_item_transaction cards are extracted.
+
+
+def _sdui_text_node(content: str) -> dict:
+    return {"type": "text", "data": {"content": content}}
+
+
+def _sdui_transaction(tid: str, title: str, price: str, detail: str) -> dict:
+    return {
+        "type": "list_item_transaction",
+        "id": tid,
+        "data": {
+            "avatar": {"type": "avatar", "sub_type": "product", "data": {"main_image_url": "x"}},
+            "main": _sdui_text_node(title),
+            "detail": _sdui_text_node(detail),
+            "detail_price": _sdui_text_node(price),
+            "extra_details": [
+                {"type": "list_item_transaction_plain_detail", "data": {
+                    "title": _sdui_text_node("Fecha de pedido"),
+                    "description": _sdui_text_node("25 abr 2025"),
+                }},
+                {"type": "list_item_transaction_contact_detail", "data": {
+                    "label": _sdui_text_node("Alberto D."),
+                }},
+            ],
+        },
+        "events": {"on_click": {"data": {"url": "https://wallapop.com/item/x"}}},
+        "children": [],
+    }
+
+
+SDUI_PAYLOAD = {
+    "main": {
+        "type": "main",
+        "data": {
+            "content": [
+                {
+                    "type": "tab_container",
+                    "data": {
+                        "tabs": [{"type": "tab", "id": "ongoing", "data": {"label": "En curso"}}],
+                        "content": [
+                            {"type": "spacer", "data": {"orientation": "vertical", "size": 12}},
+                            {
+                                "type": "directory",
+                                "data": {
+                                    "content": [
+                                        _sdui_text_node("2025"),
+                                        _sdui_text_node("Abril"),
+                                        _sdui_transaction("a1b2c3d4", "Router wifi 6", "14,88 €", "Transacción completada 25 abr 2025"),
+                                    ],
+                                    "pagination": None,
+                                },
+                            },
+                        ],
+                    },
+                }
+            ]
+        },
+    },
+    "nav_bar": {},
+}
+
+
+def test_parse_sdui_transactions_extracts_cards():
+    items = parse_sdui_transactions(SDUI_PAYLOAD)
+    assert len(items) == 1
+    assert items[0]["id"] == "a1b2c3d4"
+    assert items[0]["title"] == "Router wifi 6"
+    assert items[0]["price"] == "14,88 €"
+    assert items[0]["detail"] == "Transacción completada 25 abr 2025"
+    assert items[0]["url"] == "https://wallapop.com/item/x"
+    assert {"title": "Fecha de pedido", "description": "25 abr 2025"} in items[0]["details"]
+    assert {"title": "", "description": "Alberto D."} in items[0]["details"]
+
+
+def test_parse_sdui_transactions_empty_state():
+    payload = {
+        "main": {"data": {"content": [{"type": "directory", "data": {"content": [
+            {"type": "empty_state", "data": {"title": _sdui_text_node("No hay compras en curso")}},
+        ]}}]}}
+    }
+    assert parse_sdui_transactions(payload) == []
+
+
+def test_parse_sdui_transactions_ignores_headers():
+    items = parse_sdui_transactions(SDUI_PAYLOAD)
+    titles = [i["title"] for i in items]
+    assert "2025" not in titles
+    assert "Abril" not in titles

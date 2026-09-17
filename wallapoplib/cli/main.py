@@ -13,11 +13,13 @@ from .commands import (
     cmd_message,
     cmd_offer,
     cmd_publish,
+    cmd_purchases,
     cmd_replies,
     cmd_search,
     cmd_session,
     cmd_show,
     cmd_seller,
+    cmd_selling,
     cmd_watch,
 )
 from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
@@ -79,6 +81,8 @@ def build_parser() -> argparse.ArgumentParser:
     lp.add_argument("email", nargs="?", default=None, help="email for password login")
     lp.add_argument("password", nargs="?", help="optional; if omitted you are prompted safely")
     lp.add_argument("--browser", choices=["firefox"], help="import your session from the Firefox profile (works with Google accounts)")
+    lp.add_argument("--wizard", action="store_true", help="open es.wallapop.com in a real browser and capture the session after you log in (works with Google accounts from any browser)")
+    lp.add_argument("--timeout", type=int, default=300, help="seconds to wait for the wizard login (default 300)")
     lp.add_argument("--cookies", help="paste cookies as a 'name=value; ...' string (accessToken, __Secure-next-auth.session-token)"
     )
     lp.add_argument("--cookies-file", default="cookies.txt", help="read cookies from this file instead of --cookies (default: cookies.txt)")
@@ -129,6 +133,16 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--conversation", help="conversation id to dump the full message thread")
     rp.add_argument("--json", action="store_true", help="dump raw JSON (inbox or conversation thread)")
     rp.set_defaults(func=cmd_replies)
+
+    pc = sub.add_parser("purchases", help="list your purchases (compras): ongoing or finished")
+    pc.add_argument("--finished", action="store_true", help="show finished purchases instead of ongoing")
+    pc.add_argument("--json", action="store_true", help="dump the transactions as JSON")
+    pc.set_defaults(func=cmd_purchases)
+
+    sl = sub.add_parser("selling", help="list your selling (ventas): ongoing or finished")
+    sl.add_argument("--finished", action="store_true", help="show finished sales instead of ongoing")
+    sl.add_argument("--json", action="store_true", help="dump the transactions as JSON")
+    sl.set_defaults(func=cmd_selling)
 
     sh = sub.add_parser("show", help="print a listing's full details (including description)")
     sh.add_argument("item", help="item url, web slug or internal hash")
