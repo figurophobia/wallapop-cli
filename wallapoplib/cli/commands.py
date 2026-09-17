@@ -266,7 +266,7 @@ def cmd_session(args: argparse.Namespace) -> int:
 def cmd_show(args: argparse.Namespace) -> int:
     item_hash = resolve_internal_id(args.item)
     client, _ = authed_client()
-    it = client.item(item_hash)
+    it = client.item(item_hash, authed=True)
     data = it.to_dict()
     seller_data = seller_summary(client, it.user_id)
     if args.json:
@@ -345,6 +345,19 @@ def seller_summary(client, user_id: str) -> dict:
         "reviews": count,
         "data": {"profile": profile, "stats": stats},
     }
+
+
+def cmd_favorite(args: argparse.Namespace) -> int:
+    item_hash = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    r = client.favorite(item_hash, not args.remove)
+    if r.ok:
+        action = "añadido a" if not args.remove else "eliminado de"
+        print(f"[ok] {action} favoritos")
+    else:
+        eprint(f"error: {r.error_reason or r.status}")
+        return 1
+    return 0
 
 
 def cmd_seller(args: argparse.Namespace) -> int:

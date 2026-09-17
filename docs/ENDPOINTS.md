@@ -780,3 +780,22 @@ Body: {}                                  # vacío
 - Verificado en tres anuncios de prueba (2026-09-06): `p618gorvp5z5`,
   `8z8871mrqdz3` y `8z8871mpkdz3` (web) y `mzn3nlyqq2jn` (API pura,
   vendido además con `body={}` quedando `sold: {"flag": true}`).
+
+### Marcar/desmarcar un artículo como favorito: `PUT /api/v3/items/{id}/favorite`
+
+```http
+PUT /api/v3/items/{id}/favorite
+Content-Type: application/json
+Body: {"favorited": true}     # para desmarcar: {"favorited": false}
+```
+
+- Devuelve **204** sin body. Se verifica con `GET /items/{id>` → el campo
+  `favorited` pasa a `{"flag": true}` (o queda `false`/`null` al desmarcar).
+- Capturado desde la web (HAR): el botón de corazón en la página del item
+  dispara este PUT con body `{"favorited": true}`.
+- Los headers necesarios son los base del CLI (`Authorization`, `Content-Type`,
+  `Origin`, `X-DeviceID`, `X-AppVersion`, `X-DeviceOS`). No necesita el header
+  `Accept: application/vnd.upload-v2+json` del PUT de edición.
+- El bundle JS de la web define la ruta como `api/v3/items/{id}/favorite`
+  (chunk 23852, exportado como `itemFavoriteUrl`).
+- Código: `Wallapop.favorite(item_id, favorited)` (client.py).

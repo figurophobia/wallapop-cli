@@ -101,17 +101,28 @@ class Wallapop:
         params: Optional[dict] = None,
         body: Optional[dict] = None,
         auth: bool = False,
+        extra_headers: Optional[dict] = None,
     ) -> Response:
+        headers = self._headers(auth=auth)
+        if extra_headers:
+            headers.update(extra_headers)
         status, data, _ = http_request(
-            method, f"{API_BASE}{path}", params=params, body=body, headers=self._headers(auth=auth)
+            method, f"{API_BASE}{path}", params=params, body=body, headers=headers
         )
         return Response(status, data, 200 <= status < 300, status == 401)
 
-    def _authed(self, method: str, path: str, params: Optional[dict] = None, body: Optional[dict] = None) -> Response:
-        resp = self._request(method, path, params=params, body=body, auth=True)
+    def _authed(
+        self,
+        method: str,
+        path: str,
+        params: Optional[dict] = None,
+        body: Optional[dict] = None,
+        extra_headers: Optional[dict] = None,
+    ) -> Response:
+        resp = self._request(method, path, params=params, body=body, auth=True, extra_headers=extra_headers)
         if resp.unauthorized:
             self.refresh_web()
-            resp = self._request(method, path, params=params, body=body, auth=True)
+            resp = self._request(method, path, params=params, body=body, auth=True, extra_headers=extra_headers)
         return resp
 
     def refresh_web(self) -> bool:
@@ -307,8 +318,8 @@ class Wallapop:
 
         return [clean(c) for c in raw]
 
-    def item(self, item_id: str) -> Item:
-        resp = self._request("GET", f"/items/{item_id}")
+    def item(self, item_id: str, authed: bool = False) -> Item:
+        resp = self._authed("GET", f"/items/{item_id}") if authed else self._request("GET", f"/items/{item_id}")
         if not resp.ok:
             raise ApiError(f"item {item_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
         data = resp.data
@@ -421,6 +432,14 @@ class Wallapop:
         payload is generated for the current responder).
         """
         return self._bff("GET", "/delivery/offer-details", params={"offer_id": offer_id})
+
+    def favorite(self, item_id: str, favorited: bool = True) -> Response:
+        """Toggle an item's favorite status.
+
+        Uses the real web endpoint ``PUT /api/v3/items/{id}/favorite``
+        with body ``{"favorited": <bool>}``.  Returns 204 on success.
+        """
+        return self._authed("PUT", f"/items/{item_id}/favorite", body={"favorited": favorited})
 
     def _item_currency(self, item_id: str) -> str:
         return self.item(item_id).currency

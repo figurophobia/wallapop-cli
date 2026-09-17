@@ -7,6 +7,7 @@ import sys
 
 from .commands import (
     cmd_deals,
+    cmd_favorite,
     cmd_login,
     cmd_logout,
     cmd_message,
@@ -133,6 +134,11 @@ def build_parser() -> argparse.ArgumentParser:
     sh.add_argument("item", help="item url, web slug or internal hash")
     sh.add_argument("--json", action="store_true", help="dump the full item as JSON")
     sh.set_defaults(func=cmd_show)
+
+    fav = sub.add_parser("favorite", help="add/remove an item from your favorites")
+    fav.add_argument("item", help="item url, web slug or internal hash")
+    fav.add_argument("--remove", action="store_true", help="remove from favorites instead of adding")
+    fav.set_defaults(func=cmd_favorite)
 
     seller = sub.add_parser("seller", help="print a seller's full profile (rating, stats, reviews)")
     seller.add_argument("user", help="seller user id (found in 'show' output)")

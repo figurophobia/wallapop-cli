@@ -17,6 +17,7 @@ Referencia completa de `wallapop`. Se invoca como
 | `message` | Enviar mensaje al vendedor de un anuncio |
 | `replies` | Ver el inbox y los hilos completos |
 | `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
+| `favorite` | Marcar/desmarcar un anuncio como favorito |
 | `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
@@ -256,6 +257,21 @@ wallapop show <item> --json          # dump crudo de todo el anuncio como JSON
   `seller_reviews` y `images` (URLs de las fotos del anuncio, tamaño medium).
 - Si quieres el perfil completo del vendedor (más stats y sus reseñas), usa el
   comando `seller` (ver más abajo).
+
+---
+
+## Favoritos
+
+```
+wallapop favorite <item>          # añadir a favoritos
+wallapop favorite <item> --remove # quitar de favoritos
+```
+
+- `<item>` acepta url, slug web o hash interno (igual que `show`/`message`/`offer`).
+- Usa el endpoint real `PUT /items/{id}/favorite` de la web, con body
+  `{"favorited": true|false}`. Devuelve 204 sin body.
+- Para verificar el estado de favorito, usa `show <item>` — la línea de stats
+  muestra `(te gusta)` cuando el item está en favoritos.
 
 ---
 

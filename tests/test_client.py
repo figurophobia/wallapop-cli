@@ -189,6 +189,8 @@ class FakeTransport:
             return 200, RAW_ME, "application/json"
         if "/users/wz0123456789/items" in url:
             return 200, {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
+        if url.endswith("/favorite") and method == "PUT":
+            return 204, None, "text/plain"
         raise AssertionError(f"unexpected call: {method} {url} params={params} body={body}")
 
 
@@ -307,6 +309,23 @@ def test_item_has_image_urls(fake):
     client = Wallapop()
     it = client.item(RAW_ITEM["id"])
     assert it.images == ["https://cdn.wallapop.com/images/m/i1.jpg"]
+
+
+def test_favorite_calls_put_endpoint(fake):
+    client = Wallapop()
+    resp = client.favorite(RAW_ITEM["id"], True)
+    assert resp.status == 204
+    put_calls = [c for c in fake.calls if "/favorite" in c[1] and c[0] == "PUT"]
+    assert len(put_calls) == 1
+    assert put_calls[0][3] == {"favorited": True}
+
+
+def test_unfavorite_sends_false(fake):
+    client = Wallapop()
+    resp = client.favorite(RAW_ITEM["id"], False)
+    assert resp.status == 204
+    put_calls = [c for c in fake.calls if "/favorite" in c[1] and c[0] == "PUT"]
+    assert put_calls[0][3] == {"favorited": False}
 
 
 def test_download_images(tmp_path, fake, monkeypatch):

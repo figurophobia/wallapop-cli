@@ -38,6 +38,10 @@ client.counter_offer(offer_id, 75.0)               # PATCH offer-price 75.00
 
 # Chat (PubNub REST; idempotente: no reenvía el mismo texto)
 client.send_message(items[0].id, "Hola! Tiene cargador?")
+
+# Marcar/desmarcar favorito
+client.favorite(items[0].id)            # marca como favorito (PUT .../favorite → 204)
+client.favorite(items[0].id, False)     # desmarca
 ```
 
 ### Imágenes de un item
@@ -101,6 +105,7 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | mensajería |
 | `send_message(item_hash, message, report?)` | PubNub REST publish; fallback navegador (Playwright) |
 | `publish(photo_path, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
+| `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
 | `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
 
 `report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.

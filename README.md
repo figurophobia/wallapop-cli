@@ -22,6 +22,8 @@ python3 wallapop.py <comando> ...
 | `offer` | Hacer ofertas, responder y ver el panel de negociaciones |
 | `message` | Enviar mensaje de chat a un vendedor |
 | `replies` | Ver inbox y hilos completos |
+| `show` / `seller` | Ver detalles completos de un anuncio o perfil de vendedor |
+| `favorite` | Marcar/desmarcar un anuncio como favorito |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ## Documentación
@@ -30,8 +32,7 @@ La documentación está dividida en cuatro documentos:
 
 - [**Uso de la CLI**](docs/USAGE.md) — referencia de todos los comandos y
   flags: login, búsqueda, deals/watch, ofertas (con el panel `offer status` y
-  la leyenda de estados), mensajería y detalles (ritmo de requests, colores,
-  transporte).
+  la leyenda de estados), mensajería, detalles, favoritos y publicación.
 - [**Arquitectura**](docs/ARCHITECTURE.md) — estructura del repo
   (`wallapoplib/`), cómo fluye una invocación, sesión/autenticación, transporte
   HTTP (y el anti-bot de los endpoints `BFF`), mensajería y gestión de ofertas.
@@ -66,7 +67,7 @@ for it in items:
 
 Ver [docs/API.md](docs/API.md) para el contrato completo (dataclasses `Item` /
 `Deal` / `OfferEvent`/`OfferState`, `rank_deals`, `parse_offer_events`,
-respuesta a ofertas, chating idempotente).
+respuesta a ofertas, chating idempotente, publicación y favoritos).
 
 ## Instalación rápida
 
