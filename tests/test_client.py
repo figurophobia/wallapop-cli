@@ -138,6 +138,7 @@ class FakeTransport:
         self.calls: list[tuple[str, str, dict, dict]] = []
         self.thread_same = False
         self.section_pages = 1
+        self.empty_section_pages = 0
         self.force_legacy = False
 
     def __call__(self, method: str, url: str, params=None, body=None, headers=None):
@@ -149,7 +150,15 @@ class FakeTransport:
         if "/search/section" in url:
             section_calls = [c for c in self.calls if "/search/section" in c[1]]
             current = section_calls.index((method, url, dict(params or {}), dict(body or {})))
-            has_next = current < self.section_pages - 1
+            if current < self.empty_section_pages:
+                return 200, {
+                    "data": {
+                        "next_page": "empty-cursor-page-next",
+                        "section": {"type": "organic_search_results", "title": None, "items": []},
+                    }
+                }, "application/json"
+            item_page = current - self.empty_section_pages
+            has_next = item_page < self.section_pages - 1
             return 200, {
                 "data": {
                     "next_page": "cursor-page-2" if has_next else None,
@@ -293,6 +302,52 @@ def test_search_paginates_with_next_page(fake):
     assert len(sections) == 3
     assert sections[1][2].get("next_page") == "cursor-page-2"
     assert len(items) == 3
+
+
+def test_search_skips_empty_section_pages(fake):
+    fake.section_pages = 3
+    fake.empty_section_pages = 1
+    client = Wallapop()
+    items = client.search("gamecube", pages=3, delay=0)
+    sections = [c for c in fake.calls if "/search/section" in c[1]]
+    assert len(sections) == 4
+    assert sections[0][2].get("next_page") is None
+    assert sections[1][2].get("next_page") == "empty-cursor-page-next"
+    assert len(items) == 3
+
+
+def test_search_loads_items_when_first_page_is_empty(fake):
+    fake.section_pages = 1
+    fake.empty_section_pages = 1
+    client = Wallapop()
+    items = client.search("gamecube", pages=1, delay=0)
+    sections = [c for c in fake.calls if "/search/section" in c[1]]
+    assert len(sections) == 2
+    assert len(items) == 1
+
+
+def test_search_resolves_category_from_subcategory_alone(fake):
+    client = Wallapop()
+    client.search("gamecube", subcategory_ids=10328, pages=1, delay=0)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    assert comps[2]["category_id"] == 12800
+    assert comps[2]["subcategory_ids"] == 10328
+
+
+def test_search_keeps_given_category_with_subcategory(fake):
+    client = Wallapop()
+    client.search("gamecube", category_id=12800, subcategory_ids=10328, pages=1, delay=0)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    assert comps[2]["category_id"] == 12800
+    assert comps[2]["subcategory_ids"] == 10328
+
+
+def test_search_promotes_midlevel_category_to_root(fake):
+    client = Wallapop()
+    client.search("gamecube", category_id=10167, pages=1, delay=0)
+    comps = next(c for c in fake.calls if c[1].endswith("/search/components"))
+    assert comps[2]["category_id"] == 12800
+    assert "subcategory_ids" not in comps[2]
 
 
 def test_search_falls_back_to_legacy_when_no_search_id(fake):

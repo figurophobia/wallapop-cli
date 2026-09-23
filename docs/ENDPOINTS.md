@@ -108,6 +108,13 @@ Bootstrap de una búsqueda.
   `closest`), `filters_source=search_box`, opcional `category_id`,
   `subcategory_ids`, `condition`, `min_sale_price`, `max_sale_price`,
   `is_shippable=true`, `latitude`, `longitude`.
+- **`category_id` debe ser top-level** (100, 12800, 24200...). Un id de
+  node intermedio (p. ej. `24203`, hijo de `24200`) se acepta pero devuelve
+  **0 resultados** en silencio. La CLI lo normaliza a su raíz con
+  `Wallapop().top_level_category()`.
+- **`subcategory_ids` sin `category_id` devuelve 400** en este endpoint.
+  La CLI resuelve la raíz automáticamente con
+  `Wallapop().category_for_subcategory()` (p. ej. `10088` → `24200`).
 - De su respuesta se extrae `search_id` (clave para paginar).
 - Código: `Wallapop.search()`.
 
@@ -119,6 +126,11 @@ Página de resultados (lo que la web monta tras el bootstrap).
   `source=deep_link`; para página 2+ añadir `next_page` (cursor que devuelve
   la propia API en el campo `next_page`).
 - Respuesta: `...items[]` con los anuncios sin normalizar.
+- **Página 1 puede venir vacía pero con `next_page`** — ocurre con
+  `is_shippable=true` + `price_low_to_high`: la API deja la primera página
+  como placeholder (los items con envío real quedan a partir de la página 2).
+  `_search_sections()` sigue el cursor aunque la página venga sin items y no
+  descuenta esas páginas vacías del presupuesto de `--pages`.
 - Código: `Wallapop._search_sections()`.
 
 ### GET `/api/v3/categories?context=search`

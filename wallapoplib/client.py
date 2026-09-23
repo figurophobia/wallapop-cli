@@ -214,8 +214,13 @@ class Wallapop:
             "filters_source": "search_box",
         }
         if category_id:
+            category_id = self.top_level_category(category_id)
             base["category_id"] = category_id
         if subcategory_ids:
+            if not category_id:
+                category_id = self.category_for_subcategory(subcategory_ids)
+                if category_id is not None:
+                    base["category_id"] = category_id
             base["subcategory_ids"] = subcategory_ids
         if condition:
             base["condition"] = condition
@@ -239,7 +244,9 @@ class Wallapop:
         params = dict(base)
         params.update({"search_id": search_id, "section_type": "organic_search_results", "source": "deep_link"})
         next_page: Optional[str] = None
-        for page in range(max(pages, 1)):
+        budget = max(pages, 1)
+        hops = 0
+        while budget > 0:
             qp = dict(params)
             if next_page:
                 qp["next_page"] = next_page
@@ -247,11 +254,16 @@ class Wallapop:
             if not resp.ok:
                 raise ApiError(f"search failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
             items = extract_items(resp.data)
-            all_items.extend(normalize_item(item) for item in items)
+            if items:
+                all_items.extend(normalize_item(item) for item in items)
+                budget -= 1
             next_page = first(deep_find(resp.data, "next_page"))
             if not next_page:
                 break
-            if page < max(pages, 1) - 1 and delay > 0:
+            hops += 1
+            if hops > 20:
+                break
+            if delay > 0:
                 time.sleep(delay + random.uniform(0, 0.5))
         return all_items
 
@@ -318,6 +330,44 @@ class Wallapop:
             }
 
         return [clean(c) for c in raw]
+
+    def category_for_subcategory(self, subcategory_id: int) -> Optional[int]:
+        """Resolve the top-level category that a subcategory belongs to.
+
+        The search API needs ``category_id`` (a top-level node) alongside
+        ``subcategory_ids``; sending a deep ``subcategory_ids`` alone makes
+        ``/search/components`` return 400. ``--subcat`` alone is therefore
+        resolved by climbing the taxonomy tree to its root.
+        """
+        for node in self.categories():
+            root = self._top_level_for(node, subcategory_id)
+            if root is not None:
+                return root
+        return None
+
+    def top_level_category(self, category_id: int) -> Optional[int]:
+        """Normalize a category id to its top-level root.
+
+        ``category_id`` in the search API must be a top-level node (100,
+        12800, 24200...); passing a mid-level node (e.g. 24203, a child of
+        24200) silently returns 0 results. Given any node id, returns its
+        root when found in the tree, otherwise the id unchanged.
+        """
+        roots = self.categories()
+        if any(node["id"] == category_id for node in roots):
+            return category_id
+        for node in roots:
+            if self._top_level_for(node, category_id) is not None:
+                return node["id"]
+        return category_id
+
+    def _top_level_for(self, node: dict[str, Any], subcategory_id: int) -> Optional[int]:
+        if node["id"] == subcategory_id:
+            return node["id"]
+        for child in node.get("subcategories") or []:
+            if self._top_level_for(child, subcategory_id) is not None:
+                return node["id"]
+        return None
 
     def item(self, item_id: str, authed: bool = False) -> Item:
         resp = self._authed("GET", f"/items/{item_id}") if authed else self._request("GET", f"/items/{item_id}")

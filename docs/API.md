@@ -106,7 +106,9 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
 | `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
 | `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
-| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. |
+| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. Si falta `category_id` y hay `subcategory_ids`, se resuelve la raíz del árbol (`category_for_subcategory`); un `category_id` intermedio se normaliza a su top-level. Salta páginas vacías con `next_page` (p. ej. `ship_only` + `price_asc`). |
+| `category_for_subcategory(subcategory_id)` → `Optional[int]` | raíz top-level del nodo en `/categories` (p. ej. `10088` → `24200`) |
+| `top_level_category(category_id)` → `int` | devuelve el id si ya es top-level; si es un nodo intermedio, sube a su raíz; si no está en el árbol, lo deja igual |
 | `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
 | `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |
 | `counter_offer(offer_id, amount, currency="EUR")` | `PATCH /delivery/offers/{id}/offer-price` |

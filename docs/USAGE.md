@@ -138,12 +138,24 @@ Flags comunes:
 | `--json` / `--csv` | Salida estructurada |
 | `--quiet` | Oculta avisos |
 
+> **`price_asc` oculta precios**: Wallapop devuelve `0.00 €` (precio oculto)
+> en los resultados ordenados por precio ascendente. Combinado con
+> `--ship-only`, la primera página del API viene vacía (los items a 0€ no
+> tienen envío); la CLI sigue el cursor `next_page` y trae el resto igualmente.
+> Añadir `--min-price` evita el placeholder y devuelve precios reales.
+
 > **Ids de categoría**: el catálogo completo (18 categorías top + todas sus
 > subcategorías con sus ids) está en `docs/categories.json`, o se puede obtener
 > en vivo con `Wallapop.categories()`. Los ids de `--category`/`--subcat` son
 > los de ese árbol, no invenciones. En la web, al hacer clic en una subcategoría
 > se abre otro submenú y la URL queda `category_id=X&subcategory_ids=Y` — esos
 > `Y` son ids de subcategoría del mismo árbol.
+>
+> - `--subcat` **sin `--category` funciona**: la CLI sube al nodo raíz
+>   automáticamente (p. ej. `--subcat 10088` → `category_id=24200`).
+> - `--category` con un **nodo intermedio** (p. ej. `24203`, hijo de `24200`)
+>   también se normaliza a su raíz. El API acepta esos ids pero devuelve 0
+>   resultados, por eso la CLI los corrige.
 
 ### Seleccionar país / región
 

@@ -113,7 +113,7 @@ def fetch_items(client: Wallapop, args: argparse.Namespace, keyword: str) -> lis
     items = client.search(
         keyword,
         category_id=args.category,
-        subcategory_ids=args.subcat,
+        subcategory_ids=int(args.subcat) if getattr(args, "subcat", None) else None,
         order_by=order,
         latitude=lat,
         longitude=lon,
