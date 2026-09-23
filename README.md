@@ -26,6 +26,10 @@ python3 wallapop.py <comando> ...
 | `favorite` | Marcar/desmarcar un anuncio como favorito |
 | `purchases` | Ver tus compras (en curso / finalizadas) |
 | `selling` | Ver tus ventas (en curso / finalizadas) |
+| `edit` | Editar un anuncio tuyo publicado (precio, título, descripción, marca, modelo, color, condición, peso) |
+| `reserve` | Reservar / desreservar uno de tus artículos |
+| `sold` | Marcar uno de tus artículos como vendido (o desmarcar) |
+| `delete` | Borrar permanentemente uno de tus artículos (`DELETE /api/v3/items/{id}`) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ## Documentación

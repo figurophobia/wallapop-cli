@@ -158,7 +158,7 @@ class FakeTransport:
             }, "application/json"
         if url.endswith("/general/search"):
             return 200, LEGACY_SEARCH, "application/json"
-        if url.endswith(f"/items/{RAW_ITEM['id']}"):
+        if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "GET":
             return 200, RAW_ITEM, "application/json"
         if url.endswith("/users/wz0123456789/reviews"):
             return 200, RAW_REVIEWS, "application/json"
@@ -198,6 +198,8 @@ class FakeTransport:
         if "/users/wz0123456789/items" in url:
             return 200, {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
         if url.endswith("/favorite") and method == "PUT":
+            return 204, None, "text/plain"
+        if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "DELETE":
             return 204, None, "text/plain"
         raise AssertionError(f"unexpected call: {method} {url} params={params} body={body}")
 
@@ -334,6 +336,15 @@ def test_unfavorite_sends_false(fake):
     assert resp.status == 204
     put_calls = [c for c in fake.calls if "/favorite" in c[1] and c[0] == "PUT"]
     assert put_calls[0][3] == {"favorited": False}
+
+
+def test_delete_item_calls_delete_endpoint(fake):
+    client = Wallapop()
+    resp = client.delete_item(RAW_ITEM["id"])
+    assert resp.status == 204
+    delete_calls = [c for c in fake.calls if c[0] == "DELETE"]
+    assert len(delete_calls) == 1
+    assert delete_calls[0][1].endswith(f"/items/{RAW_ITEM['id']}")
 
 
 def test_login_sends_client_id_and_stores_tokens(fake):

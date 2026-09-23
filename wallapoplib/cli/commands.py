@@ -874,6 +874,57 @@ def cmd_selling(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reserve(args: argparse.Namespace) -> int:
+    item_id = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    r = client.reserve(item_id, not args.remove)
+    announce("reservado" if not args.remove else "desreservado", r)
+    return 0 if r.ok else 1
+
+
+def cmd_sold(args: argparse.Namespace) -> int:
+    item_id = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    r = client.mark_sold(item_id, not args.undo)
+    announce("marcado como vendido" if not args.undo else "desmarcado como vendido", r)
+    return 0 if r.ok else 1
+
+
+def cmd_edit(args: argparse.Namespace) -> int:
+    item_id = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    r = client.edit_item(
+        item_id,
+        price=args.price,
+        title=args.title,
+        description=args.description,
+        condition=args.condition,
+        brand=args.brand,
+        model=args.model,
+        color=args.color,
+        max_weight_kg=args.max_weight_kg,
+    )
+    announce("editado", r)
+    if not r.ok:
+        return 1
+    if args.json and r.data:
+        emit_json(r.data)
+    return 0
+
+
+def cmd_delete(args: argparse.Namespace) -> int:
+    item_id = resolve_internal_id(args.item)
+    if not args.yes:
+        ans = input(f"borrar {item_id} permanentemente? (y/N): ").strip().lower()
+        if ans not in ("y", "yes"):
+            eprint("cancelado")
+            return 1
+    client, _ = authed_client()
+    r = client.delete_item(item_id)
+    announce("borrado (DELETE /items/{id})", r)
+    return 0 if r.ok else 1
+
+
 def cmd_publish(args: argparse.Namespace) -> int:
     """Publish an item: pure API by default, or the real web wizard with --browser."""
     price = int(round(args.price))

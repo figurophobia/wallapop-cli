@@ -115,6 +115,10 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `send_message(item_hash, message, report?)` | PubNub REST publish; fallback navegador (Playwright) |
 | `publish(photo_path, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
 | `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
+| `reserve(item_id, reserved=True)` → `Response` | reserva/desreserva un item tuyo (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
+| `mark_sold(item_id, sold=True)` → `Response` | marca uno de tus items como vendido/no vendido (`PUT /items/{id}/sold`, 204) |
+| `edit_item(item_id, price?, title?, description?, condition?, brand?, model?, color?, category_leaf_id?, max_weight_kg?)` → `Response` | edita un anuncio publicado replicando el formulario "Actualizar" de la web (`PUT /api/v3/items/{id}` con `Accept: application/vnd.upload-v2+json`) |
+| `delete_item(item_id)` → `Response` | **borra permanentemente** un item tuyo (`DELETE /api/v3/items/{id}`, 204) |
 | `purchases(tab)` / `selling(tab)` → `dict` | centros **Compras/Ventas** de la web por SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parsea el árbol con `parse_sdui_transactions` |
 | `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
 

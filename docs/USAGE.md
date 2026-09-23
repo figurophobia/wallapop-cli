@@ -20,6 +20,10 @@ Referencia completa de `wallapop`. Se invoca como
 | `favorite` | Marcar/desmarcar un anuncio como favorito |
 | `purchases` | Ver tus compras: en curso o finalizadas (centro de compras) |
 | `selling` | Ver tus ventas: en curso o finalizadas (centro de ventas) |
+| `edit` | Editar un anuncio tuyo publicado (precio, título, descripción, marca, modelo, color, condición, peso) |
+| `reserve` | Reservar / desreservar uno de tus artículos |
+| `sold` | Marcar uno de tus artículos como vendido (o desmarcarlo) |
+| `delete` | Borrar permanentemente uno de tus artículos (`DELETE /api/v3/items/{id}`) |
 | `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
@@ -320,6 +324,38 @@ wallapop favorite <item> --remove # quitar de favoritos
   `{"favorited": true|false}`. Devuelve 204 sin body.
 - Para verificar el estado de favorito, usa `show <item>` — la línea de stats
   muestra `(te gusta)` cuando el item está en favoritos.
+
+---
+
+## Gestionar tus artículos
+
+Comandos para los anuncios que tú publicaste:
+
+```
+wallapop edit <item> --price 200 --title 'Nintendo 3DS Roja' --condition as_good_as_new
+wallapop edit <item> --brand Nintendo --model 3DS --color red --max-weight-kg 1
+wallapop reserve <item>            # reservar (lo tapa en el marketplace)
+wallapop reserve <item> --remove   # desreservar
+wallapop sold <item>               # marcar como vendido
+wallapop sold <item> --undo        # desmarcar
+wallapop delete <item>             # borrar permanentemente (pide confirmación)
+wallapop delete <item> --yes       # borrar sin confirmar
+```
+
+- `<item>` acepta url, slug web o hash interno (igual que `show`); debe ser
+  **uno de tus anuncios** (el API responde 403/404 si no es tuyo).
+- `edit` usa `PUT /api/v3/items/{id}` con el header `Accept:
+  application/vnd.upload-v2+json` (el mismo del formulario "Actualizar" de la
+  web). Solo cambia lo que pases; el resto se rellena con el estado actual del
+  anuncio. Devuelve el item actualizado con `--json`.
+- `reserve` → `PUT /items/{id}/reserve` (body `{"reserved": true|false}`, 204);
+  `sold` → `PUT /items/{id}/sold` (body vacío al marcar, `{"sold": false}` al
+  desmarcar, 204).
+- `delete` → `DELETE /api/v3/items/{id}` (204). **Borrado permanente**: quita
+  el anuncio del marketplace y desaparece (un `show` posterior da 404). Es
+  distinto de `reserve`/`sold`, que lo mantienen en tu historial. Pide
+  confirmación salvo con `--yes`.
+- Verificado en vivo: publicar → `delete --yes` → 204; `show` del mismo id → 404.
 
 ---
 

@@ -561,6 +561,15 @@ class Wallapop:
         }
         return self._authed("PUT", f"/items/{item_id}", body=item, extra_headers=headers)
 
+    def delete_item(self, item_id: str) -> Response:
+        """Permanently delete an owned listing via ``DELETE /items/{id}``.
+
+        Unlike ``reserve`` (holds it briefly) or ``mark_sold`` (removes it
+        from the marketplace but keeps it in your sales history), this
+        removes the listing for good. Returns 204 on success.
+        """
+        return self._authed("DELETE", f"/items/{item_id}")
+
     def _item_currency(self, item_id: str) -> str:
         return self.item(item_id).currency
 

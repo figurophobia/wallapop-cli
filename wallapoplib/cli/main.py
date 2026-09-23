@@ -7,6 +7,8 @@ import sys
 
 from .commands import (
     cmd_deals,
+    cmd_delete,
+    cmd_edit,
     cmd_favorite,
     cmd_login,
     cmd_logout,
@@ -15,11 +17,13 @@ from .commands import (
     cmd_publish,
     cmd_purchases,
     cmd_replies,
+    cmd_reserve,
     cmd_search,
+    cmd_selling,
     cmd_session,
     cmd_show,
     cmd_seller,
-    cmd_selling,
+    cmd_sold,
     cmd_watch,
 )
 from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
@@ -143,6 +147,34 @@ def build_parser() -> argparse.ArgumentParser:
     sl.add_argument("--finished", action="store_true", help="show finished sales instead of ongoing")
     sl.add_argument("--json", action="store_true", help="dump the transactions as JSON")
     sl.set_defaults(func=cmd_selling)
+
+    ed = sub.add_parser("edit", help="edit one of your published items")
+    ed.add_argument("item", help="item url, web slug or internal hash (owned item)")
+    ed.add_argument("--price", type=float, help="new price in EUR")
+    ed.add_argument("--title", help="new title (max 50 chars)")
+    ed.add_argument("--description", help="new description")
+    ed.add_argument("--condition", help="condition: un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all")
+    ed.add_argument("--brand", help="new brand, e.g. Nintendo")
+    ed.add_argument("--model", help="new model, e.g. 3DS")
+    ed.add_argument("--color", help="new color, e.g. blue")
+    ed.add_argument("--max-weight-kg", type=int, help="shipping weight in kg")
+    ed.add_argument("--json", action="store_true", help="dump the updated item as JSON")
+    ed.set_defaults(func=cmd_edit)
+
+    rs = sub.add_parser("reserve", help="reserve/unreserve one of your items")
+    rs.add_argument("item", help="item url, web slug or internal hash (owned item)")
+    rs.add_argument("--remove", action="store_true", help="unreserve instead")
+    rs.set_defaults(func=cmd_reserve)
+
+    sd = sub.add_parser("sold", help="mark one of your items as sold (or undo)")
+    sd.add_argument("item", help="item url, web slug or internal hash (owned item)")
+    sd.add_argument("--undo", action="store_true", help="mark as not sold instead")
+    sd.set_defaults(func=cmd_sold)
+
+    dl2 = sub.add_parser("delete", help="permanently delete one of your items")
+    dl2.add_argument("item", help="item url, web slug or internal hash (owned item)")
+    dl2.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
+    dl2.set_defaults(func=cmd_delete)
 
     sh = sub.add_parser("show", help="print a listing's full details (including description)")
     sh.add_argument("item", help="item url, web slug or internal hash")

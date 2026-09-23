@@ -800,6 +800,30 @@ Body: {"favorited": true}     # para desmarcar: {"favorited": false}
   (chunk 23852, exportado como `itemFavoriteUrl`).
 - Código: `Wallapop.favorite(item_id, favorited)` (client.py).
 
+### Borrar un artículo: `DELETE /api/v3/items/{id}`
+
+```http
+DELETE /api/v3/items/{id}
+```
+
+- Devuelve **204**. Borrado permanente: elimina el anuncio del marketplace y
+  deja de existir (un GET posterior devuelve 404). Es distinto de
+  `PUT /items/{id}/reserve` (lo mantiene visible pero reservado), de
+  `PUT /items/{id}/sold` (lo quita del marketplace pero lo conserva en el
+  historial de ventas), y de `PUT /items/{id}/inactivate` (lo oculta
+  temporalmente).
+- Verificado en vivo (2026-09-23): publicar un item de prueba → 200, borrarlo
+  con `DELETE /items/{id}` → 204, y `GET /items/{id}` del mismo → 404.
+- Los headers necesarios son los base del CLI (`Authorization`, etc.), sin el
+  `Accept: application/vnd.upload-v2+json` de la edición. También hay que
+  pasar el `item_id` interno (hash de 12 chars de la dirección `#/item/...`),
+  igual que el resto de endpoints de items.
+- Documentado también en la API pública de Wallapop para desarrolladores
+  (`developers.wallapop.com`, método oficial `deleteItem` sobre el mismo
+  recurso `DELETE /items/{itemId}`).
+- Código: `Wallapop.delete_item(item_id)` (client.py), comando CLI
+  `wallapop delete <item> [--yes]` (commands.py).
+
 ---
 
 ## Centro de compras y ventas (SDUI)
