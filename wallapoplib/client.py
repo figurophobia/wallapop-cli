@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import random
 import time
 import uuid
@@ -157,6 +156,16 @@ def persist_browser_session(session: dict, token: Optional[str] = None) -> None:
     if token:
         updated["accessToken"] = token
     save_session(updated)
+
+
+def _saved_search_id_from_location(location: str) -> Optional[str]:
+    """Extract the saved-search id from a ``Location`` header (last path segment).
+
+    The server answers with a fresh UUID per saved search (e.g.
+    ``/api/v3/searchalerts/savedsearch/ae1a42fb-...``).
+    """
+    last = urllib.parse.urlparse(location or "").path.rstrip("/").split("/")[-1]
+    return last or None
 
 
 class Wallapop:
@@ -553,6 +562,109 @@ class Wallapop:
             raise ApiError(f"stats of {user_id} unavailable: unexpected payload ({type(data).__name__})")
         return data
 
+    def seller_extra_info(self, user_id: str) -> dict:
+        """Fetch a seller's trust data (GET /api/v3/users/{id}/extra-info).
+
+        Public payload: ``response_rate``, ``scoring_stars``,
+        ``rating_average``, ``validations`` (email/mobile/level/...),
+        ``activity_level``.
+        """
+        resp = self._request("GET", f"/users/{user_id}/extra-info")
+        data = resp.data if isinstance(resp.data, dict) else {}
+        return data
+
+    def seller_items(self, user_id: str, pages: int = 1, max_items: int = 25) -> list[Item]:
+        """Fetch a user's published items (GET /api/v3/users/{id}/items).
+
+        Walks the ``meta.next`` cursor (``since`` waypoint) across ``pages``
+        calls, the same pagination as the web profile grid. Returns
+        ``Item`` objects with real prices/titles (no geolocation filter).
+        """
+        all_items: list[Item] = []
+        since: Optional[str] = None
+        for page_no in range(max(pages, 1)):
+            params: dict[str, Any] = {"max_items": max_items}
+            if page_no == 0:
+                params["page"] = 0
+            if since:
+                params["since"] = since
+            resp = self._request("GET", f"/users/{user_id}/items", params=params)
+            if not resp.ok:
+                raise ApiError(f"seller items failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+            data = resp.data if isinstance(resp.data, dict) else {}
+            raw_items = data.get("data") or []
+            if isinstance(raw_items, list):
+                all_items.extend(normalize_item(it, fallback_user_id=user_id) for it in raw_items if isinstance(it, dict))
+            meta = data.get("meta") or {}
+            since = meta.get("next") if isinstance(meta, dict) else None
+            if not since:
+                break
+        return all_items
+
+    def other_items(self, item_id: str) -> list[Item]:
+        """More active items from the same seller (GET /api/v3/items/{id}/seller/other-items).
+
+        Feeds the web's "más artículos del vendedor" rail on an item page.
+        """
+        resp = self._request("GET", f"/items/{item_id}/seller/other-items")
+        if not resp.ok:
+            raise ApiError(f"other items failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        data = resp.data if isinstance(resp.data, dict) else {}
+        box = data.get("data") or {}
+        raw = []
+        if isinstance(box, dict):
+            raw = box.get("items") or []
+        return [normalize_item(it) for it in raw if isinstance(it, dict)]
+
+    def seller_phone_number(self, item_id: str) -> str:
+        """The seller's phone for an item (GET /api/v3/items/{id}/seller-phone-number).
+
+        Returns ``""`` when unavailable (the web only unlocks it after a
+        conversation is started or the seller shares it).
+        """
+        resp = self._authed("GET", f"/items/{item_id}/seller-phone-number")
+        if not resp.ok:
+            return ""
+        data = resp.data if isinstance(resp.data, dict) else {}
+        return str(data.get("phone_number") or "")
+
+    def item_actions_allowed(self, item_id: str) -> list[dict[str, Any]]:
+        """Which actions the API allows on an item (GET /api/v3/items/{id}/actions-allowed).
+
+        Returns the ``{"type", "allowed", "cause"}`` entries (e.g.
+        inactivate/reserve/delete) that drive the web's action menus.
+        """
+        resp = self._request("GET", f"/items/{item_id}/actions-allowed")
+        data = resp.data if isinstance(resp.data, list) else []
+        return [dict(a) for a in data if isinstance(a, dict)]
+
+    def suggest(self, keyword: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Autocomplete suggestions for a search keyword (GET /api/v3/suggesters/nonlocated).
+
+        Returns ``[{"text", "highlight", "subtitle"}]`` for the top
+        suggestions, the same data the search box dropdown shows.
+        """
+        resp = self._request("GET", "/suggesters/nonlocated", params={"keyword": keyword})
+        if not resp.ok:
+            raise ApiError(f"suggest failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        data = resp.data
+        raw = data.get("suggestions", []) if isinstance(data, dict) else []
+        out: list[dict[str, Any]] = []
+        for s in raw:
+            if not isinstance(s, dict):
+                continue
+            sug = (s.get("regular_suggestion") or {}).get("suggestion") or {}
+            if not isinstance(sug, dict):
+                continue
+            out.append(
+                {
+                    "text": str(sug.get("text") or ""),
+                    "highlight": str(sug.get("highlight") or ""),
+                    "subtitle": str(sug.get("subtitle") or ""),
+                }
+            )
+        return out[: max(limit, 1)]
+
     def download_images(self, item: Item, dest: str = "images") -> list[str]:
         """Download an item's images into ``dest`` and return the saved file paths.
 
@@ -645,6 +757,44 @@ class Wallapop:
         with body ``{"favorited": <bool>}``.  Returns 204 on success.
         """
         return self._authed("PUT", f"/items/{item_id}/favorite", body={"favorited": favorited})
+
+    def favorite_lists(self, pages: int = 1) -> list[Item]:
+        """List the items you favorited (GET /api/v3/favorite-lists).
+
+        Walks ``meta.next`` (the ``since`` cursor) the way the favorites page
+        does. Returns normalized ``Item`` objects so the list can be fed to
+        the same printers/deal logic as ``search``.
+        """
+        all_items: list[Item] = []
+        since: Optional[str] = None
+        for _ in range(max(pages, 1)):
+            params: dict[str, Any] = {}
+            if since:
+                params["since"] = since
+            resp = self._authed("GET", "/favorite-lists", params=params)
+            if not resp.ok:
+                raise ApiError(f"favorites failed ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+            data = resp.data if isinstance(resp.data, dict) else {}
+            raw = data.get("data") or []
+            if isinstance(raw, list):
+                all_items.extend(normalize_item(it) for it in raw if isinstance(it, dict))
+            meta = data.get("meta") or {}
+            since = meta.get("next") if isinstance(meta, dict) else None
+            if not since:
+                break
+        return all_items
+
+    def favorite_list_add(self, list_id: str, item_id: str) -> Response:
+        """Add an item to a favorite list (POST /api/v3/favorite-lists/{id}/items)."""
+        return self._authed(
+            "POST",
+            f"/favorite-lists/{list_id}/items",
+            body={"items": [{"id": item_id, "is_favorited": True}]},
+        )
+
+    def favorite_list_remove(self, list_id: str, item_id: str) -> Response:
+        """Remove an item from a favorite list (DELETE /api/v3/favorite-lists/{id}/items/{itemId})."""
+        return self._authed("DELETE", f"/favorite-lists/{list_id}/items/{item_id}")
 
     def purchases(self, tab: str = "ongoing") -> Response:
         """Fetch the purchases center (SDUI card tree).
@@ -872,6 +1022,23 @@ class Wallapop:
         removes the listing for good. Returns 204 on success.
         """
         return self._authed("DELETE", f"/items/{item_id}")
+
+    def inactivate_item(self, item_id: str) -> Response:
+        """Pause an owned item: it leaves the marketplace but stays in your catalog.
+
+        Exactly the web's "Pausar" action: ``PUT /api/v3/items/{id}/inactivate``
+        with an empty body. To put it back online, edit it (``PUT /items/{id}``
+        revives paused items).
+        """
+        return self._authed("PUT", f"/items/{item_id}/inactivate")
+
+    def mark_viewed(self, item_id: str) -> Response:
+        """Register that you opened an item page (PUT /api/v3/items/{id}/view).
+
+        The tracking call the web fires on every item detail view (it feeds the
+        price-drop and "te interesa" features).
+        """
+        return self._request("PUT", f"/items/{item_id}/view")
 
     def _item_currency(self, item_id: str) -> str:
         return self.item(item_id).currency
@@ -1258,6 +1425,89 @@ class Wallapop:
     def unread_count(self) -> Response:
         """Total unread message counter (instant messaging)."""
         return self._authed("GET", "/instant-messaging/messages/unread")
+
+    def save_search(self, params: dict) -> str:
+        """Save a favorite search and return its id.
+
+        POSTs the search filter params (``keywords``, ``category_id``, prices,
+        coordinates, ...) to ``/api/v3/searchalerts/savedsearch``; the server
+        answers 201 with the new id (a UUID) in the ``Location`` header and no
+        body.
+        """
+        headers = self._headers(auth=True)
+        status, payload, _, resp_headers = http_request(
+            "POST",
+            f"{API_BASE}/searchalerts/savedsearch",
+            params=params,
+            headers=headers,
+            include_headers=True,
+        )
+        if status == 401 and self.refresh_web():
+            headers = self._headers(auth=True)
+            status, payload, _, resp_headers = http_request(
+                "POST",
+                f"{API_BASE}/searchalerts/savedsearch",
+                params=params,
+                headers=headers,
+                include_headers=True,
+            )
+        if status not in (200, 201, 204):
+            if isinstance(payload, dict):
+                status_block = payload.get("status")
+                message = status_block.get("message") if isinstance(status_block, dict) else payload.get("message", "")
+            else:
+                message = payload or ""
+            raise ApiError(f"save search failed ({status}): {message}")
+        search_id = _saved_search_id_from_location((resp_headers or {}).get("Location") or "")
+        if search_id is None:
+            raise ApiError(f"save search accepted but no id in Location header: {resp_headers.get('Location')!r}")
+        return search_id
+
+    def saved_search_exists(self, params: dict) -> Optional[str]:
+        """Return the id of a saved search matching these filters, or None.
+
+        HEAD ``/api/v3/searchalerts/savedsearch/exists`` answers 200 with the
+        id in the ``Location`` header when the search is saved and 404
+        otherwise.
+        """
+        headers = self._headers(auth=True)
+        status, _, _, resp_headers = http_request(
+            "HEAD",
+            f"{API_BASE}/searchalerts/savedsearch/exists",
+            params=params,
+            headers=headers,
+            include_headers=True,
+        )
+        if status == 404:
+            return None
+        if status == 401 and self.refresh_web():
+            headers = self._headers(auth=True)
+            status, _, _, resp_headers = http_request(
+                "HEAD",
+                f"{API_BASE}/searchalerts/savedsearch/exists",
+                params=params,
+                headers=headers,
+                include_headers=True,
+            )
+        if status not in (200, 201, 204):
+            raise ApiError(f"check saved search failed ({status})")
+        return _saved_search_id_from_location((resp_headers or {}).get("Location") or "")
+
+    def saved_search_hits(self) -> int:
+        """Total new-listing counter across your saved searches (GET .../alerts/total-hits).
+
+        This is the badge number the web shows next to "búsquedas guardadas".
+        """
+        resp = self._authed("GET", "/searchalerts/savedsearch/alerts/total-hits")
+        if not resp.ok:
+            return 0
+        data = resp.data if isinstance(resp.data, dict) else {}
+        hits = data.get("hits")
+        return int(hits) if isinstance(hits, (int, float)) else 0
+
+    def remove_saved_search(self, search_id: str) -> Response:
+        """Delete a saved search by id (DELETE /api/v3/searchalerts/savedsearch/{id})."""
+        return self._authed("DELETE", f"/searchalerts/savedsearch/{search_id}")
 
     def send_message(
         self,

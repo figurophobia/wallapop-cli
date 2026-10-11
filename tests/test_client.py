@@ -7,7 +7,6 @@ captures, ids de-sensibilized).
 
 import argparse
 import builtins
-import sys
 import uuid
 from decimal import Decimal
 
@@ -158,6 +157,34 @@ RAW_CATEGORIES = {
     ]
 }
 
+RAW_SUGGESTIONS = {
+    "suggestions": [
+        {"regular_suggestion": {"suggestion": {"text": "switch nintendo", "highlight": "nintendo switch", "subtitle": ""}}},
+        {"regular_suggestion": {"suggestion": {"text": "switch 2 nintendo", "highlight": "nintendo switch", "subtitle": ""}}},
+    ]
+}
+
+RAW_EXTRA_INFO = {
+    "response_rate": "less_than_one_hour",
+    "scoring_stars": 98.0,
+    "rating_average": 4.9,
+    "validations": {"email": True, "mobile": True, "level": "verified", "kyc": True},
+    "activity_level": "unknown",
+}
+
+RAW_OTHER_ITEMS = {"data": {"items": [RAW_ITEM], "tracking": {"slider": 1}}}
+
+RAW_ACTIONS_ALLOWED = [
+    {"type": "inactivate", "allowed": True, "cause": None},
+    {"type": "delete", "allowed": True, "cause": None},
+]
+
+RAW_PHONE = {"phone_number": "+34 600 000 000"}
+
+RAW_FAVORITE_LISTS = {"data": [RAW_ITEM], "meta": {"next": "fav-cursor-2", "search_enabled": True}}
+
+RAW_HITS = {"hits": 7}
+
 # --- transport fake ---------------------------------------------------------
 
 
@@ -176,7 +203,7 @@ class FakeTransport:
         #: default list (used to hide the account's cost configuration).
         self.published_items: dict | None = None
 
-    def __call__(self, method: str, url: str, params=None, body=None, headers=None, retry_safe=None):
+    def __call__(self, method: str, url: str, params=None, body=None, headers=None, retry_safe=None, **kwargs):
         self.calls.append((method, url, dict(params or {}), dict(body or {})))
         self.retry_safe.append(retry_safe)
         if url.endswith("/search/components"):
@@ -245,10 +272,46 @@ class FakeTransport:
         if url.endswith("/users/me"):
             return 200, RAW_ME, "application/json"
         if "/users/wz0123456789/items" in url:
-            return 200, self.published_items or {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
+            if self.published_items:
+                return 200, self.published_items, "application/json"
+            if params.get("since"):
+                return 200, {"data": [RAW_PUBLISHED_ITEM], "meta": {"next": None}}, "application/json"
+            return 200, {"data": [RAW_PUBLISHED_ITEM], "meta": {"next": "page-cursor-2"}}, "application/json"
         if url.endswith("/favorite") and method == "PUT":
             return 204, None, "text/plain"
         if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "DELETE":
+            return 204, None, "text/plain"
+        if url.endswith("/suggesters/nonlocated"):
+            return 200, RAW_SUGGESTIONS, "application/json"
+        if url.endswith("/users/wz0123456789/extra-info"):
+            return 200, RAW_EXTRA_INFO, "application/json"
+        if url.endswith("/seller/other-items"):
+            return 200, RAW_OTHER_ITEMS, "application/json"
+        if url.endswith("/seller-phone-number"):
+            return 200, RAW_PHONE, "application/json"
+        if url.endswith("/actions-allowed"):
+            return 200, RAW_ACTIONS_ALLOWED, "application/json"
+        if url.endswith("/favorite-lists") and method == "GET":
+            if params.get("since"):
+                return 200, {"data": [], "meta": {"next": None}}, "application/json"
+            return 200, RAW_FAVORITE_LISTS, "application/json"
+        if "/favorite-lists/" in url and "/items" in url and method in ("POST", "DELETE"):
+            return 204, None, "text/plain"
+        if url.endswith("/inactivate") and method == "PUT":
+            return 204, None, "text/plain"
+        if url.endswith("/view") and method == "PUT":
+            return 204, None, "text/plain"
+        base = "https://api.wallapop.com/api/v3/searchalerts/savedsearch"
+        saved_id = "ae1a42fb-e6a7-4507-ae3f-3dd3139aa69d"
+        if url.endswith("/savedsearch/alerts/total-hits"):
+            return 200, RAW_HITS, "application/json"
+        if url.endswith("/savedsearch/exists"):
+            if params.get("keywords") == "not-saved-thing":
+                return 404, None, "text/plain", {}
+            return 200, None, "text/plain", {"Location": f"{base}/{saved_id}"}
+        if url.endswith("/savedsearch") and method == "POST":
+            return 201, None, "text/plain", {"Location": f"{base}/{saved_id}"}
+        if "/savedsearch/" in url and method == "DELETE":
             return 204, None, "text/plain"
         raise AssertionError(f"unexpected call: {method} {url} params={params} body={body}")
 
@@ -1722,3 +1785,153 @@ def test_reply_to_conversation_requires_an_id(fake):
     resp = Wallapop(token="tk").reply_to_conversation("", "hola")
     assert not resp.ok
     assert "conversation_id required" in resp.data["error_message"]
+
+
+# --- suggestions / seller extras --------------------------------------------
+
+def test_suggest_returns_suggestion_texts(fake):
+    client = Wallapop()
+    suggs = client.suggest("nintendo sw", limit=1)
+    assert len(suggs) == 1
+    assert suggs[0]["text"] == "switch nintendo"
+    assert suggs[0]["highlight"] == "nintendo switch"
+    assert suggs[0]["subtitle"] == ""
+
+
+def test_seller_extra_info_parsed(fake):
+    client = Wallapop()
+    info = client.seller_extra_info("wz0123456789")
+    assert info["response_rate"] == "less_than_one_hour"
+    assert info["rating_average"] == 4.9
+    assert info["validations"]["level"] == "verified"
+
+
+def test_other_items_normalized(fake):
+    client = Wallapop()
+    items = client.other_items(RAW_ITEM["id"])
+    assert len(items) == 1
+    assert items[0].id == RAW_ITEM["id"]
+    assert items[0].title == "Nintendo DS Lite Blanca + Funda"
+
+
+def test_seller_phone_number(fake):
+    client = Wallapop(token="tk")
+    assert client.seller_phone_number(RAW_ITEM["id"]) == "+34 600 000 000"
+
+
+def test_item_actions_allowed(fake):
+    client = Wallapop()
+    actions = client.item_actions_allowed(RAW_ITEM["id"])
+    assert actions[0]["type"] == "inactivate"
+    assert actions[0]["allowed"] is True
+    assert actions[1]["type"] == "delete"
+
+
+# --- seller items -----------------------------------------------------------
+
+def test_seller_items_paginates_with_since(fake):
+    client = Wallapop()
+    items = client.seller_items("wz0123456789", pages=2)
+    user_calls = [c for c in fake.calls if "/users/wz0123456789/items" in c[1]]
+    assert len(user_calls) == 2
+    assert user_calls[0][2].get("page") == 0
+    assert user_calls[0][2].get("since") is None
+    assert user_calls[1][2].get("since") == "page-cursor-2"
+    assert len(items) == 2
+    assert items[0].id == RAW_PUBLISHED_ITEM["id"]
+
+
+def test_seller_items_stops_when_no_next(fake):
+    client = Wallapop()
+    items = client.seller_items("wz0123456789", pages=5)
+    user_calls = [c for c in fake.calls if "/users/wz0123456789/items" in c[1]]
+    assert len(user_calls) == 2  # breaks on missing meta.next despite the page budget
+    assert len(items) == 2
+
+
+# --- favorites list -----------------------------------------------------------
+
+def test_favorite_lists_paginates(fake):
+    client = Wallapop(token="tk")
+    items = client.favorite_lists(pages=2)
+    fav_calls = [c for c in fake.calls if c[1].endswith("/favorite-lists") and c[0] == "GET"]
+    assert len(fav_calls) == 2
+    assert fav_calls[1][2] == {"since": "fav-cursor-2"}
+    assert len(items) == 1
+    assert items[0].id == RAW_ITEM["id"]
+
+
+def test_favorite_list_add_sends_items_body(fake):
+    client = Wallapop(token="tk")
+    r = client.favorite_list_add("list1", RAW_ITEM["id"])
+    assert r.ok
+    call = fake.calls[-1]
+    assert call[0] == "POST"
+    assert call[1].endswith("/favorite-lists/list1/items")
+    assert call[3] == {"items": [{"id": RAW_ITEM["id"], "is_favorited": True}]}
+
+
+def test_favorite_list_remove(fake):
+    client = Wallapop(token="tk")
+    r = client.favorite_list_remove("list1", RAW_ITEM["id"])
+    assert r.ok
+    call = fake.calls[-1]
+    assert call[0] == "DELETE"
+    assert call[1].endswith(f"/favorite-lists/list1/items/{RAW_ITEM['id']}")
+
+
+# --- saved searches (alerts) -------------------------------------------------
+
+def test_save_search_parses_location_header(fake):
+    client = Wallapop(token="tk")
+    search_id = client.save_search({"keywords": "steam deck", "max_sale_price": 300})
+    assert search_id == "ae1a42fb-e6a7-4507-ae3f-3dd3139aa69d"
+    call = fake.calls[-1]
+    assert call[0] == "POST"
+    assert call[1].endswith("/searchalerts/savedsearch")
+    assert call[2] == {"keywords": "steam deck", "max_sale_price": 300}
+
+
+def test_saved_search_exists_returns_id(fake):
+    client = Wallapop(token="tk")
+    search_id = client.saved_search_exists({"keywords": "ps5"})
+    assert search_id == "ae1a42fb-e6a7-4507-ae3f-3dd3139aa69d"
+
+
+def test_saved_search_exists_missing_returns_none(fake):
+    client = Wallapop(token="tk")
+    search_id = client.saved_search_exists({"keywords": "not-saved-thing"})
+    assert search_id is None
+
+
+def test_saved_search_hits(fake):
+    client = Wallapop(token="tk")
+    assert client.saved_search_hits() == 7
+
+
+def test_remove_saved_search(fake):
+    client = Wallapop(token="tk")
+    r = client.remove_saved_search("ae1a42fb-e6a7-4507-ae3f-3dd3139aa69d")
+    assert r.ok
+    call = fake.calls[-1]
+    assert call[0] == "DELETE"
+    assert call[1].endswith("/searchalerts/savedsearch/ae1a42fb-e6a7-4507-ae3f-3dd3139aa69d")
+
+
+# --- item lifecycle -----------------------------------------------------------
+
+def test_inactivate_item(fake):
+    client = Wallapop(token="tk")
+    r = client.inactivate_item(RAW_ITEM["id"])
+    assert r.ok
+    call = fake.calls[-1]
+    assert call[0] == "PUT"
+    assert call[1].endswith(f"/items/{RAW_ITEM['id']}/inactivate")
+
+
+def test_mark_viewed(fake):
+    client = Wallapop()
+    r = client.mark_viewed(RAW_ITEM["id"])
+    assert r.ok
+    call = fake.calls[-1]
+    assert call[1].endswith(f"/items/{RAW_ITEM['id']}/view")

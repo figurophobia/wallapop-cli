@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import datetime
 import getpass
 import json
@@ -29,7 +30,7 @@ from ..config import (
     save_contacted,
     save_credentials,
 )
-from ..http import ApiError
+from ..http import ApiError, Response
 from ..ids import resolve_internal_id
 from ..models import Deal, Item, deep_find, first, offer_state_summary, parse_offer_events, parse_sdui_transactions, rank_deals
 from .output import (
@@ -140,59 +141,85 @@ def maybe_deliver_all(client: Wallapop, args: argparse.Namespace, deals: list[De
             save_contacted(contacted)
 
 
+def _valid_session() -> bool:
+    creds = load_credentials()
+    session = load_session()
+    token = creds.get("access_token") or session.get("accessToken") or ""
+    if not token:
+        return False
+    exp = token_expiry(token)
+    return exp is None or exp > datetime.datetime.now()
+
+
+def _login_via_wizard(timeout_s: int = 300) -> int:
+    from ..weblogin import wizard_login  # noqa: PLC0415 (optional dep)
+
+    try:
+        session, token = wizard_login(timeout_s=timeout_s)
+    except RuntimeError as exc:
+        eprint(f"{exc}")
+        return 1
+    save_credentials(
+        {"email": "browser-session", "access_token": token, "refresh_token": "", "user": {}}
+    )
+    print(f"session captured from browser ({', '.join(sorted(session))})")
+    print(f"session stored in {SESSION_PATH}")
+    return 0
+
+
+def _login_from_firefox() -> int:
+    cookies = read_firefox_cookies()
+    if not cookies:
+        eprint("no wallapop cookies found in any Firefox profile; log in at es.wallapop.com first")
+        return 1
+    session = {k: cookies[k] for k in WALLAPOP_COOKIE_KEYS if k in cookies}
+    token = refresh_web_session(session)
+    if not token:
+        eprint("session cookie found but could not get an access token; log in again at es.wallapop.com")
+        return 1
+    client = Wallapop(
+        token=token,
+        email="browser-session",
+        persist_fn=lambda c: persist_browser_session(c.web_cookies or {}, c.token),
+    )
+    client.web_cookies = session
+    save_credentials({"email": "browser-session", "access_token": token, "refresh_token": "", "user": {}})
+    persist_browser_session(session, token)
+    print(f"imported Firefox session ({', '.join(sorted(session))})")
+    print(f"session stored in {SESSION_PATH}")
+    return 0
+
+
 def cmd_login(args: argparse.Namespace) -> int:
     if getattr(args, "wizard", False):
-        from ..weblogin import wizard_login  # noqa: PLC0415 (optional dep)
-
-        try:
-            session, token = wizard_login(timeout_s=args.timeout)
-        except RuntimeError as exc:
-            eprint(f"{exc}")
-            return 1
-        save_credentials(
-            {"email": "browser-session", "access_token": token, "refresh_token": "", "user": {}}
-        )
-        print(f"session captured from browser ({', '.join(sorted(session))})")
-        print(f"session stored in {SESSION_PATH}")
-        return 0
+        return _login_via_wizard(args.timeout)
 
     if getattr(args, "browser", None) == "firefox":
-        cookies = read_firefox_cookies()
-        if not cookies:
-            eprint("no wallapop cookies found in any Firefox profile; log in at es.wallapop.com first")
-            return 1
-        session = {k: cookies[k] for k in WALLAPOP_COOKIE_KEYS if k in cookies}
-        token = refresh_web_session(session)
-        if not token:
-            eprint("session cookie found but could not get an access token; log in again at es.wallapop.com")
-            return 1
-        client = Wallapop(
-            token=token,
-            email="browser-session",
-            persist_fn=lambda c: persist_browser_session(c.web_cookies or {}, c.token),
-        )
-        client.web_cookies = session
-        save_credentials({"email": "browser-session", "access_token": token, "refresh_token": "", "user": {}})
-        persist_browser_session(session, token)
-        print(f"imported Firefox session ({', '.join(sorted(session))})")
-        print(f"session stored in {SESSION_PATH}")
-        return 0
+        return _login_from_firefox()
 
     if getattr(args, "cookies", None):
         cookies_source = args.cookies
+    elif getattr(args, "cookies_file", None):
+        cfp = args.cookies_file
+        try:
+            with open(cfp, encoding="utf-8") as fh:
+                cookies_source = " ".join(
+                    line.strip() for line in fh.read().splitlines() if not line.strip().startswith("#")
+                )
+        except OSError as exc:
+            eprint(f"could not read {cfp}: {exc}")
+            return 1
+    elif os.path.exists("cookies.txt") and args.email:
+        try:
+            with open("cookies.txt", encoding="utf-8") as fh:
+                cookies_source = " ".join(
+                    line.strip() for line in fh.read().splitlines() if not line.strip().startswith("#")
+                )
+        except OSError as exc:
+            eprint(f"could not read cookies.txt: {exc}")
+            return 1
     else:
-        cfp = getattr(args, "cookies_file", None) or "cookies.txt"
-        if os.path.exists(cfp):
-            try:
-                with open(cfp, encoding="utf-8") as fh:
-                    cookies_source = " ".join(
-                        line.strip() for line in fh.read().splitlines() if not line.strip().startswith("#")
-                    )
-            except OSError as exc:
-                eprint(f"could not read {cfp}: {exc}")
-                return 1
-        else:
-            cookies_source = ""
+        cookies_source = ""
     if cookies_source:
         parsed = parse_cookie_string(cookies_source)
         session = {k: parsed[k] for k in WALLAPOP_COOKIE_KEYS if k in parsed}
@@ -211,7 +238,18 @@ def cmd_login(args: argparse.Namespace) -> int:
         return 0
 
     if not args.email:
-        eprint("provide an email, or use --browser firefox / --wizard / --cookies / cookies.txt")
+        if not getattr(args, "force", False) and _valid_session():
+            print("already logged in. run: wallapop login --force  (para cambiar de cuenta)")
+            return 0
+        if read_firefox_cookies():
+            return _login_from_firefox()
+        try:
+            import playwright  # noqa: F401, PLC0415 (optional dep)
+        except ImportError:
+            pass
+        else:
+            return _login_via_wizard(args.timeout)
+        eprint("no account found. usa: wallapop login <email>  |  pip install -e '.[browser]' para login Google (wizard)")
         return 1
     password = args.password
     if not password:
@@ -367,13 +405,17 @@ def cmd_seller(args: argparse.Namespace) -> int:
         reviews = client.seller_reviews(user_id)
     except Exception:
         reviews = []
+    extra = {}
+    if getattr(args, "extra", False):
+        try:
+            extra = client.seller_extra_info(user_id)
+        except Exception:
+            extra = {}
     name = str((profile or {}).get("micro_name") or user_id).strip()
     if name.lower() == "undefined":
         name = user_id
     if args.json:
-        import json as _json
-
-        emit(_json.dumps({"profile": profile, "stats": stats, "reviews": reviews}, ensure_ascii=False, indent=2))
+        emit_json({"profile": profile, "stats": stats, "reviews": reviews, "extra_info": extra})
         return 0
     avg = stats.get("rating_average")
     avg_lbl = f"★ {avg}" if isinstance(avg, (int, float)) else "★ ?"
@@ -391,6 +433,23 @@ def cmd_seller(args: argparse.Namespace) -> int:
         print(f"envíos: {stats['shipping']}")
     if isinstance(stats.get("deliveries_on_time_in_days"), (int, float)):
         print(f"entrega media: {stats['deliveries_on_time_in_days']} días")
+    if extra:
+        rate = extra.get("response_rate")
+        level = (extra.get("validations") or {}).get("level")
+        rating = extra.get("rating_average")
+        if rate:
+            labels = {
+                "less_than_one_hour": "< 1 h",
+                "less_than_a_day": "< 1 día",
+                "less_than_a_week": "< 1 semana",
+                "unknown": "desconocida",
+            }
+            rate_lbl = labels.get(rate, str(rate))
+            print(f"responde: {rate_lbl}")
+        if isinstance(rating, (int, float)):
+            print(f"valoración extra: {rating} ★")
+        if level:
+            print(f"verificado: {level}")
     if reviews:
         print()
         print(paint.dim("reseñas:"))
@@ -1021,3 +1080,124 @@ def _cmd_publish_api(args: argparse.Namespace, price: float) -> int:
     if resp.ok:
         return 0
     return 1
+
+
+def saved_search_params(client: Wallapop, args: argparse.Namespace, keyword: str) -> dict:
+    """Build the search filter params a saved search is stored with.
+
+    Mirrors what ``client.search`` sends to ``/search/components``, but as a
+    plain dict (no API call) so it can be posted to
+    ``/searchalerts/savedsearch``.
+    """
+    params = {
+        "keywords": keyword,
+        "source": "search_box",
+        "filters_source": "search_box",
+        "order_by": ORDER_ALIASES.get(args.order, "most_relevance"),
+    }
+    if getattr(args, "category", None):
+        params["category_id"] = client.top_level_category(args.category)
+    if getattr(args, "subcat", None):
+        params["subcategory_ids"] = int(args.subcat)
+    if getattr(args, "condition", None):
+        params["condition"] = args.condition
+    if getattr(args, "min_price", None) is not None:
+        params["min_sale_price"] = args.min_price
+    if getattr(args, "max_price", None) is not None:
+        params["max_sale_price"] = args.max_price
+    if getattr(args, "ship_only", None):
+        params["is_shippable"] = "true"
+    lat, lon = resolve_geo(args)
+    if lat is not None and lon is not None:
+        params["latitude"] = lat
+        params["longitude"] = lon
+    return params
+
+
+def cmd_alert(args: argparse.Namespace) -> int:
+    """Manage saved searches ("búsquedas guardadas"): the sniper's alert list."""
+    action = getattr(args, "action", "") or ""
+    if action in ("save", "check"):
+        keyword = " ".join(args.keyword or [])
+        if not keyword:
+            eprint("provide a keyword: wallapop alert save 'nintendo switch 2' --max-price 300")
+            return 1
+        client, _ = authed_client()
+        params = saved_search_params(client, args, keyword)
+        if action == "save":
+            search_id = client.save_search(params)
+            print(f"[ok] search saved (id {search_id})")
+            print(f"     wallapop alert remove --id {search_id}   (borrarla)")
+            return 0
+        search_id = client.saved_search_exists(params)
+        if search_id is None:
+            print(f"not saved: {keyword!r}")
+            return 0
+        print(f"saved (id {search_id}): {keyword!r}")
+        return 0
+    client, _ = authed_client()
+    if action == "hits":
+        hits = client.saved_search_hits()
+        print(f"saved-search hits (new listings): {hits}")
+        return 0
+    if action == "remove":
+        search_id = getattr(args, "search_id", None)
+        if not search_id:
+            eprint("provide the id: wallapop alert remove --id <id>")
+            return 1
+        r = client.remove_saved_search(str(search_id))
+        announce("search {search_id} removed".format(search_id=search_id), r)
+        return 0 if r.ok else 1
+    eprint(f"unknown alert action: {action} (use save, check, remove or hits)")
+    return 1
+
+
+def cmd_favorites(args: argparse.Namespace) -> int:
+    """List the items you favorited (GET /api/v3/favorite-lists)."""
+    client, _ = authed_client()
+    items = client.favorite_lists(pages=args.pages)
+    if args.json:
+        emit_json([it.to_dict() for it in items])
+    else:
+        print(paint.bold(f"{len(items)} favorited items"))
+        print_items(items)
+    return 0
+
+
+def cmd_seller_items(args: argparse.Namespace) -> int:
+    """List every published item of a user (GET /users/{id}/items)."""
+    client = Wallapop()
+    items = client.seller_items(args.user, pages=args.pages, max_items=args.max)
+    if args.json:
+        emit_json([it.to_dict() for it in items])
+    else:
+        print(paint.bold(f"{len(items)} items from seller {args.user}"))
+        print_items(items)
+    return 0
+
+
+def cmd_suggest(args: argparse.Namespace) -> int:
+    """Autocomplete suggestions for a search keyword (GET /suggesters/nonlocated)."""
+    client = Wallapop()
+    keyword = " ".join(args.keyword)
+    suggestions = client.suggest(keyword, limit=args.top)
+    if args.json:
+        emit_json(suggestions)
+        return 0
+    if not suggestions:
+        print(f"no suggestions for {keyword!r}")
+        return 0
+    print(paint.bold(f"suggestions for {keyword!r}:"))
+    for idx, s in enumerate(suggestions, 1):
+        subtitle = f"  ({s['subtitle']})" if s.get("subtitle") else ""
+        print(f"  {idx:>2}. {s['text']}{subtitle}")
+    return 0
+
+
+def cmd_inactivate(args: argparse.Namespace) -> int:
+    """Pause one of your published items (leaves the marketplace, keeps it in your catalog)."""
+    item_id = resolve_internal_id(args.item)
+    client, _ = authed_client()
+    r = client.inactivate_item(item_id)
+    announce("pausado (PUT /items/{id}/inactivate)", r)
+    return 0 if r.ok else 1

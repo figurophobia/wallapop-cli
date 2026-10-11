@@ -182,7 +182,7 @@ class Item:
         if isinstance(city, dict):
             city = city.get("title") or ""
         web_slug = raw.get("web_slug") or ""
-        slug = web_slug or item_id
+        slug = web_slug or raw.get("slug") or item_id
         taxonomy = raw.get("taxonomy") or []
         category = ""
         category_name = ""

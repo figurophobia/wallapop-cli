@@ -8,9 +8,9 @@ import json
 import shutil
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
-from ..http import Response, eprint
+from ..http import Response, eprint  # noqa: F401 (re-exported to commands)
 from ..models import Deal, Item, OfferEvent, offer_payload_summary
 
 

@@ -41,6 +41,17 @@ client.send_message(items[0].id, "Hola! Tiene cargador?")
 client.favorite(items[0].id)            # marca como favorito (PUT .../favorite → 204)
 client.favorite(items[0].id, False)     # desmarca
 
+# Sniper: guardar una búsqueda y consultar novedades (ids = UUID)
+search_id = client.save_search({"keywords": "nintendo switch", "max_sale_price": 300})
+print(search_id)                        # 87b2e4fc-b3c9-4351-81af-43e6788aafa5
+client.saved_search_exists({"keywords": "nintendo switch", "max_sale_price": 300})
+client.saved_search_hits()              # 0 (novedades pendientes)
+client.remove_saved_search(search_id)
+
+# Cosas de un vendedor / un item
+client.seller_items("9jdxxdy1v2zk", pages=2)   # todos sus anuncios (cursor: meta.next)
+client.suggest("nintendo sw")                  # autocompletado de la web
+
 # Compras y ventas (API SDUI de los centros de la web)
 from wallapoplib import parse_sdui_transactions
 
@@ -103,6 +114,12 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `seller(user_id)` → `dict` | `GET /users/{id}` |
 | `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
 | `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
+| `seller_extra_info(user_id)` → `dict` | `GET /users/{id}/extra-info` (response_rate, scoring_stars, validations, activity_level) |
+| `seller_items(user_id, pages=1, max_items=25)` → `list[Item]` | `GET /users/{id}/items` (público; paginación por cursor `meta.next` → `since`) |
+| `other_items(item_id)` → `list[Item]` | `GET /items/{id}/seller/other-items` (más anuncios del mismo vendedor) |
+| `seller_phone_number(item_id)` → `str` | `GET /items/{id}/seller-phone-number` (`""` si no está disponible) |
+| `item_actions_allowed(item_id)` → `list[dict]` | `GET /items/{id}/actions-allowed` (`[{type, allowed, cause}]`) |
+| `suggest(keyword, limit=10)` → `list[dict]` | `GET /suggesters/nonlocated` (autocompletado: `[{text, highlight, subtitle}]`) |
 | `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
 | `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. Si falta `category_id` y hay `subcategory_ids`, se resuelve la raíz del árbol (`category_for_subcategory`); un `category_id` intermedio se normaliza a su top-level. Salta páginas vacías con `next_page` (p. ej. `ship_only` + `price_asc`). |
 | `category_for_subcategory(subcategory_id)` → `Optional[int]` | raíz top-level del nodo en `/categories` (p. ej. `10088` → `24200`) |
@@ -115,11 +132,19 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `send_message(item_hash, message, report?, allow_browser_fallback=False)` | PubNub REST publish; fallback de navegador solo si se habilita y el envío no es ambiguo |
 | `publish(photo_paths, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
 | `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
+| `favorite_lists(page=0, pages=1, max_items=25)` → `list[Item]` | `GET /favorite-lists` (lo que guardas; cursor `meta.next` → `since`) |
+| `favorite_list_add(list_id, item_id)` / `favorite_list_remove(list_id, item_id)` → `Response` | `POST /favorite-lists/{id}/items` (body `{"items": [{"id", "is_favorited"}]}`) / `DELETE /favorite-lists/{id}/items/{item_id}` |
+| `mark_viewed(item_id)` → `Response` | `PUT /items/{id}/view` (marca visto) |
+| `inactivate_item(item_id, active=False)` → `Response` | pausa/reanuda uno de tus anuncios (`PUT /items/{id}/inactivate`, 403 si no es tuyo) |
 | `reserve(item_id, reserved=True)` → `Response` | reserva/desreserva un item tuyo (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
 | `mark_sold(item_id, sold=True)` → `Response` | marca uno de tus items como vendido/no vendido (`PUT /items/{id}/sold`, 204) |
 | `edit_item(item_id, price?, title?, description?, condition?, brand?, model?, color?, category_leaf_id?, max_weight_kg?)` → `Response` | edita un anuncio publicado replicando el formulario "Actualizar" de la web (`PUT /api/v3/items/{id}` con `Accept: application/vnd.upload-v2+json`) |
 | `delete_item(item_id)` → `Response` | **borra permanentemente** un item tuyo (`DELETE /api/v3/items/{id}`, 204) |
 | `purchases(tab)` / `selling(tab)` → `dict` | centros **Compras/Ventas** de la web por SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parsea el árbol con `parse_sdui_transactions` |
+| `save_search(params)` → `str` | guarda una búsqueda (`POST /searchalerts/savedsearch`); devuelve el **UUID** del `Location` header |
+| `saved_search_exists(params)` → `Optional[str]` | id de la búsqueda guardada para esos filtros o `None` (`HEAD /searchalerts/savedsearch/exists`, 200+`Location` / 404) |
+| `saved_search_hits()` → `int` | contador de novedades de tus búsquedas guardadas (`GET /searchalerts/savedsearch/alerts/total-hits` → `data.hits`) |
+| `remove_saved_search(search_id)` → `Response` | borra una búsqueda guardada por UUID (`DELETE /searchalerts/savedsearch/{id}`, 200) |
 | `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
 
 `report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.

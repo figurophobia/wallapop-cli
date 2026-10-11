@@ -18,27 +18,44 @@ Referencia completa de `wallapop`. Se invoca como
 | `replies` | Ver el inbox y los hilos completos |
 | `show` | Ver los detalles completos de un anuncio (incluye descripción y valoración del vendedor) |
 | `favorite` | Marcar/desmarcar un anuncio como favorito |
+| `favorites` | Ver todos tus favoritos (lista `/favorite-lists`) |
 | `purchases` | Ver tus compras: en curso o finalizadas (centro de compras) |
 | `selling` | Ver tus ventas: en curso o finalizadas (centro de ventas) |
+| `alert` | Búsquedas guardadas (snipar ofertones): `save` / `check` / `hits` / `remove` |
+| `suggest` | Autocompletar palabras clave (como el buscador de la web) |
+| `seller-items` | Todos los anuncios de un vendedor (paginado) |
 | `edit` | Editar un anuncio tuyo publicado (precio, título, descripción, marca, modelo, color, condición, peso) |
 | `reserve` | Reservar / desreservar uno de tus artículos |
 | `sold` | Marcar uno de tus artículos como vendido (o desmarcarlo) |
+| `inactivate` | Pausar/reactivar uno de tus anuncios |
 | `delete` | Borrar permanentemente uno de tus artículos (`DELETE /api/v3/items/{id}`) |
-| `seller` | Ver el perfil completo de un vendedor (valoración, stats de ventas y reseñas) |
+| `seller` | Ver el perfil completo de un vendedor (valoración, stats, reseñas y `--extra` para info extra) |
 | `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
 
 ---
 
 ## Login y sesión
 
-Tienes **cuatro vías** de login; elige según el tipo de cuenta:
+**Lo más sencillo: `wallapop login` a secas.** Sin argumentos detecta qué tienes
+y hace la vía con menos fricción:
+
+1. Si ya hay una sesión válida guardada → `already logged in` (para cambiar de
+   cuenta usa `wallapop login --force`).
+2. Si tu Firefox tiene una sesión de `es.wallapop.com` → la importa sin abrir
+   nada (funciona con cuentas Google).
+3. Si `playwright` está instalado → abre un navegador visible para tu login
+   normal (Google, …) y captura la sesión.
+4. Si no → te sugiere el login por email.
+
+Vías explícitas (según el tipo de cuenta):
 
 | Vía | Comando | Vale para |
 | --- | --- | --- |
+| **Auto** | `wallapop login` | Todo: usa lo que esté disponible |
 | Email + contraseña | `wallapop login your@email.com` | Cuentas normales |
 | Wizard de navegador | `wallapop login --wizard` | **Google o cualquier navegador** |
 | Importar de Firefox | `wallapop login --browser firefox` | Google (si ya estás logueado en Firefox) |
-| Pegar cookies | `wallapop login --cookies '...'` o con `cookies.txt` | Cualquier navegador (F12) |
+| Pegar cookies | `wallapop login --cookies '...'` o `--cookies-file mi.txt` | Cualquier navegador (F12) |
 
 ### 1. Email + contraseña
 
@@ -51,10 +68,12 @@ wallapop login your@email.com PASSWORD      # o inline
 > Wallapop**; este login responderá 401. Usa el wizard de navegador o la
 > importación de Firefox.
 
-### 2. Wizard de navegador (`--wizard`)
+### 2. Wizard de navegador (`--wizard`) — login con Google
 
 La vía universal para cuentas Google (o cualquier sesión que solo exista en un
-navegador), sin depender de qué navegador uses:
+navegador), sin depender de qué navegador uses. Google no se puede loguear
+por API pura (su OAuth exige la pantalla de consentimiento); el wizard abre el
+navegador, te logueas con Google y la CLI captura la sesión:
 
 ```
 wallapop login --wizard            # espera 300 s
@@ -83,12 +102,11 @@ navegador y también funciona con cuentas Google.
 
 ### 4. Cookies pegadas (cualquier navegador / Windows)
 
-**La vía fácil con cookies:** no copies cookies a mano. Pega en un fichero el
-valor del campo `Cookie` de una request y haz `login`, que lo lee
-automáticamente.
+> `wallapop login` a secas ya **no** lee `cookies.txt` automáticamente (lo
+> dejó de hacer para no colisionar con la auto-detección). Usa `--cookies` o
+> `--cookies-file` de forma explícita:
 
 ```
-python3 wallapop.py login                    # lee cookies.txt si existe
 python3 wallapop.py login --cookies-file mi.txt
 python3 wallapop.py login --cookies 'accessToken=...; __Secure-next-auth.session-token=...; device_id=...; device_fgp=...'
 ```
@@ -97,12 +115,12 @@ python3 wallapop.py login --cookies 'accessToken=...; __Secure-next-auth.session
 2. Clic en una petición que apunte a `es.wallapop.com` / `api.wallapop.com` →
    pestaña **Cabeceras** → apartado **Request Headers** → campo **Cookie:** →
    clic derecho → **Copiar valor**.
-3. Pega ese valor en `cookies.txt` (la primera línea sin comentario; ver
-   `cookies.txt.example`) y ejecuta `login`.
+3. Pega ese valor en un fichero (p. ej. `cookies.txt`) y ejecuta
+   `login --cookies-file cookies.txt`.
 
 La CLI se queda solo con las cookies que necesita (`accessToken`,
 `__Secure-next-auth.session-token`, `device_id`, `device_fgp`). No depende del
-shell ni del SO: `login` busca el fichero directamente.
+shell ni del SO.
 
 ### Estado de la sesión
 
@@ -335,6 +353,53 @@ wallapop favorite <item> --remove # quitar de favoritos
 - Para verificar el estado de favorito, usa `show <item>` — la línea de stats
   muestra `(te gusta)` cuando el item está en favoritos.
 
+### `favorites` (todos tus favoritos)
+
+```
+wallapop favorites                # tus favoritos (lista /favorite-lists)
+wallapop favorites --max 50       # más resultado por página
+wallapop favorites --json         # dump crudo
+```
+
+- Endpoint `GET /favorite-lists` de la web; pagina automáticamente con el cursor
+  `meta.next` → `since`. La URL de cada item sale con su slug web.
+- Vaciando tus favoritos a disco: `wallapop favorites --json > favs.json`.
+
+---
+
+## Búsquedas guardadas / alertas (snipar ofertones)
+
+```
+wallapop alert save 'nintendo switch' --min-price 100 --max-price 300
+wallapop alert check 'nintendo switch' --max-price 300
+wallapop alert hits
+wallapop alert remove --id 87b2e4fc-b3c9-4351-81af-43e6788aafa5
+```
+
+- `save` → `POST /searchalerts/savedsearch`. El server contesta el **UUID** de la
+  búsqueda (header `Location`); se imprime y puedes guardártelo para `remove`.
+- `check` → `HEAD /searchalerts/savedsearch/exists` con los mismos filtros:
+  imprime `saved (id <uuid>): '<keywords>'` o `not saved: '<keywords>'`.
+- `hits` → `GET /searchalerts/savedsearch/alerts/total-hits`: el contador de
+  novedades de la web (el badge junto a "búsquedas guardadas").
+- `remove --id <uuid>` → `DELETE /searchalerts/savedsearch/{id}` (200).
+- Filtros aceptados (mismos nombres que la web): `--min-price`, `--max-price`,
+  `--category-id`, `--city/-geo`, `--ship-only` y los de `search`.
+- La sesión debe estar logueada (endpoints autenticados). Verificado en vivo el
+  ciclo completo `save → check → remove` sobre una búsqueda real.
+
+---
+
+## Autocompletar (suggest)
+
+```
+wallapop suggest 'nintendo sw'     # sugerencias del buscador de la web
+wallapop suggest 'ps' --limit 5 --json
+```
+
+- `GET /suggesters/nonlocated?keyword=...` (200, autenticado); imprime
+  `texto [subtitulo]` por línea.
+
 ---
 
 ## Gestionar tus artículos
@@ -348,6 +413,8 @@ wallapop reserve <item>            # reservar (lo tapa en el marketplace)
 wallapop reserve <item> --remove   # desreservar
 wallapop sold <item>               # marcar como vendido
 wallapop sold <item> --undo        # desmarcar
+wallapop inactivate <item>         # pausar (quitar del marketplace sin borrar)
+wallapop inactivate <item> --undo  # reactivar
 wallapop delete <item>             # borrar permanentemente (pide confirmación)
 wallapop delete <item> --yes       # borrar sin confirmar
 ```
@@ -361,10 +428,13 @@ wallapop delete <item> --yes       # borrar sin confirmar
 - `reserve` → `PUT /items/{id}/reserve` (body `{"reserved": true|false}`, 204);
   `sold` → `PUT /items/{id}/sold` (body vacío al marcar, `{"sold": false}` al
   desmarcar, 204).
+- `inactivate` → `PUT /items/{id}/inactivate` (204 al pausar) usando el mismo
+  interruptor que el perfil de la web ("Pausar anuncio"; en vivo devuelve 403 si
+  el item no es tuyo).
 - `delete` → `DELETE /api/v3/items/{id}` (204). **Borrado permanente**: quita
   el anuncio del marketplace y desaparece (un `show` posterior da 404). Es
-  distinto de `reserve`/`sold`, que lo mantienen en tu historial. Pide
-  confirmación salvo con `--yes`.
+  distinto de `reserve`/`sold`/`inactivate`, que lo mantienen en tu historial.
+  Pide confirmación salvo con `--yes`.
 - Verificado en vivo: publicar → `delete --yes` → 204; `show` del mismo id → 404.
 
 ---
@@ -397,12 +467,19 @@ wallapop selling --finished --json  # dump crudo
 ```
 wallapop seller <user_id>             # valoración, stats de ventas y reseñas
 wallapop seller <user_id> --json      # dump crudo (profile + stats + reviews)
+wallapop seller <user_id> --extra     # + info extra (response_rate, verificación, actividad)
+wallapop seller-items <user_id>       # todos sus anuncios (paginado)
+wallapop seller-items <user_id> --max 4 --json
 ```
 
 - `<user_id>` es el id del vendedor que sale en la línea `seller:` de `show`.
 - Muestra el nombre, la valoración media y el total de reseñas (igual que el
   item), además de stats de la cuenta (ventas, envíos, días de entrega media)
   y sus reseñas detalladas (qué vendió y valoración).
+- `--extra` añade `GET /users/{id}/extra-info` (rapidez de respuesta,
+  verificaciones y nivel de actividad del vendedor).
+- `seller-items` lista todos los anuncios del vendedor con `GET /users/{id}/items`
+  (cursor `meta.next` → `since`); cada item sale con su URL de slug web.
 - Se alimenta de `GET /users/{id}` (nombre), `GET /users/{id}/stats`
   (valoración y contadores) y `GET /users/{id}/reviews` (reseñas).
 

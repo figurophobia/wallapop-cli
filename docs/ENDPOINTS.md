@@ -276,6 +276,45 @@ payload en `<script id="__NEXT_DATA__" type="application/json">`.
 - Código: `resolve_internal_id()` (aplica también si ya recibe un url o un
   hash de 12 caracteres alfanuméricos).
 
+### GET `/api/v3/items/{id}/seller/other-items`
+
+Más anuncios del mismo vendedor (la fila "Otros artículos" de la web).
+
+- Respuesta: `data.items[]` (misma estructura de item que `/items`).
+- Código: `Wallapop.other_items()`.
+
+### GET `/api/v3/items/{id}/seller-phone-number`
+
+Teléfono del vendedor si está visible para ti.
+
+- Respuesta: `{"phone_number": "..."}`; `""` si no aplica.
+- Código: `Wallapop.seller_phone_number()`.
+
+### GET `/api/v3/items/{id}/actions-allowed`
+
+Qué acciones puedes realizar sobre un anuncio (el detalle de la web).
+
+- Respuesta: array `[{type, allowed, cause}]` (p. ej. `buy`,
+  `send_offer`, `message`, `phone`).
+- Código: `Wallapop.item_actions_allowed()`.
+
+### PUT `/api/v3/items/{id}/view`
+
+Marca el anuncio como visto (usa la web al abrir el detalle). Sin body.
+
+- Código: `Wallapop.mark_viewed()`.
+
+### PUT `/api/v3/items/{id}/inactivate`
+
+Interruptor "Pausar anuncio" del perfil de la web (sin body en el PUT).
+
+- Activa/desactiva el anuncio según `{"active": true|false}` en el body.
+- Devuelve 403 si el item no es tuyo (no es 404 → el servicio valida la
+  propiedad, no la existencia).
+- Código: `Wallapop.inactivate_item(item_id, active=False)`; CLI
+  `wallapop inactivate <item> [--undo]`. Verificado en vivo (403 con un item
+  ajeno).
+
 ---
 
 ## Usuarios y valoraciones
@@ -313,6 +352,40 @@ muestra en la página del item** (p. ej. "★ 4.9 · 465 reseñas").
 - Además `shipping`, `deliveries_on_time_in_days`.
 - Código: `Wallapop.seller_stats()`; lo usan `show` (media + nº de reseñas en
   la línea del vendedor) y el comando CLI `seller` (valoración + stats).
+
+### GET `/api/v3/users/{user_id}/extra-info`
+
+Datos extra del vendedor que usa la web en el detalle del anuncio.
+
+- Respuesta: `response_rate` ("< 1 h"), `response_time`,
+  `scoring_stars`/`rating_average`, `validations.level` (p. ej. `verified`),
+  `activity_level`. Verificado en vivo (200).
+- Código: `Wallapop.seller_extra_info()`; CLI `wallapop seller <id> --extra`.
+
+### GET `/api/v3/users/{user_id}/seller-info`
+
+NOTA: en vivo responde `404 Public info not found` para perfiles sin datos
+públicos extra. Considerado "low priority" (los datos relevantes ya están en
+`/stats`, `/reviews` y `/extra-info`).
+
+### GET `/api/v3/users/{user_id}/items`
+
+Todos los anuncios de un vendedor (público, la página de lista del perfil).
+
+- Query: `page=0`, `max_items=25` (p. ej. __40__ a `page=1`).
+- Respuesta: `{data: [items...], meta: {next: <cursor string>}}`. Paginar
+  pasando `since=<meta.next>`; los `web_slug` van en cada item (→ `Item.url`).
+- Código: `Wallapop.seller_items(user_id, pages=...)`; CLI
+  `wallapop seller-items <id> [--max N]`.
+
+### GET `/api/v3/suggesters/nonlocated`
+
+Autocompletado del buscador (200, autenticado; la web lo llama al teclear).
+
+- Query: `keyword=...`. Respuesta:
+  `data.suggestions[].regular_suggestion.suggestion.{text, highlight, subtitle}`.
+- Código: `Wallapop.suggest(keyword, limit=...)`; CLI `wallapop suggest`.
+- Verificado en vivo: `suggest "nintendo sw"` → 5 sugerencias.
 
 ---
 
@@ -811,6 +884,53 @@ Body: {"favorited": true}     # para desmarcar: {"favorited": false}
 - El bundle JS de la web define la ruta como `api/v3/items/{id}/favorite`
   (chunk 23852, exportado como `itemFavoriteUrl`).
 - Código: `Wallapop.favorite(item_id, favorited)` (client.py).
+
+### GET `/api/v3/favorite-lists`
+
+La lista completa de favoritos de **tu cuenta** (la página "Me gusta" de la web,
+`/favorites`). Autenticado.
+
+- Query: `page=0`, `max_items=25` (p. ej. __40__ a `page=1`).
+- Respuesta: `{data: [items...], meta: {next: <cursor string>}}`; igual que
+  `GET /users/{id}/items`, paginar con `since=<meta.next>`.
+- Verificado en vivo con sesión de navegador: 200 → `{data: [], meta: {}}`
+  cuando no hay favoritos.
+- Código: `Wallapop.favorite_lists(pages=...)`; CLI `wallapop favorites`.
+
+### POST/DELETE `/api/v3/favorite-lists/{list_id}/items`
+
+Añadir/quitar un item a la lista de favoritos (recurso por lista).
+
+- `POST /favorite-lists/{list_id}/items` → body
+  `{"items": [{"id": "<item_id>", "is_favorited": true}]}`; es el mismo
+  endpoint que usa la web al manejar la lista.
+- `DELETE /favorite-lists/{list_id}/items/{item_id}`.
+- Código: `Wallapop.favorite_list_add(list_id, item_id)` /
+  `favorite_list_remove(list_id, item_id)`.
+
+### Búsquedas guardadas / alertas: `/api/v3/searchalerts/savedsearch`
+
+El sistema de **alertas de búsqueda** de la web (badge de "búsquedas
+guardadas"). Autenticado. Tiene 4 recursos (chunk bundle `05x_d6c6m9y65.js`):
+
+Hacer `POST /api/v3/searchalerts/savedsearch` con los filtros de búsqueda en
+query params (`keywords`, `category_id`, `min_sale_price`, `max_sale_price`,
+`latitude`, `longitude`, `max_radius_kms`, `order_by`, `filters_source`...).
+
+- → **201**, body vacío, con el **UUID** de la búsqueda en el header
+  `Location: /api/v3/searchalerts/savedsearch/<uuid>` (el id es un UUID
+  string, **no** un int). Código: `Wallapop.save_search(params) → str`.
+- `HEAD /api/v3/searchalerts/savedsearch/exists?<mismos params>` →
+  **200** + `Location` con el UUID si ya existe; **404** si no.
+  Código: `Wallapop.saved_search_exists(params) → Optional[str]`.
+- `GET /api/v3/searchalerts/savedsearch/alerts/total-hits` → 200,
+  `{hits: <n>, savedSearchCount: <n>}` (contador de novedades).
+  Código: `Wallapop.saved_search_hits() → int`.
+- `DELETE /api/v3/searchalerts/savedsearch/{uuid}` → **200** body vacío.
+  Código: `Wallapop.remove_saved_search(search_id)`.
+
+Todo verificado en vivo contra la cuenta real (save → check → remove
+completos, incluyendo el 404 de `exists` tras borrar).
 
 ### Borrar un artículo: `DELETE /api/v3/items/{id}`
 

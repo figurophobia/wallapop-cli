@@ -7,6 +7,7 @@ import os
 import shutil
 import sqlite3
 import tempfile
+from typing import Any
 
 API_BASE = "https://api.wallapop.com/api/v3"
 
