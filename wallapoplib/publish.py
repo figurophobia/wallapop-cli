@@ -1,12 +1,4 @@
-"""Publish an item through the real web wizard (Playwright).
-
-The upload flow is a stateless step machine served by ``POST /api/v3/steps``.
-All the pieces are documented and the API endpoints are known, but the final
-publish call (``POST /api/v3/items``) is multipart + header-gated and its body
-is not exposed to CDP/Playwright (``postData: null``), so it cannot be
-replayed with plain HTTP yet. Until then, publishing drives the real browser
-wizard headful with the user's session and lets the page do the API calls.
-"""
+"""Publish an item through the real web wizard (Playwright)."""
 
 from __future__ import annotations
 
@@ -14,7 +6,7 @@ import os
 import re
 from typing import Optional
 
-from .client import persist_browser_session, refresh_web_session
+from .client import persist_browser_session, price_amount, refresh_web_session
 from .config import load_session
 
 # JS helpers injected into the wizard page. ``window.D`` exposes the same
@@ -71,6 +63,11 @@ CONDITION_LABELS = {
 }
 
 
+def browser_price(value: float) -> str:
+    """Validate a listing price and render exact cents for the web wizard."""
+    return format(price_amount(value), ".2f")
+
+
 def _click_continuar(page) -> None:
     r = page.evaluate('D.clickWalla("Continuar")')
     page.wait_for_timeout(5000)
@@ -101,6 +98,7 @@ def publish_item(
     If ``capture_body_path`` is given, the raw multipart body of the final
     ``POST /api/v3/items`` is written to that file (debug helper).
     """
+    validated_price = browser_price(price)
     from playwright.sync_api import sync_playwright  # noqa: PLC0415 (optional dep)
 
     session = load_session()
@@ -190,7 +188,7 @@ def publish_item(
             browser.close()
             raise RuntimeError(f"could not reach the listing form: {last_err}")
 
-        page.locator('input[name="price_amount"]').fill(str(int(price)))
+        page.locator('input[name="price_amount"]').fill(validated_price)
         page.keyboard.press("Tab")
         page.wait_for_timeout(1500)
 

@@ -6,10 +6,12 @@ build-backend = "hatchling.build"
 name = "wallapoplib"
 version = "0.1.0"
 description = "Typed Wallapop API client + CLI: search, deals, offers and messaging without a browser."
-readme = "README.md"
+readme = "docs/PYTHON.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "figurophobia" }]
+maintainers = [{ name = "jrrome" }]
 keywords = ["wallapop", "api", "client", "cli", "offers", "chat"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -17,7 +19,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Environment :: Console",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
@@ -34,7 +35,6 @@ addopts = "-q"
 
 [tool.hatch.build]
 exclude = [
-    "docs/**",
     "tests/**",
     "cookies.txt.example",
     ".github/**",
@@ -44,4 +44,8 @@ exclude = [
 packages = ["wallapoplib"]
 
 [tool.hatch.build.targets.sdist]
-include = ["wallapoplib"]
+include = ["wallapoplib", "docs/PYTHON.md", "LICENSE", "pyproject.toml"]
+
+[project.urls]
+Repository = "https://github.com/jrrome/wallapop-mcp"
+Upstream = "https://github.com/figurophobia/wallapop-cli"

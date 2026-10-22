@@ -130,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     me = sub.add_parser("message", help="send a chat message to an item's seller")
     me.add_argument("item_id", help="item url, web slug or internal hash")
     me.add_argument("--text", required=True, help="message text")
+    me.add_argument("--browser-fallback", action="store_true", help="send through the web app only when PubNub was definitely not sent (opt-in)")
     me.add_argument("--dry-run", action="store_true")
     me.set_defaults(func=cmd_message)
 

@@ -293,10 +293,8 @@ wallapop replies --conversation <conv> --json
 ```
 
 - Los mensajes se entregan por la REST de PubNub (forma real de la web); si
-  no hay ack, la CLI intenta el fallback de navegador (Playwright), para lo
-  que necesitas sesión de navegador (`login --browser firefox`) y tener
-  `playwright` instalado:
-  `pip install --user --break-system-packages playwright && python3 -m playwright install firefox`.
+  no hay ack, la entrega se considera desconocida: comprueba el hilo antes de reenviar. El fallback de navegador requiere `--browser-fallback` y no debe repetir envíos ambiguos.
+  El fallback opcional requiere Playwright y Firefox, instalados en el entorno virtual de la CLI.
 - La CLI evita reenviar un texto idéntico al último mensaje tuyo del hilo.
 
 ---
@@ -436,7 +434,7 @@ wallapop publish ./fotos --summary '...' --price 331 --mode browser     # wizard
   las fotos y solo editas precio/estado.
 - `--condition`: `un_opened,in_box,new,as_good_as_new,good,fair,has_given_it_all`
   (por defecto `good` = "En buen estado").
-- `--price`: precio de venta en EUR (entero, rango invertible 1–2500).
+- `--price`: precio de venta en EUR; admite céntimos (por ejemplo, `19.95`).
 - `--max-weight-kg`: peso de envío en kg (por defecto 1, modo API).
 - `--weight-tier`: tramo de peso envío del wizard (por defecto `0` = 0–1 kg,
   solo modo browser).

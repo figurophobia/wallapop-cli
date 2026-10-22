@@ -1,151 +1,48 @@
-# Arquitectura
+# Architecture
 
-CLI de automatización para Wallapop: busca anuncios, detecta gangas (precio por
-debajo de la mediana), envía ofertas y mensajes, y gestiona ofertas recibidas
-(aceptar / rechazar / contraofertar) y publicar artículos. Todo se hace por HTTP
-plano (`urllib`), incluida la publicación (`Wallapop.publish()` replica sin
-navegador el multipart de `POST /api/v3/items`); Playwright es solo opcional
-para `publish --mode browser` (wizard visible) y un fallback puntual del envío
-de chat.
+The repository contains two clients with separate runtimes:
 
-## Estructura del repo
-
-```
-wallapop.py                    # entrypoint fino (launches wallapoplib.cli.main)
-wallapoplib/
-  __init__.py                  # API pública curada (dataclasses+cliente+dominio re-exportados)
-  config.py                    # constantes API, paths, storage local, cookies
-  http.py                      # transporte HTTP (rate-limit, retries, decode) + eprint
-  tokens.py                    # JWT: claims, hash de usuario, política de expiración
-  models.py                    # dominio: dataclasses Item/Deal/OfferEvent/OfferState + derivaciones
-  ids.py                       # resolución item url/slug/hash -> id interno
-  client.py                    # clase Wallapop: TODAS las llamadas a endpoints
-  cli/                         # capa de consumo (NO contrato público del paquete)
-    main.py                    # argparse + main()   (entry point wallapoplib.cli.main:main)
-    commands.py                # handlers de comandos (login, search, deals, watch, offer, message, replies)
-    output.py                  # render en terminal (colores, tablas, announce, colas/hilos)
+```text
+MCP client → stdio → internal/mcpserver → internal/wallapop → internal/transport
+Python CLI → wallapoplib/cli → wallapoplib/client.py → wallapoplib/http.py
 ```
 
-La gerencia es sencilla y unidireccional:
+## Go server
 
-```
-cli/main.py  ->  cli/commands.py  ->  client.py  ->  http.py
-                  |                      |
-                  v                      v
-       models / ids / tokens  <-   config.py (constantes y storage)
-                 |
-                 v
-          cli/output.py (terminal)
-```
+`cmd/wallapop-mcp` owns configuration, process signals and stdio. `internal/mcpserver` uses the official MCP SDK for the protocol and validates tool inputs before dispatch. Tool results are structured JSON with a compatible text representation. No shell subprocesses or browsers are used.
 
-Ningún módulo `importa` a un superior jerárquico (evitando ciclos): `models`
-nunca toca `output`/`client`; `client` importa `eprint` desde `http` (no desde
-`cli.output`, para no cerrar un ciclo `client`↔`cli`); las etiquetas con color
-del estado de ofertas viven en `cli/output` (que importa `models`), no al
-revés.
+`internal/wallapop` maps the fixed operation set to the endpoints researched in the original project. It normalizes response shapes, maintains authentication, preserves decimal amounts, handles partial writes and checks the write capability independently of the MCP layer.
 
-## Cómo fluye una invocación
+`internal/transport` owns connection reuse, request pacing, retry policy, cancellation, coalescing and a bounded LRU cache. It rejects redirects and limits upstream response bodies to 4 MiB. Diagnostics exclude headers, tokens, response bodies and request URLs.
 
-1. `python3 wallapop.py <comando> ...` → `wallapoplib.cli.main.main()`.
-2. `build_parser()` monta subcomandos (`search`, `deals`, `watch`, `offer`,
-   `message`, `replies`, `login`, `logout`, `session`) y registra su
-   `cmd_*` como `func` en el namespace de argparse.
-3. `main()` llama `args.func(args)`. `ApiError` se captura arriba para
-   imprimir `error: ...` en rojo y devolver código 1.
+## Scheduling and retries
 
-## Sesión y autenticación
+Each tool has a 45-second default budget, including waiting for one of four concurrent slots. Upstream requests start at least one second apart by default. Cached reads consume no upstream pacing slot. No fixed post-operation sleeps are used by the Go client.
 
-Hay dos vías, ambas guardadas bajo `~/.config/wallapop_cli/`:
+Only requests explicitly marked read-only can retry. The retry set is transient network failures and HTTP 429, 502, 503 and 504, up to three attempts. HTTP 403 is returned immediately. Retry-After is never shortened: a longer delay exhausts the caller's budget instead of retrying early.
 
-| Vía | Flujo | Storage |
-| --- | --- | --- |
-| Email/password | `POST /api/v3/access/login` → `access_token` + `refresh_token` | `credentials.json` |
-| Wizard de navegador | Chromium visible en `es.wallapop.com`; el usuario hace su login (Google, email…) y la CLI captura las cookies de sesión del contexto y genera el `accessToken` vía `GET https://es.wallapop.com/api/auth/session` | `session.json` |
-| Importación de navegador | Importa cookies `__Secure-next-auth.session-token` (+`device_id`/`device_fgp`) desde Firefox, y genera el `accessToken` vía `GET https://es.wallapop.com/api/auth/session` | `session.json` |
+Writes are sent once per transport invocation. A definitive 401 can trigger one replay after successful token renewal. An interrupted write is marked uncertain. Write requests use fresh HTTP/1 connections to prevent Go's transport from silently replaying a GET used by PubNub to publish a message.
 
-El wizard (`wallapoplib/weblogin.py`, `wallapop login --wizard`) es la vía
-recomendada para cuentas Google desde cualquier navegador: no depende del
-perfil de Firefox y solo necesita `playwright`.
+## Cache and session boundaries
 
-`authed_client()` (en `commands.py`) une ambas fuentes en una instancia de
-`Wallapop` y registra el token de sesión web como credencial principal. El
-JWT del token incluye el `exp` y el `hashed_sub`; `refresh_if_expired()`
-renueva vía `/access/refresh` cuando el token va a caducar.
+Read caches live in memory, are scoped to the client, and include authorization headers in their hashed key. The cache holds at most 128 entries and 32 MiB of response data. Entries expire; `fresh` bypasses cache lookup. Invalidation generations prevent an older in-flight read from repopulating a cache after a write.
 
-## Transporte HTTP (`http.py`)
+Public reads use short TTLs, account reads shorter TTLs, and the category tree a longer TTL. A cache is an optimization, not proof that an offer or listing is still actionable. Mutation prerequisites must read fresh state.
 
-- `http_request()`: rate-limit opcional (`WALLAPOP_RATE_PACE`, 1.0 s por
-  defecto), retries con backoff exponencial en 403/429 y en fallos de red,
-  timeout 25 s. Devuelve `(status, data, content_type)`.
-- `decode_payload()`: intenta parsear JSON (también si el content-type no lo
-  dice pero el cuerpo empieza por `{`).
-- Cabeceras de la aplicación: `User-Agent` de un pool de Chrome, `Origin`/
-  `Referer` de `es.wallapop.com`, y los marcadores de cliente
-  `X-DeviceOS: 0`, `X-Product: wallapop`, `X-AppVersion: 826560`.
-- **Ojo anti-bot**: algunos endpoints `GET` de la familia `/bff/...` (p. ej.
-  `offer-details`) son sensibles al *fingerprint TLS* de `urllib` y devuelven
-  el shell de la SPA (o un redirect a `/notAvailable`). Los `POST`/`PATCH` de
-  acciones (ofertas, mensajes) **no** están bloqueados y llegan a la
-  validación real del servicio.
+Concurrent readers can share one upstream request. Canceling a waiter does not abort the request while another waiter remains. Canceling the last waiter stops the shared work.
 
-## Búsqueda de anuncios
+Only an explicitly supplied session path is read. Tokens supplied through the environment are supported. Token values are never included in status output. Refresh updates are atomic and private; the process remains a local, single-account server.
 
-`Wallapop.search()` intenta primero el flujo moderno de la web:
+## Writes and partial results
 
-```
-GET /api/v3/search/components?keywords=...&source=search_box&order_by=...&filters_source=search_box
-        -> search_id
-GET /api/v3/search/section?search_id=...&section_type=organic_search_results&source=deep_link&next_page=...
-        -> items[] + next_page (cursor)
-```
+The default tool list contains only reads. Enabling writes exposes account mutations and enables a second guard in the API client.
 
-y si no obtiene `search_id` cae al legado `GET /api/v3/general/search`
-(`search_objects[]`). Los resultados se normalizan con `normalize_item()`
-(modelo plano con `id`, `price`, `city`, `shippable`, `url`, etc.).
+Publishing first creates the listing with its first photo, then uploads additional photos. Later failures retain the created item ID and completed count. Unknown acknowledgements must be reconciled with current state before another write. No retry policy can provide exactly-once delivery when the upstream service does not expose an idempotency guarantee.
 
-`deals`/`watch` rankean sobre la mediana del precio con `rank_deals()`.
+Listing text and messages are untrusted content. Tool descriptions instruct agents to treat them as data.
 
-## Mensajería (chat)
+## Compatibility
 
-`Wallapop.send_message()` hace:
+The endpoint catalogue in [ENDPOINTS.md](ENDPOINTS.md) preserves upstream research. [MCP.md](MCP.md) lists the subset exposed by the new server. The Go implementation is covered by offline contract tests; live anti-bot behavior and undocumented API changes remain external dependencies.
 
-1. `POST /api/v3/instant-messaging/conversation {item_hash_id}` →
-   `conversation_id` (idempotente: crea o devuelve la existente).
-2. `GET /bff/messaging/conversation/{id}` → hilo (mensajes, `channel`,
-   `with_user`, `item`).
-3. Comprueba si el texto ya fue nuestro último mensaje (guard de idempotencia).
-4. Pide token de PubNub: `GET /api/v3/instant-messaging/token`.
-5. Publica el mensaje por la **REST pubnub** con `GET` al origin `ps7.pndsn.com`
-   (así lo hace la web en realidad; `meta` y `auth` incluidos). El ack
-   `[1,"Sent",<timetoken>]` confirma la entrega.
-6. Si PubNub no hace ack, cae al fallback de navegador (Playwright Firefox
-   con las cookies de sesión) en `send_chat_text()`.
-
-## Ofertas
-
-Traslado completo del flujo de la web (los endpoints se extrajeron del bundle
-JS, ver `docs/ENDPOINTS.md`):
-
-- Enviar: `POST /api/v3/delivery/buyer/offers` con un `offer_id` (uuid) que
-  genera el cliente, el importe y `item_ids`.
-- Aceptar/rechazar: `PATCH /api/v3/delivery/offers/{id}/status` con
-  `{status: "ACCEPTED"|"DECLINED"}`.
-- Contraofertar: `PATCH /api/v3/delivery/offers/{id}/offer-price` con el nuevo
-  `offer_price_amount`.
-- Info del editor: `GET /bff/delivery/make-an-offer?item_id=` (devuelve
-  precio, `max_offer_percentage` y ofertas restantes del día).
-- Estado: no se usa el modal OTS (`offer-details` está vetado por anti-bot);
-  se reconstruye el **ledger de ofertas** a partir de los mensajes del hilo
-  (`parse_offer_events()` → `offer_state_summary()`). Cada evento del payload
-  de "delivery" se clasifica (`our-offer`, `seller-counter`, `our-counter`,
-  `seller-accepted`, `accepted-buy`, `seller-declined`, `our-declined`,
-  `expired`) y se presentan en orden cronológico (el inbox llega
-  newest-first; siempre se ordena por `timestamp`).
-
-## Almacenamiento local
-
-| Fichero | Contenido |
-| --- | --- |
-| `~/.config/wallapop_cli/credentials.json` | email + access/refresh token (chmod 600) |
-| `~/.config/wallapop_cli/session.json` | cookies de sesión web + token |
-| `~/.config/wallapop_cli/contacted.json` | ids de anuncios ya contactados (para `deals`/`watch`) |
+The Python library is retained separately. Shared session formats and offline fixtures support compatibility, but its defaults and features are not identical to the MCP server.
