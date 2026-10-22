@@ -1,6 +1,22 @@
-"""Offline tests for cookie parsing (config.parse_cookie_string)."""
+"""Offline tests for cookie parsing (config.parse_cookie_string) and for the
+atomic credential/session storage.
+"""
 
-from wallapoplib.config import parse_cookie_string
+import json
+import os
+import stat
+
+import pytest
+
+from wallapoplib.config import (
+    load_credentials,
+    load_json,
+    load_session,
+    parse_cookie_string,
+    save_credentials,
+    save_json,
+    save_session,
+)
 
 
 def test_parse_semicolon_pairs():
@@ -62,3 +78,82 @@ def test_categories_reflects_canonical_endpoint():
     assert 16000 not in CATEGORIES
     assert 15000 not in CATEGORIES
     assert 12900 not in CATEGORIES
+
+
+# --- atomic credential / session storage ------------------------------------
+
+def test_save_json_writes_valid_json(tmp_path):
+    path = tmp_path / "creds.json"
+    save_json(str(path), {"access_token": "abc"})
+    assert json.loads(path.read_text()) == {"access_token": "abc"}
+
+
+def test_save_json_creates_private_files(tmp_path):
+    path = tmp_path / "creds.json"
+    save_json(str(path), {"access_token": "abc"})
+    mode = stat.S_IMODE(os.stat(path).st_mode)
+    assert mode == 0o600
+
+
+def test_save_json_can_write_public_files(tmp_path):
+    path = tmp_path / "contacted.json"
+    save_json(str(path), ["a"], private=False)
+    assert json.loads(path.read_text()) == ["a"]
+    assert stat.S_IMODE(os.stat(path).st_mode) != 0o600
+
+
+def test_save_json_never_truncates_the_previous_content(tmp_path):
+    path = tmp_path / "creds.json"
+    path.write_text('{"access_token": "old"}')
+
+    class NotSerializable:
+        pass
+
+    with pytest.raises(TypeError):
+        save_json(str(path), {"access_token": NotSerializable()})
+
+    assert json.loads(path.read_text()) == {"access_token": "old"}
+    # no temporary file is left behind
+    assert [p.name for p in tmp_path.iterdir()] == ["creds.json"]
+
+
+def test_save_credentials_and_session_are_atomic(tmp_path, monkeypatch):
+    import wallapoplib.config as config_mod
+
+    cred_path = tmp_path / "credentials.json"
+    sess_path = tmp_path / "session.json"
+    monkeypatch.setattr(config_mod, "CRED_PATH", str(cred_path))
+    monkeypatch.setattr(config_mod, "SESSION_PATH", str(sess_path))
+
+    save_credentials({"access_token": "abc", "email": "a@b.c"})
+    save_session({"accessToken": "xyz"})
+
+    assert json.loads(cred_path.read_text())["access_token"] == "abc"
+    assert json.loads(sess_path.read_text())["accessToken"] == "xyz"
+    assert stat.S_IMODE(os.stat(cred_path).st_mode) == 0o600
+    assert stat.S_IMODE(os.stat(sess_path).st_mode) == 0o600
+    assert load_credentials()["access_token"] == "abc"
+    assert load_session()["accessToken"] == "xyz"
+
+
+def test_save_json_replaces_the_file_atomically(tmp_path, monkeypatch):
+    """The new content is moved into place with os.replace."""
+    path = tmp_path / "creds.json"
+    path.write_text("old")
+    replaced = []
+    real_replace = os.replace
+
+    def spy(src, dst):
+        replaced.append((src, dst))
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", spy)
+    save_json(str(path), {"a": 1})
+    assert replaced and replaced[0][1] == str(path)
+    assert json.loads(path.read_text()) == {"a": 1}
+
+
+def test_load_json_returns_the_default_on_broken_files(tmp_path):
+    path = tmp_path / "broken.json"
+    path.write_text("{not json")
+    assert load_json(str(path), {"fallback": True}) == {"fallback": True}

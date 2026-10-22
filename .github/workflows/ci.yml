@@ -1,32 +1,76 @@
-name: ci
+name: CI
 
 on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  go:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.25.x", stable]
+        exclude:
+          - os: macos-latest
+            go: "1.25.x"
+          - os: windows-latest
+            go: "1.25.x"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install
+          go-version: ${{ matrix.go }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Format
+        shell: bash
+        run: test -z "$(gofmt -l cmd internal)"
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: Build and test stdio
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[test]'
-      - name: Test
-        run: pytest
-      - name: Verify build has no secrets
+          go build -trimpath -o bin/wallapop-mcp.exe ./cmd/wallapop-mcp
+          python scripts/smoke_mcp.py ./bin/wallapop-mcp.exe
+      - name: Check dependency manifest
+        shell: bash
         run: |
-          python -m pip install --quiet build
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e '.[test]' build
+      - run: python -m pytest
+      - name: Build wheel and sdist
+        run: |
           python -m build
-          if find dist -name '*.whl' -exec unzip -l {} \; | grep -E 'cookies\.txt|credentials\.json|session\.json'; then
-            echo "secrets packaged!"; exit 1
-          fi
-          echo "no secrets in wheel"
+          python scripts/check_package.py dist
+      - name: Install built package away from the source tree
+        run: |
+          python -m venv /tmp/package-check
+          /tmp/package-check/bin/pip install dist/*.whl
+          cd /tmp
+          /tmp/package-check/bin/python -c "import wallapoplib; from wallapoplib import build_client"
+          /tmp/package-check/bin/wallapop --help

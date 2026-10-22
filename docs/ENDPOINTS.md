@@ -875,3 +875,7 @@ devuelve un árbol de widgets y el frontend lo pinta tal cual.
   `url`), descartando cabeceras de agrupación y `empty_state`.
 - Código: `Wallapop.purchases(tab)`, `Wallapop.selling(tab)` (client.py) y los
   comandos CLI `wallapop purchases [--finished]` / `wallapop selling [--finished]`.
+
+## Cobertura del servidor MCP
+
+Este catálogo conserva la investigación del proyecto original. La superficie expuesta por el servidor Go y sus límites se documentan en [MCP.md](MCP.md). Los endpoints no oficiales pueden cambiar; las pruebas locales no verifican su disponibilidad en vivo.

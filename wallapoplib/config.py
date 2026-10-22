@@ -167,12 +167,32 @@ def load_json(path: str, default: Any) -> Any:
 
 
 def save_json(path: str, data: Any, private: bool = True) -> None:
-    ensure_config_dir()
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2)
-        fh.write("\n")
-    if private:
-        os.chmod(path, 0o600)
+    """Write ``data`` as JSON to ``path`` atomically.
+
+    The document is written to a temporary file in the same directory and then
+    moved into place with ``os.replace``, so a crash (or a serialization
+    error) can never leave a truncated credentials/session file behind: the
+    previous content stays intact until the new one is complete on disk.
+    Private files are created with mode ``0600``.
+    """
+    target = os.path.abspath(path)
+    directory = os.path.dirname(target) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".wallapop-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, 0o600 if private else 0o644)
+        os.replace(tmp, target)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def load_credentials() -> dict:

@@ -5,13 +5,16 @@ answers endpoint calls the way the real API does (shapes taken from live
 captures, ids de-sensibilized).
 """
 
+import argparse
 import builtins
 import sys
 import uuid
+from decimal import Decimal
 
 import pytest
 
 import wallapoplib.client as client_mod
+import wallapoplib.http as http_mod
 from wallapoplib.client import Wallapop, refresh_web_session
 
 # --- payload fixtures (live-shape, des-sensibilized) ------------------------
@@ -50,6 +53,31 @@ RAW_PUBLISHED_ITEM = {
     "id": "v6gpwy9d476e",
     "price": {"amount": 45.0, "currency": "EUR"},
     "shipping": {"item_is_shippable": True, "user_allows_shipping": True, "cost_configuration_id": "814429d6-0000-0000-0000-000000000000"},
+}
+
+#: An *owned* item, as ``GET /items/<id>`` returns it for the seller: it
+#: carries the editable state (category, condition, shipping, weight and
+#: location) the edit has to preserve.
+RAW_OWNED_ITEM = {
+    "id": "v6gpwy9d476e",
+    "title": {"original": "Nintendo DS Lite Blanca + Funda"},
+    "price": {"cash": {"amount": 45.0, "currency": "EUR"}},
+    "condition": "good",
+    "category_leaf_id": "10088",
+    "brand": "Nintendo",
+    "model": "DS Lite",
+    "color": "white",
+    "description": {"original": "En buen estado"},
+    "shipping": {
+        "item_is_shippable": True,
+        "user_allows_shipping": True,
+        "cost_configuration_id": "814429d6-0000-0000-0000-000000000000",
+    },
+    "type_attributes": {"up_to_kg": "5.0"},
+    "location": {"lat": 40.4168, "lon": -3.7038, "city": "Madrid"},
+    "user": {"id": "wz0123456789", "micro_name": "Daniel"},
+    "flags": {"reserved": False, "sold": False},
+    "images": [{"id": "nz0gdgn1dwrj"}],
 }
 
 LEGACY_SEARCH = {
@@ -136,13 +164,21 @@ RAW_CATEGORIES = {
 class FakeTransport:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str, dict, dict]] = []
+        self.retry_safe: list = []
         self.thread_same = False
         self.section_pages = 1
         self.empty_section_pages = 0
         self.force_legacy = False
+        #: when set, ``GET /items/<id>`` answers with it (an *owned* item,
+        #: with the editable state) instead of the public one.
+        self.owned_item: dict | None = None
+        #: when set, ``GET /users/<id>/items`` answers with it instead of the
+        #: default list (used to hide the account's cost configuration).
+        self.published_items: dict | None = None
 
-    def __call__(self, method: str, url: str, params=None, body=None, headers=None):
+    def __call__(self, method: str, url: str, params=None, body=None, headers=None, retry_safe=None):
         self.calls.append((method, url, dict(params or {}), dict(body or {})))
+        self.retry_safe.append(retry_safe)
         if url.endswith("/search/components"):
             if self.force_legacy:
                 return 200, {"data": {}}, "application/json"
@@ -168,7 +204,9 @@ class FakeTransport:
         if url.endswith("/general/search"):
             return 200, LEGACY_SEARCH, "application/json"
         if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "GET":
-            return 200, RAW_ITEM, "application/json"
+            return 200, self.owned_item or RAW_ITEM, "application/json"
+        if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "PUT":
+            return 204, None, "text/plain"
         if url.endswith("/users/wz0123456789/reviews"):
             return 200, RAW_REVIEWS, "application/json"
         if url.endswith("/users/wz0123456789/stats"):
@@ -185,6 +223,8 @@ class FakeTransport:
             return 200, {"token": "im-auth-token"}, "application/json"
         if "publish" in url:
             return 200, '[1,"Sent",1234567890]', "text/plain"
+        if "/bff/delivery/offer-details" in url:
+            return 200, {"offer_id": "offer-1", "status": "PENDING"}, "application/json"
         if "/bff/delivery" in url or "/bff/messaging/inbox" in url:
             data = {"restriction": {"max_offer_percentage": 30.0, "remaining_offers_per_day": 3}, "conversations": []}
             return 200, data, "application/json"
@@ -205,7 +245,7 @@ class FakeTransport:
         if url.endswith("/users/me"):
             return 200, RAW_ME, "application/json"
         if "/users/wz0123456789/items" in url:
-            return 200, {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
+            return 200, self.published_items or {"data": [RAW_PUBLISHED_ITEM]}, "application/json"
         if url.endswith("/favorite") and method == "PUT":
             return 204, None, "text/plain"
         if url.endswith(f"/items/{RAW_ITEM['id']}") and method == "DELETE":
@@ -462,7 +502,7 @@ def test_refresh_web_session_returns_token(fake, monkeypatch):
 def test_authed_request_refreshes_token_on_401(fake, monkeypatch):
     calls = []
 
-    def flaky(method, url, params=None, body=None, headers=None):
+    def flaky(method, url, params=None, body=None, headers=None, retry_safe=None):
         calls.append(method)
         if "/bff/messaging/inbox" in url:
             if len(calls) == 1:
@@ -653,3 +693,916 @@ def test_publish_uploads_extra_photos(fake, monkeypatch, tmp_path):
     steps_calls = [c for c in fake.calls if "/steps" in c[1]]
     assert len(steps_calls) == 0
     assert any(u.endswith("/api/v3/items") for u in raw_urls)
+
+
+# --- helpers for the new regression tests -----------------------------------
+
+JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJoYXNoZWRfc3ViIjoid3p5bm92bXYxcGo1In0.xx"
+
+
+def published_item_json(raw: bytes) -> dict:
+    """Extract the ``item`` document from a publish multipart body."""
+    import json as _json
+    import re as _re
+
+    text = raw.decode("utf-8", "replace")
+    part = _re.search(r'name="item"\r\n\r\n(\{.*?\})\r\n--', text)
+    assert part is not None, text[:500]
+    return _json.loads(part.group(1))
+
+
+class NoAckTransport(FakeTransport):
+    """Fake transport whose PubNub publish is *not* acknowledged."""
+
+    def __call__(self, method, url, params=None, body=None, headers=None, retry_safe=None):
+        if "publish" in url:
+            self.calls.append((method, url, dict(params or {}), dict(body or {})))
+            self.retry_safe.append(retry_safe)
+            return 200, '[0,"Error","denied"]', "text/plain"
+        return super().__call__(method, url, params=params, body=body, headers=headers, retry_safe=retry_safe)
+
+
+# --- offer details: the BFF prefix ------------------------------------------
+
+def test_offer_details_uses_the_bff_prefix(fake):
+    client = Wallapop(token="tk")
+    resp = client.offer_details("offer-1")
+    assert resp.ok
+    call = next(c for c in fake.calls if "offer-details" in c[1])
+    assert call[0] == "GET"
+    assert call[1] == "https://api.wallapop.com/bff/delivery/offer-details?offer_id=offer-1"
+
+
+def test_offer_details_path_is_not_the_api_v3_one(fake):
+    client = Wallapop(token="tk")
+    client.offer_details("offer-1")
+    call = next(c for c in fake.calls if "offer-details" in c[1])
+    assert "/api/v3/" not in call[1]
+
+
+# --- prices keep their cents ------------------------------------------------
+
+def test_publish_keeps_the_price_cents(fake, monkeypatch, tmp_path):
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        calls_raw.append((method, url, raw_body))
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "T", 19.95, color="black")
+    assert resp.ok
+    item = published_item_json(calls_raw[0][2])
+    assert item["attributes"]["price_amount"] == 19.95
+    assert item["attributes"]["price_amount"] != 20
+
+
+def test_publish_rejects_a_price_with_more_than_two_decimals(fake, monkeypatch, tmp_path):
+    """A price with extra precision is refused, never silently rounded."""
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        calls_raw.append((method, url, raw_body))
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    with pytest.raises(client_mod.InvalidPrice):
+        client.publish([str(photo)], "T", 19.999)
+    assert calls_raw == []
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf"), -1.0, "abc", None, True])
+def test_publish_rejects_invalid_prices(fake, monkeypatch, tmp_path, bad):
+    calls_raw = []
+    monkeypatch.setattr(
+        client_mod,
+        "http_request_raw",
+        lambda *a, **k: calls_raw.append(a) or (200, {"id": "x"}),
+    )
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    with pytest.raises(client_mod.InvalidPrice):
+        client.publish([str(photo)], "T", bad)
+    assert calls_raw == []
+    assert fake.calls == []
+
+
+def test_invalid_price_is_both_an_api_error_and_a_value_error():
+    assert issubclass(client_mod.InvalidPrice, client_mod.ApiError)
+    assert issubclass(client_mod.InvalidPrice, ValueError)
+
+
+def test_edit_item_keeps_the_price_cents(fake):
+    fake.owned_item = RAW_OWNED_ITEM
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], price=19.95)
+    assert resp.ok
+    put = next(c for c in fake.calls if c[0] == "PUT")
+    assert put[3]["attributes"]["price_amount"] == 19.95
+    assert put[3]["attributes"]["price_amount"] != 20
+
+
+def test_edit_item_rejects_invalid_prices(fake):
+    client = Wallapop(token="tk")
+    with pytest.raises(client_mod.InvalidPrice):
+        client.edit_item(RAW_ITEM["id"], price=float("nan"))
+    assert not [c for c in fake.calls if c[0] == "PUT"]
+
+
+def test_edit_item_keeps_the_current_price_cents(fake):
+    """Without an explicit price the current one is kept, cents included."""
+    fake.owned_item = {**RAW_OWNED_ITEM, "price": {"cash": {"amount": 19.95, "currency": "EUR"}}}
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="nuevo")
+    assert resp.ok
+    put = next(c for c in fake.calls if c[0] == "PUT")
+    assert put[3]["attributes"]["price_amount"] == 19.95
+    assert put[3]["attributes"]["title"] == "nuevo"
+
+
+# --- publish: partial result when an extra photo fails ----------------------
+
+def test_publish_reports_a_partial_result_when_an_extra_photo_fails(fake, monkeypatch, tmp_path):
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        calls_raw.append((method, url))
+        if "/picture2" in url:
+            return 500, {"error_message": "storage is on fire"}
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photos = []
+    for i in range(3):
+        p = tmp_path / f"p{i}.jpg"
+        p.write_bytes(b"jpeg")
+        photos.append(str(p))
+    client = Wallapop(token="tk")
+    resp = client.publish(photos, "T", 5.0)
+    assert not resp.ok
+    assert resp.partial is True
+    data = resp.data
+    # the item *was* created: it must not look absent
+    assert data["id"] == "abc123"
+    assert data["item_id"] == "abc123"
+    assert data["created"] is True
+    assert data["photos_total"] == 3
+    assert data["photos_completed"] == 1
+    assert data["failed_photo_index"] == 1
+    assert data["failed_photo_order"] == 2
+    assert data["failed_photo_path"] == photos[1]
+    assert data["outcome"] == "unknown"
+    assert "inspect the listing before uploading this photo again" in data["retry"]
+    assert "abc123" in data["retry"]
+
+
+# --- PubNub acknowledgement -------------------------------------------------
+
+def test_parse_pubnub_ack_accepts_a_list_and_a_json_string():
+    assert client_mod.parse_pubnub_ack([1, "Sent", 123]) is True
+    assert client_mod.parse_pubnub_ack('[1,"Sent",123]') is True
+    assert client_mod.parse_pubnub_ack([1, "Sent"]) is True
+    assert client_mod.parse_pubnub_ack([0, "Error", "denied"]) is False
+    assert client_mod.parse_pubnub_ack("not json") is False
+    assert client_mod.parse_pubnub_ack(None) is False
+    assert client_mod.parse_pubnub_ack([]) is False
+
+
+def test_pubnub_publish_accepts_a_json_string_ack(monkeypatch):
+    seen = []
+
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        seen.append((url, retry_safe))
+        return 200, '[1,"Sent",123]', "text/plain"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token=JWT)
+    assert client.pubnub_publish("chan", "hola", "user", "conv", "auth") is True
+    # a publish is a write: it must never be retried automatically
+    assert seen[0][1] is False
+
+
+def test_pubnub_publish_accepts_a_decoded_list_ack(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, [1, "Sent", 123], "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token=JWT)
+    assert client.pubnub_publish("chan", "hola", "user", "conv", "auth") is True
+
+
+def test_pubnub_publish_rejects_a_negative_ack(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, '[0,"Error","denied"]', "text/plain"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token=JWT)
+    assert client.pubnub_publish("chan", "hola", "user", "conv", "auth") is False
+
+
+# --- chat delivery: the browser fallback is opt-in --------------------------
+
+def test_send_message_reports_unknown_delivery_without_browser_fallback(monkeypatch):
+    transport = NoAckTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    monkeypatch.setattr(
+        client_mod,
+        "send_chat_text",
+        lambda *a, **k: pytest.fail("the browser fallback must never start automatically"),
+    )
+    client = Wallapop(token=JWT)
+    report = {}
+    resp = client.send_message(RAW_ITEM["id"], "hola", report=report)
+    assert not resp.ok
+    assert resp.data["delivery"] == "unknown"
+    assert report["path"] == "unknown"
+    assert report["delivery"] == "unknown"
+
+
+def test_send_message_uses_the_browser_only_when_explicitly_allowed(monkeypatch):
+    transport = FakeTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    sent = []
+    monkeypatch.setattr(client_mod, "send_chat_text", lambda ih, text: sent.append(text) or True)
+    monkeypatch.setattr(client_mod.time, "sleep", lambda _s: None)
+    client = Wallapop(token=JWT)
+    monkeypatch.setattr(client, "im_token", lambda: http_mod.Response(503, {}, False, False))
+    report = {}
+    resp = client.send_message(
+        RAW_ITEM["id"], "hola", report=report, allow_browser_fallback=True
+    )
+    assert sent == ["hola"]
+    assert report["path"] == "browser"
+    assert report["delivery"] == "confirmed"
+    assert not any("publish" in call[1] for call in transport.calls)
+
+
+@pytest.mark.parametrize("status,payload", [
+    (200, '[0,"Error","denied"]'),
+    (503, "unavailable"),
+    (200, '[1,"Sent"'),
+])
+def test_send_message_never_falls_back_after_unacknowledged_publish(monkeypatch, status, payload):
+    class UnacknowledgedTransport(FakeTransport):
+        def __call__(self, method, url, params=None, body=None, headers=None, retry_safe=None):
+            if "publish" in url:
+                self.calls.append((method, url, dict(params or {}), dict(body or {})))
+                return status, payload, "text/plain"
+            return super().__call__(method, url, params=params, body=body, headers=headers, retry_safe=retry_safe)
+
+    transport = UnacknowledgedTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    browser_calls = []
+    monkeypatch.setattr(client_mod, "send_chat_text", lambda *a: browser_calls.append(a) or True)
+    report = {}
+    response = Wallapop(token=JWT).send_message(RAW_ITEM["id"], "hola", report=report, allow_browser_fallback=True)
+    assert not response.ok
+    assert response.data["outcome"] == "unknown"
+    assert report["path"] == "unknown"
+    assert len([call for call in transport.calls if "publish" in call[1]]) == 1
+    assert browser_calls == []
+
+
+# --- 401 handling -----------------------------------------------------------
+
+def test_401_refresh_prefers_the_refresh_token(monkeypatch):
+    calls = []
+
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        calls.append(url)
+        if "/bff/messaging/inbox" in url:
+            inbox_calls = [c for c in calls if "/bff/messaging/inbox" in c]
+            if len(inbox_calls) == 1:
+                return 401, {"error": "expired"}, "application/json"
+            return 200, {"conversations": []}, "application/json"
+        if url.endswith("/access/refresh"):
+            return 200, {"data": {"access_token": "fresh.token"}}, "application/json"
+        if "/api/auth/session" in url:
+            raise AssertionError("the web session must not be used when the refresh token works")
+        return 200, {}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token="old.token", refresh_token="refresh-1")
+    resp = client.inbox()
+    assert resp.ok
+    assert client.token == "fresh.token"
+    assert any(c.endswith("/access/refresh") for c in calls)
+    assert not any("/api/auth/session" in c for c in calls)
+
+
+def test_401_falls_back_to_the_web_session(monkeypatch):
+    calls = []
+
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        calls.append(url)
+        if "/bff/messaging/inbox" in url:
+            inbox_calls = [c for c in calls if "/bff/messaging/inbox" in c]
+            if len(inbox_calls) == 1:
+                return 401, {"error": "expired"}, "application/json"
+            return 200, {"conversations": []}, "application/json"
+        if url.endswith("/access/refresh"):
+            return 401, {"error": "invalid refresh token"}, "application/json"
+        if "/api/auth/session" in url:
+            return 200, {"token": "web.token"}, "application/json"
+        return 200, {}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(
+        token="old.token",
+        refresh_token="refresh-1",
+        web_cookies={"__Secure-next-auth.session-token": "st"},
+    )
+    resp = client.inbox()
+    assert resp.ok
+    assert client.token == "web.token"
+
+
+def test_401_is_not_replayed_with_the_same_token(monkeypatch):
+    calls = []
+
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        calls.append(url)
+        if "/bff/messaging/inbox" in url:
+            return 401, {"error": "expired"}, "application/json"
+        if url.endswith("/access/refresh"):
+            # the server hands back the very same (dead) token
+            return 200, {"data": {"access_token": "old.token"}}, "application/json"
+        return 200, {}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token="old.token", refresh_token="refresh-1")
+    resp = client.inbox()
+    assert resp.status == 401
+    assert resp.unauthorized is True
+    assert len([c for c in calls if "/bff/messaging/inbox" in c]) == 1
+
+
+def test_401_is_not_replayed_when_the_refresh_fails(monkeypatch):
+    calls = []
+
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        calls.append(url)
+        if "/bff/messaging/inbox" in url:
+            return 401, {"error": "expired"}, "application/json"
+        if url.endswith("/access/refresh"):
+            return 401, {"error": "nope"}, "application/json"
+        return 200, {}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    client = Wallapop(token="old.token", refresh_token="refresh-1")
+    resp = client.inbox()
+    assert resp.status == 401
+    assert len([c for c in calls if "/bff/messaging/inbox" in c]) == 1
+
+
+# --- payload validation -----------------------------------------------------
+
+def test_seller_raises_on_http_error(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 500, {"error_message": "boom"}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller("wz0123456789")
+
+
+def test_seller_raises_when_the_payload_is_not_an_object(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, "not a profile", "text/plain"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller("wz0123456789")
+
+
+def test_seller_reviews_raise_on_http_error(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 503, {"error_message": "boom"}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller_reviews("wz0123456789")
+
+
+def test_seller_reviews_raise_when_the_payload_is_not_a_list(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, {"reviews": []}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller_reviews("wz0123456789")
+
+
+def test_seller_stats_raise_on_http_error(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 404, {"error_message": "boom"}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller_stats("wz0123456789")
+
+
+def test_seller_stats_raise_when_the_payload_is_not_an_object(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, [], "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().seller_stats("wz0123456789")
+
+
+def test_item_rejects_an_html_response(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, "<html><body>anti bot</body></html>", "text/html"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().item("v6gpwy9d476e")
+
+
+def test_item_rejects_a_missing_object(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 200, {"flags": {}}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().item("v6gpwy9d476e")
+
+
+def test_search_raises_on_http_error(monkeypatch):
+    def fake(method, url, params=None, body=None, headers=None, retry_safe=None):
+        return 500, {"error_message": "boom"}, "application/json"
+
+    monkeypatch.setattr(client_mod, "http_request", fake)
+    with pytest.raises(client_mod.ApiError):
+        Wallapop().search("gamecube")
+
+
+# --- prices: exact cents, no silent rounding --------------------------------
+
+def test_price_amount_keeps_the_cents():
+    assert client_mod.price_amount(19.95) == 19.95
+    assert client_mod.price_amount("19.95") == 19.95
+    assert client_mod.price_amount(Decimal("19.95")) == 19.95
+    assert client_mod.price_amount("19,95") == 19.95
+    assert client_mod.price_amount(20) == 20.0
+    assert client_mod.price_amount(0) == 0.0
+
+
+def test_browser_price_keeps_cents_and_validates_before_browser():
+    from wallapoplib.publish import browser_price
+
+    assert browser_price(19.95) == "19.95"
+    assert browser_price(20) == "20.00"
+    with pytest.raises(client_mod.InvalidPrice):
+        browser_price(19.999)
+
+
+@pytest.mark.parametrize("bad", [19.999, "19.999", Decimal("19.999"), 0.005])
+def test_price_amount_rejects_more_than_two_decimals(bad):
+    with pytest.raises(client_mod.InvalidPrice):
+        client_mod.price_amount(bad)
+
+
+def test_price_amount_is_bounded():
+    assert client_mod.price_amount(client_mod.MAX_PRICE) == 99999999.99
+    with pytest.raises(client_mod.InvalidPrice):
+        client_mod.price_amount(100000000)
+    with pytest.raises(client_mod.InvalidPrice):
+        client_mod.price_amount(Decimal("99999999.995"))
+    with pytest.raises(client_mod.InvalidPrice):
+        client_mod.price_amount(-0.01)
+
+
+@pytest.mark.parametrize(
+    "bad", [float("nan"), float("inf"), float("-inf"), Decimal("NaN"), Decimal("Infinity")]
+)
+def test_price_amount_rejects_non_finite_values(bad):
+    with pytest.raises(client_mod.InvalidPrice):
+        client_mod.price_amount(bad)
+
+
+def test_price_amount_never_leaks_a_decimal_error():
+    """A huge exponent must not raise a bare ``decimal.InvalidOperation``."""
+    for bad in (Decimal("1E+400"), Decimal("-1E+400"), Decimal("1E+4000000")):
+        with pytest.raises(client_mod.InvalidPrice):
+            client_mod.price_amount(bad)
+
+
+# --- publish: the creation result is never guessed ----------------------------
+
+def test_publish_accepts_any_2xx(fake, monkeypatch, tmp_path):
+    monkeypatch.setattr(client_mod, "http_request_raw", lambda *a, **k: (201, {"id": "abc123"}))
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "T", 5.0)
+    assert resp.ok
+    assert resp.data["id"] == "abc123"
+
+
+def test_publish_reports_an_unknown_creation_when_the_id_is_missing(fake, monkeypatch, tmp_path):
+    monkeypatch.setattr(client_mod, "http_request_raw", lambda *a, **k: (200, {"flags": {}}))
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "T", 5.0)
+    assert not resp.ok
+    assert resp.partial is False
+    assert resp.data["created"] == "unknown"
+    assert resp.data["outcome"] == "unknown"
+    assert "before publishing it again" in resp.data["error_message"]
+
+
+def test_publish_keeps_the_item_id_when_an_extra_photo_raises(fake, monkeypatch, tmp_path):
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        calls_raw.append((method, url))
+        if "/picture2" in url:
+            raise http_mod.ApiError("storage exploded")
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photos = []
+    for i in range(3):
+        p = tmp_path / f"p{i}.jpg"
+        p.write_bytes(b"jpeg")
+        photos.append(str(p))
+    client = Wallapop(token="tk")
+    resp = client.publish(photos, "T", 5.0)
+    assert not resp.ok
+    assert resp.partial is True
+    data = resp.data
+    # the listing *was* created: its id must never be lost
+    assert data["id"] == "abc123"
+    assert data["item_id"] == "abc123"
+    assert data["created"] is True
+    assert data["photos_total"] == 3
+    assert data["photos_completed"] == 1
+    assert data["failed_photo_index"] == 1
+    assert data["failed_photo_order"] == 2
+    assert "abc123" in data["retry"]
+
+
+def test_publish_says_the_outcome_is_unknown_after_a_network_error(fake, monkeypatch, tmp_path):
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        if "/picture2" in url:
+            raise http_mod.UnknownOutcomeError("socket timeout while sending the photo")
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photos = []
+    for i in range(2):
+        p = tmp_path / f"p{i}.jpg"
+        p.write_bytes(b"jpeg")
+        photos.append(str(p))
+    client = Wallapop(token="tk")
+    resp = client.publish(photos, "T", 5.0)
+    assert not resp.ok
+    assert resp.partial is True
+    assert resp.data["item_id"] == "abc123"
+    assert resp.data["outcome"] == "unknown"
+
+
+def test_publish_says_the_photo_was_not_sent_when_it_could_not_be_read(fake, monkeypatch, tmp_path):
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        if "/picture2" in url:
+            raise OSError("cannot read the file")
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photos = []
+    for i in range(2):
+        p = tmp_path / f"p{i}.jpg"
+        p.write_bytes(b"jpeg")
+        photos.append(str(p))
+    client = Wallapop(token="tk")
+    resp = client.publish(photos, "T", 5.0)
+    assert not resp.ok
+    assert resp.partial is True
+    assert resp.data["item_id"] == "abc123"
+    assert resp.data["outcome"] == "not_sent"
+
+
+def test_publish_refuses_to_guess_the_cost_configuration(fake, monkeypatch, tmp_path):
+    fake.published_items = {"data": [{"id": "x", "shipping": {"item_is_shippable": True}}]}
+    calls_raw = []
+    monkeypatch.setattr(client_mod, "http_request_raw", lambda *a, **k: calls_raw.append(a))
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "T", 5.0)
+    assert not resp.ok
+    assert "cost_configuration_id" in resp.data["error_message"]
+    assert calls_raw == []
+
+
+def test_publish_uses_the_given_cost_configuration(fake, monkeypatch, tmp_path):
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60, retry_safe=None):
+        calls_raw.append((method, url, raw_body))
+        return 200, {"id": "abc123"}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"jpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "T", 5.0, cost_configuration_id="cfg-1")
+    assert resp.ok
+    item = published_item_json(calls_raw[0][2])
+    assert item["delivery"]["cost_configuration_id"] == "cfg-1"
+    # nothing had to be inferred: the account's listings were not even read
+    assert not any("/users/wz0123456789/items" in c[1] for c in fake.calls)
+
+
+# --- edit: the listing is preserved, never rewritten -------------------------
+
+def test_edit_item_preserves_the_current_state(fake):
+    fake.owned_item = RAW_OWNED_ITEM
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="Nintendo DS Lite")
+    assert resp.ok
+    body = next(c for c in fake.calls if c[0] == "PUT")[3]
+    assert body["category_leaf_id"] == "10088"
+    assert body["attributes"]["condition"] == "good"
+    assert body["attributes"]["price_amount"] == 45.0
+    assert body["delivery"]["allowed_by_user"] is True
+    assert body["delivery"]["max_weight_kg"] == 5
+    assert body["delivery"]["cost_configuration_id"] == "814429d6-0000-0000-0000-000000000000"
+    assert body["location"]["latitude"] == 40.4168
+    assert body["location"]["longitude"] == -3.7038
+
+
+def test_edit_item_does_not_enable_shipping(fake):
+    fake.owned_item = {**RAW_OWNED_ITEM, "shipping": {"item_is_shippable": False, "user_allows_shipping": False}}
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="Nintendo DS Lite")
+    assert resp.ok
+    body = next(c for c in fake.calls if c[0] == "PUT")[3]
+    assert body["delivery"]["allowed_by_user"] is False
+    assert "cost_configuration_id" not in body["delivery"]
+
+
+def test_edit_item_requires_known_shipping_consent(fake):
+    fake.owned_item = {**RAW_OWNED_ITEM, "shipping": {"item_is_shippable": True}}
+    response = Wallapop(token="tk").edit_item(RAW_ITEM["id"], title="nuevo")
+    assert not response.ok
+    assert "user allows shipping" in response.error_reason
+    assert not [call for call in fake.calls if call[0] == "PUT"]
+
+
+def test_edit_item_nonshipping_does_not_require_weight(fake):
+    fake.owned_item = {
+        **RAW_OWNED_ITEM,
+        "shipping": {"user_allows_shipping": False},
+        "type_attributes": {},
+    }
+    response = Wallapop(token="tk").edit_item(RAW_ITEM["id"], title="nuevo")
+    assert response.ok
+    body = next(call for call in fake.calls if call[0] == "PUT")[3]
+    assert body["delivery"] == {"allowed_by_user": False}
+
+
+@pytest.mark.parametrize("images", [None, [], [{"urls": {"small": "https://example.test/a.jpg"}}]])
+def test_edit_item_requires_known_picture_ids(fake, images):
+    fake.owned_item = {**RAW_OWNED_ITEM, "images": images}
+    response = Wallapop(token="tk").edit_item(RAW_ITEM["id"], title="nuevo")
+    assert not response.ok
+    assert "picture IDs" in response.error_reason
+    assert not [call for call in fake.calls if call[0] == "PUT"]
+
+
+def test_edit_item_rejects_fractional_shipping_weight(fake):
+    fake.owned_item = {**RAW_OWNED_ITEM, "type_attributes": {"up_to_kg": "1.5"}}
+    response = Wallapop(token="tk").edit_item(RAW_ITEM["id"], title="nuevo")
+    assert not response.ok
+    assert "whole number" in response.error_reason
+    assert not [call for call in fake.calls if call[0] == "PUT"]
+
+
+def test_edit_item_does_not_move_the_item_to_the_account_location(fake):
+    fake.owned_item = RAW_OWNED_ITEM
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="Nintendo DS Lite")
+    assert resp.ok
+    body = next(c for c in fake.calls if c[0] == "PUT")[3]
+    assert body["location"]["latitude"] == 40.4168
+    assert body["location"]["longitude"] == -3.7038
+    # the account location is never used to relocate the listing
+    assert not any(c[1].endswith("/users/me") for c in fake.calls)
+
+
+@pytest.mark.parametrize(
+    "missing,expected",
+    [
+        ("category_leaf_id", "category_leaf_id"),
+        ("condition", "condition"),
+        ("location", "location"),
+        ("weight", "weight"),
+    ],
+)
+def test_edit_item_refuses_when_the_current_state_cannot_be_inferred(fake, missing, expected):
+    item = {**RAW_OWNED_ITEM}
+    item.pop(missing, None)
+    if missing == "weight":
+        item["type_attributes"] = {}
+    fake.owned_item = item
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="nuevo")
+    assert not resp.ok
+    assert expected in resp.data["error_message"]
+    # no default is applied and nothing is sent
+    assert not [c for c in fake.calls if c[0] == "PUT"]
+
+
+def test_edit_item_refuses_when_a_shipping_item_has_no_known_cost_configuration(fake):
+    fake.owned_item = {**RAW_OWNED_ITEM, "shipping": {"item_is_shippable": True, "user_allows_shipping": True}}
+    fake.published_items = {"data": [{"id": "x", "shipping": {}}]}
+    client = Wallapop(token="tk")
+    resp = client.edit_item(RAW_ITEM["id"], title="nuevo")
+    assert not resp.ok
+    assert "cost_configuration_id" in resp.data["error_message"]
+    assert not [c for c in fake.calls if c[0] == "PUT"]
+
+
+# --- chat delivery -----------------------------------------------------------
+
+class UnknownDeliveryTransport(FakeTransport):
+    """Fake transport whose PubNub publish dies *after* being sent."""
+
+    def __call__(self, method, url, params=None, body=None, headers=None, retry_safe=None):
+        if "publish" in url:
+            raise http_mod.UnknownOutcomeError("socket timeout while sending the message")
+        return super().__call__(method, url, params=params, body=body, headers=headers, retry_safe=retry_safe)
+
+
+UNSORTED_THREAD = {
+    **RAW_THREAD,
+    "messages": {
+        "messages": [
+            {"timestamp": 1760000002000, "from_self": True, "type": "text", "text": "hola"},
+            {"timestamp": 1760000001000, "from_self": True, "type": "text", "text": "otro"},
+        ]
+    },
+}
+
+
+class UnorderedThreadTransport(FakeTransport):
+    """Fake transport whose thread is *not* sorted by timestamp."""
+
+    def __call__(self, method, url, params=None, body=None, headers=None, retry_safe=None):
+        if "/bff/messaging/conversation/" in url:
+            self.calls.append((method, url, dict(params or {}), dict(body or {})))
+            self.retry_safe.append(retry_safe)
+            return 200, UNSORTED_THREAD, "application/json"
+        return super().__call__(method, url, params=params, body=body, headers=headers, retry_safe=retry_safe)
+
+
+def test_send_message_returns_a_compact_confirmed_answer(fake, monkeypatch):
+    class NoSleepClock:
+        """Stand-in for the ``time`` module: it records the sleeps."""
+
+        def __init__(self) -> None:
+            self.sleeps: list = []
+
+        def sleep(self, seconds: float) -> None:
+            self.sleeps.append(seconds)
+
+        def monotonic(self) -> float:
+            return 0.0
+
+    clock = NoSleepClock()
+    monkeypatch.setattr(client_mod, "time", clock)
+    client = Wallapop(token=JWT)
+    report = {}
+    resp = client.send_message(RAW_ITEM["id"], "Hola!", report=report)
+    assert resp.ok
+    assert resp.data["delivery"] == "confirmed"
+    assert resp.data["outcome"] == "confirmed"
+    assert resp.data["conversation_id"] == "wzy050ee4e65"
+    assert resp.data["message"] == "Hola!"
+    assert resp.data["with_user"]["name"] == "pixelia"
+    # the acknowledgement is enough: no extra GET is needed
+    thread_calls = [c for c in fake.calls if "/bff/messaging/conversation/" in c[1]]
+    assert len(thread_calls) == 1
+    # and no fixed wait after the acknowledgement
+    assert clock.sleeps == []
+    assert report["path"] == "rest"
+    assert report["delivery"] == "confirmed"
+
+
+def test_send_message_reports_an_unknown_delivery_after_an_ambiguous_send(monkeypatch):
+    transport = UnknownDeliveryTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    monkeypatch.setattr(
+        client_mod,
+        "send_chat_text",
+        lambda *a, **k: pytest.fail("an ambiguous send must never be retransmitted"),
+    )
+    client = Wallapop(token=JWT)
+    report = {}
+    resp = client.send_message(RAW_ITEM["id"], "hola", report=report, allow_browser_fallback=True)
+    assert not resp.ok
+    assert resp.data["delivery"] == "unknown"
+    assert resp.data["outcome"] == "unknown"
+    assert resp.data["conversation_id"] == "wzy050ee4e65"
+    assert "inspect the conversation before sending the message again" in resp.data["error_message"]
+    assert report["path"] == "unknown"
+    assert report["delivery"] == "unknown"
+
+
+def test_send_message_error_asks_to_inspect_the_conversation(monkeypatch):
+    transport = NoAckTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    client = Wallapop(token=JWT)
+    resp = client.send_message(RAW_ITEM["id"], "hola")
+    assert not resp.ok
+    assert "inspect the conversation before sending the message again" in resp.data["error_message"]
+
+
+def test_send_message_duplicate_guard_compares_the_newest_message(monkeypatch):
+    transport = UnorderedThreadTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    client = Wallapop(token=JWT)
+    report = {}
+    resp = client.send_message(RAW_ITEM["id"], "hola", report=report)
+    assert report.get("skipped") is True
+    assert report.get("path") == "skipped"
+    assert not any("publish" in c[1] for c in transport.calls)
+
+
+def test_send_message_duplicate_guard_ignores_older_messages(monkeypatch):
+    transport = UnorderedThreadTransport()
+    monkeypatch.setattr(client_mod, "http_request", transport)
+    client = Wallapop(token=JWT)
+    report = {}
+    client.send_message(RAW_ITEM["id"], "otro", report=report)
+    assert report.get("skipped") is False
+    assert any("publish" in c[1] for c in transport.calls)
+
+
+# --- CLI: the browser publish keeps the cents --------------------------------
+
+def test_cli_browser_publish_keeps_the_price_cents(monkeypatch):
+    import wallapoplib.publish as publish_mod
+    from wallapoplib.cli import commands
+
+    captured: dict = {}
+
+    def fake_publish_item(**kwargs):
+        captured.update(kwargs)
+        return {"url": "https://www.wallapop.com/item/published", "item_id": "abc123"}
+
+    monkeypatch.setattr(publish_mod, "publish_item", fake_publish_item)
+    args = argparse.Namespace(
+        mode="browser",
+        price=19.95,
+        photos_dir="/tmp/photos",
+        summary="Nintendo DS Lite",
+        condition="good",
+        weight_tier="0",
+        max_photos=5,
+        headless=True,
+        capture_body=None,
+    )
+    assert commands.cmd_publish(args) == 0
+    assert captured["price"] == 19.95
+
+
+def test_cli_message_prints_the_unknown_delivery_guidance(monkeypatch, capsys):
+    from wallapoplib.cli import commands
+
+    class FakeClient:
+        def send_message(self, item_hash, text, report=None, allow_browser_fallback=False):
+            if report is not None:
+                report.update({"path": "unknown", "skipped": False, "delivery": "unknown"})
+            return client_mod.Response(
+                0,
+                {
+                    "error_message": "chat delivery is unknown",
+                    "delivery": "unknown",
+                    "outcome": "unknown",
+                    "conversation_id": "wzy050ee4e65",
+                },
+                False,
+                False,
+            )
+
+    monkeypatch.setattr(commands, "resolve_internal_id", lambda x: x)
+    monkeypatch.setattr(commands, "authed_client", lambda required=True: (FakeClient(), {}))
+    args = argparse.Namespace(
+        item_id=RAW_ITEM["id"], text="hola", dry_run=False, browser_fallback=False
+    )
+    assert commands.cmd_message(args) == 1
+    err = capsys.readouterr().err
+    assert "inspect the conversation before sending the message again" in err
+    assert "wzy050ee4e65" in err
