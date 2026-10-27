@@ -1,142 +1,96 @@
-# Wallapop CLI
+# Wallapop MCP
 
-CLI de automatización para Wallapop: busca anuncios, detecta gangas (precio por
-debajo de la mediana), envía ofertas y mensajes de chat, gestiona ofertas
-recibidas (aceptar / rechazar / contraofertar) y publica artículos. Todo por
-HTTP plano (`urllib`), incluido `publish` (el body multipart del POST final
-`/api/v3/items` se capturó y se replica por API pura); el `--mode browser`
-conserva el wizard Playwright para quien quiera ver/navegar la publicación.
+A local MCP server for agents that search and manage Wallapop listings.
 
+Written in Go, using the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). One executable, stdio transport, no browser or Python runtime required by the server. The original Python library and CLI remain available.
+
+This project is a fork of [figurophobia/wallapop-cli](https://github.com/figurophobia/wallapop-cli). Its API research, Python implementation and Git history are preserved. See [credits](CREDITS.md).
+
+## Build
+
+Requires Go 1.25 or later.
+
+```sh
+git clone https://github.com/jrrome/wallapop-mcp.git
+cd wallapop-mcp
+go build -trimpath -ldflags="-s -w" -o bin/wallapop-mcp ./cmd/wallapop-mcp
+./bin/wallapop-mcp --help
 ```
-python3 wallapop.py <comando> ...
+
+No release binaries or package registry publication are provided yet.
+
+## Connect an agent
+
+For MCP clients that use a `mcpServers` configuration:
+
+```json
+{
+  "mcpServers": {
+    "wallapop": {
+      "command": "/absolute/path/to/wallapop-mcp/bin/wallapop-mcp",
+      "args": []
+    }
+  }
+}
 ```
 
-## Comandos (resumen)
+The process communicates over stdin/stdout. Diagnostics go to stderr. Starting the server or calling `session_status` does not contact Wallapop.
 
-| Comando | Qué hace |
+Public search, listings, sellers and categories work without configuring an account, subject to Wallapop's access controls. Account operations require a session. Reuse the Python CLI configuration with:
+
+```json
+{
+  "mcpServers": {
+    "wallapop": {
+      "command": "/absolute/path/to/wallapop-mcp",
+      "args": ["--session", "/absolute/path/to/.config/wallapop_cli"]
+    }
+  }
+}
+```
+
+Alternatively set `WALLAPOP_ACCESS_TOKEN` and optionally `WALLAPOP_REFRESH_TOKEN` in the process environment. `WALLAPOP_SESSION_PATH` is equivalent to `--session`. Session files are loaded only from an explicitly configured path. Refreshed sessions are saved atomically with owner-only permissions.
+
+## Tools
+
+| Group | Operations |
 | --- | --- |
-| `login` / `logout` / `session` | Identificarse y ver estado de la sesión |
-| `search` | Buscar anuncios (`wallapop search 'ps5' --city madrid`) |
-| `deals` | Buscar y rankear gangas (precio vs mediana del mercado) |
-| `watch` | Escaneo periódico con auto-oferta / auto-mensaje |
-| `offer` | Hacer ofertas, responder y ver el panel de negociaciones |
-| `message` | Enviar mensaje de chat a un vendedor |
-| `replies` | Ver inbox y hilos completos |
-| `show` / `seller` | Ver detalles completos de un anuncio o perfil de vendedor |
-| `favorite` | Marcar/desmarcar un anuncio como favorito |
-| `purchases` | Ver tus compras (en curso / finalizadas) |
-| `selling` | Ver tus ventas (en curso / finalizadas) |
-| `edit` | Editar un anuncio tuyo publicado (precio, título, descripción, marca, modelo, color, condición, peso) |
-| `reserve` | Reservar / desreservar uno de tus artículos |
-| `sold` | Marcar uno de tus artículos como vendido (o desmarcar) |
-| `delete` | Borrar permanentemente uno de tus artículos (`DELETE /api/v3/items/{id}`) |
-| `publish` | Publicar un artículo por API pura (o con wizard Playwright con `--mode browser`) |
+| Public reads | Search, item details, seller profile and reviews, category tree |
+| Account reads | Session status, inbox, conversation, unread count, purchases, sales, offer limits and history |
+| Optional writes | Favorites, messages, offers, publish, edit, reserve, mark sold, delete |
 
-## Documentación
+Writes are hidden and disabled by default. Add `--allow-writes` only when the agent should be able to change the account. The flag grants capability; the MCP client should still obtain the user's intent before consequential actions.
 
-La documentación está dividida en cuatro documentos:
+[Tool and endpoint reference](docs/MCP.md) · [Architecture](docs/ARCHITECTURE.md) · [Python CLI](docs/PYTHON.md)
 
-- [**Uso de la CLI**](docs/USAGE.md) — referencia de todos los comandos y
-  flags: login, búsqueda, deals/watch, ofertas (con el panel `offer status` y
-  la leyenda de estados), mensajería, detalles, favoritos y publicación.
-- [**Arquitectura**](docs/ARCHITECTURE.md) — estructura del repo
-  (`wallapoplib/`), cómo fluye una invocación, sesión/autenticación, transporte
-  HTTP (y el anti-bot de los endpoints `BFF`), mensajería y gestión de ofertas.
-- [**Endpoints**](docs/ENDPOINTS.md) — catálogo de cada endpoint que usa la
-  CLI, cómo se extrajeron del bundle JS de la web, y el significado de los
-  identificadores públicos de la app (las constantes `API_BASE`, `PUB_KEY`,
-  `SUB_KEY`, `PUB_ORIGIN`, etc. de `config.py`).
-- [**API de librería**](docs/API.md) — quickstart y contrato público de
-  `wallapoplib` como librería (dataclasses, cliente, dominio).
+## Reliability and resource limits
 
-## Usar como librería
+- Reuses HTTP connections for reads. Read-only requests can retry transient failures; writes are never automatically retried after an uncertain outcome.
+- Short, bounded, in-memory caches; concurrent identical reads share a request. `fresh: true` bypasses cached values. Writes invalidate the client's cache.
+- Context cancellation and a 45-second tool budget. Default concurrency: 4 calls. Default upstream pacing: one request start per second.
+- Bounded search pages, response bodies, cache storage, uploads and MCP output.
+- Explicit partial publication and unknown delivery results. Check the existing listing or conversation before retrying.
+- Decimal price inputs preserve cents. No automatic browser fallback in the Go server.
 
-`wallapoplib` es un paquete instalable (ya listo para PyPI; la publicación en
-PyPI queda **diferida**): contiene el cliente tipado + las dataclasses de
-dominio y trae la CLI dentro. Sin publicar, se instala localmente en modo
-editable:
+Run `make benchmark` to measure local overhead. See [local measurements and resource bounds](docs/PERFORMANCE.md). Network latency and Wallapop's rate limits dominate real requests; these local measurements are not live API throughput claims.
 
-```
-pip install -e '.[test]'
+## Development
+
+```sh
+make test-go
+make build
+python3 scripts/smoke_mcp.py ./bin/wallapop-mcp
+python3 -m venv .venv
+.venv/bin/pip install -e '.[test]' build
+make test-python PYTHON=.venv/bin/python
 ```
 
-Uso mínimo:
+Tests use local fixtures and HTTP test servers. They do not need a Wallapop account. See [contributing](CONTRIBUTING.md).
 
-```python
-from wallapoplib import Wallapop, load_session
+## Status and scope
 
-client = Wallapop(token=load_session().get("accessToken"))
-items = client.search("nintendo switch lite", pages=1)
-for it in items:
-    print(it.price, it.title, it.url)
-```
+Experimental, unofficial integration. The endpoints are derived from the web application and can change or reject non-browser clients. Offline tests cover protocol behavior and known response shapes; they do not establish current live compatibility.
 
-Ver [docs/API.md](docs/API.md) para el contrato completo (dataclasses `Item` /
-`Deal` / `OfferEvent`/`OfferState`, `rank_deals`, `parse_offer_events`,
-respuesta a ofertas, chating idempotente, publicación y favoritos).
+The Go server does not implement login UI, checkout, payment, shipping-label purchase, background watchers, or a remotely hosted HTTP transport. The Python CLI retains its existing login and browser workflows.
 
-## Instalación rápida
-
-**No hay dependencias obligatorias.** Toda la comunicación con Wallapop se hace
-por HTTP plano con la stdlib de Python: solo necesitas `python3` (≥ 3.10).
-
-Puedes usarla de dos formas:
-
-1. **Sin instalar nada** — con el repo clonado:
-
-   ```
-   python3 wallapop.py <comando> ...
-   ```
-
-2. **Como paquete instalable** (con la CLI `wallapop` incluida):
-
-   ```
-   pip install -e '.[test]'     # desarrollo local
-   ```
-
-### Playwright es opcional (solo para `publish --mode browser`)
-
-El envío de mensajes de chat funciona por PubNub REST, sin navegador. Solo si
-PubNub no confirma la entrega se intenta un **fallback** que abre un navegador
-headless (Playwright + Firefox) con tus cookies de sesión. Para el flujo normal
-**no necesitas instalar Playwright**.
-
-La publicación por defecto es **API pura** (sin navegador). `publish --mode
-browser` sí requiere Chromium vía Playwright para jugar el **wizard de la web**
-headful:
-
-```
-pip install --user --break-system-packages playwright
-python3 -m playwright install chromium
-```
-
-Añade `pip install -e '.[browser]'` para incluir la dependencia de Playwright
-en el entorno del paquete.
-
-## Sesión
-
-Hay cuatro formas de iniciar sesión; usa la que te encaje:
-
-| Vía | Cuándo usarla | Cómo |
-| --- | --- | --- |
-| **Email + contraseña** | Tienes cuenta normal (no registrada con Google) | `wallapop login tu@email.com` (te pedirá la contraseña) o inline: `wallapop login tu@email.com PASSWORD` |
-| **Wizard de navegador** | Cuenta de Google o cualquier navegador | `wallapop login --wizard` abre `es.wallapop.com` en Chromium, te logueas una vez y captura la sesión automáticamente |
-| **Importar de Firefox** | Ya estás logueado en Firefox | `wallapop login --browser firefox` |
-| **Pegar cookies** | Cualquier navegador (F12) | `wallapop login --cookies '...'` o un fichero `cookies.txt` en el directorio |
-
-Detalle de las vías:
-
-- `wallapop login tu@email.com` — pide contraseña de forma segura; `login tu@email.com PASS` la acepta inline. Pero **si la cuenta se registró con Google no tiene contraseña de Wallapop** y `/access/login` dará 401: usa el wizard o la importación de navegador.
-- `wallapop login --wizard` — abre un Chromium visible con `es.wallapop.com` (pantalla de login). Haces tu login normal (Google, email…), y la CLI captura las cookies de sesión y genera el token. No depende del navegador de donde venga tu cuenta; necesitas `playwright` (`pip install -e '.[browser]'`).
-- `wallapop login --browser firefox` — importa la sesión de Firefox (vale para cuentas Google).
-- `wallapop login` (con `cookies.txt` en el directorio) — login pegando el valor del campo `Cookie` de una request (F12 → Cabeceras → Copiar valor); ver `cookies.txt.example` y `docs/USAGE.md`.
-
-- Los tokens y cookies se guardan en `~/.config/wallapop_cli/`, **fuera del repo** (no se suben a git).
-
-## Seguridad (qué hay en el repo y qué no)
-
-- El repositorio contiene solo **código y docs**. Las claves de PubNub
-  (`PUB_KEY`/`SUB_KEY`) y la versión de la app (`WEB_APP_VERSION`) son
-  identificadores públicos que la web expone en su bundle JS: no son secretos.
-- Lo que sí es sensible (access/refresh token y cookies de sesión) vive en
-  `~/.config/wallapop_cli/` y está excluido de git (`.gitignore`).
+MIT license. Wallapop and its trademarks belong to their respective owners; this project is not affiliated with Wallapop.

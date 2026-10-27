@@ -5,6 +5,8 @@ from __future__ import annotations
 import base64
 import datetime
 import json
+from typing import Any, Optional
+
 
 def jwt_claims(token: str) -> dict:
     try:
@@ -33,8 +35,20 @@ def token_expiry(token: str) -> Optional[datetime.datetime]:
     return None
 
 
-def refresh_if_expired(client: Wallapop) -> None:
+def refresh_if_expired(client: Any) -> bool:
+    """Refresh the client's access token when it is expired or about to expire.
+
+    The ``refresh_token`` is preferred; the browser session is only used when
+    the refresh token is missing or rejected.  Returns ``True`` only when a
+    *different* token was obtained, so a refresh that keeps returning the
+    same (already dead) token is not mistaken for a successful renewal.
+    """
     exp = token_expiry(client.token or "")
-    if exp is not None and exp <= datetime.datetime.now() + datetime.timedelta(minutes=1):
-        if not client.try_refresh():
-            client.refresh_web()
+    if exp is None or exp > datetime.datetime.now() + datetime.timedelta(minutes=1):
+        return False
+    before = client.token
+    if client.try_refresh() and client.token and client.token != before:
+        return True
+    if client.refresh_web() and client.token and client.token != before:
+        return True
+    return False

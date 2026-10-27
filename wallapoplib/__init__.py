@@ -11,7 +11,10 @@ Public surface (the v1 contract):
   ``parse_sdui_transactions``.
 - ``resolve_internal_id`` for item references.
 - ``ApiError`` / ``Response`` from the HTTP layer.
-- Session aids ``load_credentials`` / ``load_session`` / ``save_session``.
+- Session aids ``load_credentials`` / ``load_session`` / ``save_session`` and
+  the session initializer ``build_client`` (which raises ``SessionError``
+  instead of exiting the interpreter).
+- ``InvalidPrice`` for rejected price values.
 
 The bundled CLI lives in ``wallapoplib.cli`` (entry point ``wallapop``) and is
 not part of the library contract. Requires Python >= 3.10, zero mandatory
@@ -20,7 +23,7 @@ dependencies.
 
 from .config import VERSION as __version__
 from .config import CATEGORIES, load_credentials, load_session, save_session
-from .http import ApiError, Response
+from .http import ApiError, NotSentError, Response, TransportError, UnknownOutcomeError
 from .ids import resolve_internal_id
 from .models import (
     Deal,
@@ -32,7 +35,8 @@ from .models import (
     parse_sdui_transactions,
     rank_deals,
 )
-from .client import Wallapop
+from .client import InvalidPrice, Wallapop
+from .session import SessionError, build_client
 
 __all__ = [
     "Wallapop",
@@ -46,7 +50,13 @@ __all__ = [
     "parse_sdui_transactions",
     "resolve_internal_id",
     "ApiError",
+    "TransportError",
+    "NotSentError",
+    "UnknownOutcomeError",
     "Response",
+    "InvalidPrice",
+    "SessionError",
+    "build_client",
     "CATEGORIES",
     "load_credentials",
     "load_session",

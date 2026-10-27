@@ -50,44 +50,20 @@ from .output import (
     render_template,
     truncate,
 )
-from ..tokens import refresh_if_expired, token_expiry
+from ..session import SessionError, build_client
+from ..tokens import token_expiry
 
 def authed_client(required: bool = True) -> tuple[Wallapop, dict]:
-    creds = load_credentials()
-    session = load_session()
-    web_cookies = session if session.get("__Secure-next-auth.session-token") else None
-    token = creds.get("access_token") or session.get("accessToken") or ""
-    if not token and web_cookies:
-        refreshed = refresh_web_session(web_cookies)
-        if refreshed:
-            token = refreshed
-    if required and not token:
-        eprint("not logged in. run: wallapop login <email> <password>  or  wallapop login --browser firefox")
-        raise SystemExit(1)
+    """CLI wrapper around :func:`wallapoplib.session.build_client`.
 
-    def persist(client: Wallapop) -> None:
-        save_credentials(
-            {
-                "email": client.email,
-                "access_token": client.token,
-                "refresh_token": client.refresh_token,
-                "user": client.user,
-            }
-        )
-        if client.web_cookies:
-            persist_browser_session(client.web_cookies, client.token)
-
-    client = Wallapop(
-        token=token or None,
-        refresh_token=creds.get("refresh_token"),
-        email=creds.get("email"),
-        persist_fn=persist,
-        web_cookies=web_cookies,
-    )
-    if token:
-        client.user = creds.get("user", {})
-        refresh_if_expired(client)
-    return client, creds
+    The library helper raises ``SessionError``; the CLI turns that into a
+    friendly ``SystemExit(1)``.
+    """
+    try:
+        return build_client(required=required)
+    except SessionError as exc:
+        eprint(str(exc))
+        raise SystemExit(1) from None
 
 
 def resolve_geo(args: argparse.Namespace) -> tuple[Optional[float], Optional[float]]:
@@ -711,7 +687,10 @@ def cmd_message(args: argparse.Namespace) -> int:
     client, _ = authed_client()
     started = time.monotonic()
     report: dict[str, Any] = {}
-    resp = client.send_message(item_hash, args.text, report=report)
+    browser_fallback = bool(getattr(args, "browser_fallback", False))
+    resp = client.send_message(
+        item_hash, args.text, report=report, allow_browser_fallback=browser_fallback
+    )
     elapsed = time.monotonic() - started
     announce(label, resp)
     if resp.ok:
@@ -723,6 +702,16 @@ def cmd_message(args: argparse.Namespace) -> int:
         if report.get("browser_s"):
             print(f"      browser send itself took {report['browser_s']:.1f}s")
         return 0
+    data = resp.data if isinstance(resp.data, dict) else {}
+    if data.get("delivery") == "unknown":
+        eprint(paint.yellow("delivery is unknown: the message may or may not have reached the seller"))
+        conv = data.get("conversation_id")
+        if conv:
+            eprint(f"      conversation: {conv}")
+        if data.get("outcome") == "not_sent":
+            eprint("      the message was not sent: it is safe to send it again")
+        else:
+            eprint("      inspect the conversation before sending the message again")
     return 1
 
 
@@ -927,16 +916,16 @@ def cmd_delete(args: argparse.Namespace) -> int:
 
 def cmd_publish(args: argparse.Namespace) -> int:
     """Publish an item: pure API by default, or the real web wizard with --browser."""
-    price = int(round(args.price))
     if args.mode == "browser":
-        return _cmd_publish_browser(args, price)
-    return _cmd_publish_api(args, price)
+        # the price keeps its cents: 19.95 is published as 19.95
+        return _cmd_publish_browser(args, args.price)
+    return _cmd_publish_api(args, args.price)
 
 
-def _cmd_publish_browser(args: argparse.Namespace, price: int) -> int:
+def _cmd_publish_browser(args: argparse.Namespace, price: float) -> int:
     from ..publish import publish_item  # noqa: PLC0415 (optional playwright dep)
 
-    print(paint.bold(f"publishing {args.photos_dir} — {args.summary} @ {price} EUR ({args.condition})"))
+    print(paint.bold(f"publishing {args.photos_dir} — {args.summary} @ {price:g} EUR ({args.condition})"))
     capture = getattr(args, "capture_body", None)
     try:
         result = publish_item(
@@ -970,7 +959,7 @@ def _pick_photos(photos_dir: str, max_n: int = 10) -> list[str]:
     return files[:max_n]
 
 
-def _cmd_publish_api(args: argparse.Namespace, price: int) -> int:
+def _cmd_publish_api(args: argparse.Namespace, price: float) -> int:
     photos = _pick_photos(args.photos_dir, max_n=10)
     if not photos:
         eprint(f"no photo found in {args.photos_dir}")
@@ -989,9 +978,23 @@ def _cmd_publish_api(args: argparse.Namespace, price: int) -> int:
         max_weight_kg=args.max_weight_kg,
     )
     announce("published via API", resp)
+    data = resp.data if isinstance(resp.data, dict) else {}
+    item_id = data.get("id") or data.get("item_id") or ""
+    if item_id:
+        print(paint.green(f"item {item_id}"))
+    if getattr(resp, "partial", False):
+        eprint(paint.yellow(
+            f"partial publish: {data.get('photos_completed')} of {data.get('photos_total')} photos uploaded"
+        ))
+        if data.get("retry"):
+            eprint(f"      retry: {data['retry']}")
+        return 1
+    if data.get("outcome") == "unknown":
+        eprint(paint.yellow(
+            "publish outcome unknown: the listing may or may not have been created; "
+            "check your listings before publishing it again"
+        ))
+        return 1
     if resp.ok:
-        item_id = (resp.data or {}).get("id") or ""
-        if item_id:
-            print(paint.green(f"item {item_id}"))
         return 0
     return 1

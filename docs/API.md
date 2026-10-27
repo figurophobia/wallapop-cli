@@ -7,9 +7,7 @@ stdlib), con la CLI incluida (`wallapop`). Instalación local de desarrollo:
 pip install -e '.[test]'
 ```
 
-El único extra opcional es `[browser]` (Playwright), usado como fallback del
-envío de chat cuando PubNub no responde. La comunicación normal no añade
-ninguna dependencia.
+El extra `[browser]` (Playwright) permite el login y publicación con navegador, y un fallback de chat explícito. Un envío con entrega desconocida no se repite automáticamente. La comunicación normal no añade dependencias.
 
 ## Quickstart
 
@@ -114,8 +112,8 @@ Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=No
 | `counter_offer(offer_id, amount, currency="EUR")` | `PATCH /delivery/offers/{id}/offer-price` |
 | `offer_details(offer_id)` / `make_offer_info(item_id)` | BFF (sujetos a anti-bot) |
 | `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | mensajería |
-| `send_message(item_hash, message, report?)` | PubNub REST publish; fallback navegador (Playwright) |
-| `publish(photo_path, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
+| `send_message(item_hash, message, report?, allow_browser_fallback=False)` | PubNub REST publish; fallback de navegador solo si se habilita y el envío no es ambiguo |
+| `publish(photo_paths, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
 | `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
 | `reserve(item_id, reserved=True)` → `Response` | reserva/desreserva un item tuyo (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
 | `mark_sold(item_id, sold=True)` → `Response` | marca uno de tus items como vendido/no vendido (`PUT /items/{id}/sold`, 204) |
@@ -176,3 +174,7 @@ El detalle completo del comportamiento geográfico está en
 
 - Python `>= 3.10`, cero dependencias obligatorias.
 - CI: matrix `3.10 / 3.11 / 3.12` (`pip install -e '.[test]'` → `pytest`).
+
+## Fiabilidad en este fork
+
+`build_client(required=True)` devuelve `(client, credentials)` y lanza `SessionError` si falta sesión, sin terminar el proceso. Los importes conservan céntimos; un `Response.partial` mantiene el ID creado si falla una foto posterior. Los fallos HTTP de perfiles se notifican como `ApiError`. Una escritura sin confirmación requiere comprobar su estado antes de reintentar.

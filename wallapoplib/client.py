@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 import time
 import uuid
 import urllib.parse
 import urllib.request
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -28,9 +30,105 @@ from .config import (
     load_session,
     save_session,
 )
-from .http import ApiError, Response, eprint, http_request, http_request_raw
+from .http import ApiError, NotSentError, Response, eprint, http_request, http_request_raw
 from .models import Item, deep_find, extract_items, first, normalize_item
 from .tokens import user_hash_of
+
+
+class InvalidPrice(ApiError, ValueError):
+    """Raised when a price is not a valid, finite amount."""
+
+
+#: Prices are amounts of money: only whole cents are accepted.
+CENT = Decimal("0.01")
+
+#: Local validation cap: a price outside it is rejected, never silently
+#: truncated. This is a local validation limit, not a documented API limit.
+MAX_PRICE = Decimal("99999999.99")
+
+
+def price_amount(value: Any) -> float:
+    """Convert a price into a validated amount, keeping the cents.
+
+    ``19.95`` stays ``19.95`` (it used to be rounded to ``20``), while
+    non-numeric, non-finite (``nan``/``inf``), negative, out of range
+    (``0 .. 99999999.99``) and sub-cent values are rejected with
+    :class:`InvalidPrice`.
+
+    A price carrying more than two decimals is **rejected** instead of being
+    rounded: rounding silently changes the amount the buyer pays.
+
+    >>> price_amount(19.95)
+    19.95
+    """
+    if value is None or isinstance(value, bool):
+        raise InvalidPrice(f"invalid price: {value!r}")
+    try:
+        if isinstance(value, Decimal):
+            amount = value
+        elif isinstance(value, int):
+            amount = Decimal(value)
+        elif isinstance(value, float):
+            if not math.isfinite(value):
+                raise InvalidPrice(f"invalid price: {value!r}")
+            amount = Decimal(str(value))
+        elif isinstance(value, str):
+            text = value.strip().replace(",", ".")
+            if not text:
+                raise InvalidPrice(f"invalid price: {value!r}")
+            amount = Decimal(text)
+        else:
+            raise InvalidPrice(f"invalid price: {value!r}")
+    except (InvalidOperation, ValueError):
+        raise InvalidPrice(f"invalid price: {value!r}") from None
+    if not amount.is_finite():
+        raise InvalidPrice(f"invalid price: {value!r}")
+    if amount < 0:
+        raise InvalidPrice(f"price must not be negative: {value!r}")
+    if amount > MAX_PRICE:
+        raise InvalidPrice(f"price out of range (0..{MAX_PRICE}): {value!r}")
+    try:
+        rounded = amount.quantize(CENT, rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        raise InvalidPrice(f"invalid price: {value!r}") from None
+    if rounded != amount:
+        raise InvalidPrice(f"price has more than two decimals: {value!r}")
+    return float(rounded)
+
+
+def _as_int(value: Any) -> Optional[int]:
+    """Best effort int conversion (``None`` when the value is not a number)."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def parse_pubnub_ack(payload: Any) -> bool:
+    """Return True when a PubNub publish payload acknowledges the message.
+
+    PubNub answers ``[1, "Sent", <timetoken>]``.  Depending on the transport
+    (and on the ``Content-Type`` the CDN replies with) that acknowledgement
+    reaches us either already decoded (a list) or as a JSON string.
+    """
+    if isinstance(payload, (bytes, bytearray)):
+        payload = payload.decode("utf-8", "replace")
+    if isinstance(payload, str):
+        text = payload.strip()
+        if not text:
+            return False
+        try:
+            payload = json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            return False
+    if not isinstance(payload, list) or not payload:
+        return False
+    if payload[0] != 1:
+        return False
+    return len(payload) > 1 and str(payload[1]).strip().lower() == "sent"
+
 
 def refresh_web_session(session: dict) -> Optional[str]:
     """Exchange a browser session cookie set for a fresh access token (GET /api/auth/session)."""
@@ -108,7 +206,12 @@ class Wallapop:
         if extra_headers:
             headers.update(extra_headers)
         status, data, _ = http_request(
-            method, f"{API_BASE}{path}", params=params, body=body, headers=headers
+            method,
+            f"{API_BASE}{path}",
+            params=params,
+            body=body,
+            headers=headers,
+            retry_safe=method.upper() in ("GET", "HEAD") and body is None,
         )
         return Response(status, data, 200 <= status < 300, status == 401)
 
@@ -121,10 +224,24 @@ class Wallapop:
         extra_headers: Optional[dict] = None,
     ) -> Response:
         resp = self._request(method, path, params=params, body=body, auth=True, extra_headers=extra_headers)
-        if resp.unauthorized:
-            self.refresh_web()
+        if resp.unauthorized and self._refresh_access_token():
             resp = self._request(method, path, params=params, body=body, auth=True, extra_headers=extra_headers)
         return resp
+
+    def _refresh_access_token(self) -> bool:
+        """Renew the access token after a 401.
+
+        The ``refresh_token`` is tried first and the browser session second.
+        Returns ``True`` only when a *different* token was obtained, so a
+        request is never replayed with the very same (already rejected)
+        token.
+        """
+        before = self.token
+        if self.try_refresh() and self.token and self.token != before:
+            return True
+        if self.refresh_web() and self.token and self.token != before:
+            return True
+        return False
 
     def refresh_web(self) -> bool:
         """Refresh the access token from the browser session cookie; return True on success."""
@@ -234,6 +351,8 @@ class Wallapop:
             base["latitude"] = latitude
             base["longitude"] = longitude
         components = self._request("GET", "/search/components", params=base)
+        if not components.ok:
+            raise ApiError(f"search failed ({components.status}): {components.error_reason or str(components.data)[:300]}")
         search_id = first(deep_find(components.data, "search_id"))
         if search_id:
             return self._search_sections(base, search_id, pages, delay)
@@ -370,25 +489,51 @@ class Wallapop:
         return None
 
     def item(self, item_id: str, authed: bool = False) -> Item:
+        """Fetch a listing.
+
+        Raises ``ApiError`` when the listing is not available, when the server
+        answers with something that is not an item (e.g. an HTML anti-bot page)
+        or when the payload does not contain the item at all.
+        """
         resp = self._authed("GET", f"/items/{item_id}") if authed else self._request("GET", f"/items/{item_id}")
         if not resp.ok:
             raise ApiError(f"item {item_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
         data = resp.data
-        raw = data if isinstance(data, dict) else {}
-        return Item.from_raw(raw)
+        if isinstance(data, str):
+            if data.lstrip().startswith("<"):
+                raise ApiError(f"item {item_id} unavailable: unexpected HTML response (anti-bot page?)")
+            raise ApiError(f"item {item_id} unavailable: unexpected non-JSON response ({data[:120]!r})")
+        if not isinstance(data, dict):
+            raise ApiError(f"item {item_id} unavailable: unexpected payload ({type(data).__name__})")
+        if not data.get("id"):
+            raise ApiError(f"item {item_id} unavailable: response does not contain the item")
+        return Item.from_raw(data)
 
     def seller(self, user_id: str) -> dict:
-        """Fetch a seller's public profile (GET /users/{id})."""
+        """Fetch a seller's public profile (GET /users/{id}).
+
+        Raises ``ApiError`` on HTTP errors or when the payload is not an
+        object (an error page must never look like an empty profile).
+        """
         resp = self._request("GET", f"/users/{user_id}")
-        data = resp.data if isinstance(resp.data, dict) else {}
+        if not resp.ok:
+            raise ApiError(f"seller {user_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        data = resp.data
+        if not isinstance(data, dict):
+            raise ApiError(f"seller {user_id} unavailable: unexpected payload ({type(data).__name__})")
         return data
 
     def seller_reviews(self, user_id: str) -> list[dict]:
-        """Fetch a seller's recent reviews (GET /users/{id}/reviews)."""
+        """Fetch a seller's recent reviews (GET /users/{id}/reviews).
+
+        Raises ``ApiError`` on HTTP errors or when the payload is not a list.
+        """
         resp = self._request("GET", f"/users/{user_id}/reviews")
+        if not resp.ok:
+            raise ApiError(f"reviews of {user_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
         data = resp.data
         if not isinstance(data, list):
-            return []
+            raise ApiError(f"reviews of {user_id} unavailable: unexpected payload ({type(data).__name__})")
         return data
 
     def seller_stats(self, user_id: str) -> dict:
@@ -396,9 +541,16 @@ class Wallapop:
 
         Returns the real values the web shows on an item page (~rating_average
         and counters[].reviews), unlike /reviews which only gives one page.
+
+        Raises ``ApiError`` on HTTP errors or when the payload is not an
+        object.
         """
         resp = self._request("GET", f"/users/{user_id}/stats")
-        data = resp.data if isinstance(resp.data, dict) else {}
+        if not resp.ok:
+            raise ApiError(f"stats of {user_id} unavailable ({resp.status}): {resp.error_reason or str(resp.data)[:300]}")
+        data = resp.data
+        if not isinstance(data, dict):
+            raise ApiError(f"stats of {user_id} unavailable: unexpected payload ({type(data).__name__})")
         return data
 
     def download_images(self, item: Item, dest: str = "images") -> list[str]:
@@ -435,7 +587,7 @@ class Wallapop:
         """
         body: dict[str, Any] = {
             "offer_id": str(uuid.uuid4()),
-            "offer_price_amount": float(round(amount, 2)),
+            "offer_price_amount": price_amount(amount),
             "offer_price_currency": self._item_currency(item_id),
             "item_ids": [item_id],
         }
@@ -471,7 +623,7 @@ class Wallapop:
             "PATCH",
             f"/delivery/offers/{offer_id}/offer-price",
             body={
-                "offer_price_amount": float(round(amount, 2)),
+                "offer_price_amount": price_amount(amount),
                 "offer_price_currency": currency,
             },
         )
@@ -480,9 +632,11 @@ class Wallapop:
         """Fetch the Offer Tracking Status payload for an offer.
 
         Only meaningful when WE are the party waiting for reply (the modal
-        payload is generated for the current responder).
+        payload is generated for the current responder).  The endpoint lives
+        under the BFF prefix (``/bff/delivery/offer-details``), not under
+        ``/api/v3``.
         """
-        return self._bff("GET", "/delivery/offer-details", params={"offer_id": offer_id})
+        return self._bff("GET", "/bff/delivery/offer-details", params={"offer_id": offer_id})
 
     def favorite(self, item_id: str, favorited: bool = True) -> Response:
         """Toggle an item's favorite status.
@@ -548,9 +702,20 @@ class Wallapop:
         from ``GET /items/{id}``, so every editable attribute is always sent
         (same as the web form).
 
-        Returns 204 on success; ``Response.data`` then carries the updated
-        item (from a follow-up GET).
+        Returns 204 on success (the ``PUT`` answer, as the API sends none).
+
+        The price keeps its cents (``19.95`` is sent as ``19.95``); invalid
+        prices (non numeric, ``nan``/``inf``, negative, out of range or with
+        more than two decimals) are rejected with :class:`InvalidPrice` before
+        anything is sent.
+
+        The edit **preserves the listing**: category, condition, shipping,
+        weight and location are taken from the item itself, never guessed.
+        When the current state cannot be inferred (no category, no condition,
+        no location...) the edit is refused with an explicit error instead of
+        applying a default that would change the listing.
         """
+        new_price = price_amount(price) if price is not None else None
         current = self._authed("GET", f"/items/{item_id}", extra_headers={"Accept": "application/vnd.upload-v2+json"})
         if not current.ok:
             return Response(current.status, current.data, False, current.unauthorized)
@@ -561,46 +726,109 @@ class Wallapop:
                 return v.get("original") or v.get("value") or ""
             return v or ""
 
+        def refuse(message: str) -> Response:
+            return Response(0, {"error_message": message}, False, False)
+
         price_raw = raw.get("price") or {}
         if isinstance(price_raw, dict) and "cash" in price_raw:
             price_raw = price_raw.get("cash") or {}
+        if not isinstance(price_raw, dict):
+            price_raw = {}
+        if new_price is None:
+            current_amount = price_raw.get("amount")
+            if current_amount is None:
+                return refuse(
+                    "cannot infer the current price of the item; pass price=... to set it"
+                )
+            new_price = price_amount(current_amount)
+
+        leaf = category_leaf_id if category_leaf_id is not None else text(raw.get("category_leaf_id"))
+        if not leaf:
+            return refuse(
+                "cannot infer the current category_leaf_id of the item; "
+                "pass category_leaf_id=... to set it"
+            )
+
+        cond = condition if condition is not None else text(raw.get("condition"))
+        if not cond:
+            return refuse(
+                "cannot infer the current condition of the item; pass condition=... to set it"
+            )
+
+        shipping = raw.get("shipping") if isinstance(raw.get("shipping"), dict) else {}
+        # shipping is only kept as it is: it is never switched on by an edit.
+        allowed_by_user = shipping.get("user_allows_shipping", shipping.get("allowed_by_user"))
+        if not isinstance(allowed_by_user, bool):
+            return refuse("cannot infer whether the user allows shipping; refusing to change the listing")
+
+        weight = max_weight_kg if max_weight_kg is not None else shipping.get("max_weight_kg")
+        if weight is None and isinstance(raw.get("type_attributes"), dict):
+            weight = raw["type_attributes"].get("up_to_kg")
+        if allowed_by_user and weight is None:
+            return refuse(
+                "cannot infer the current shipping weight of the item; "
+                "pass max_weight_kg=... to set it"
+            )
+        if weight is not None:
+            try:
+                parsed_weight = Decimal(str(weight))
+            except (InvalidOperation, ValueError):
+                return refuse("invalid shipping weight; refusing to change the listing")
+            if not parsed_weight.is_finite() or parsed_weight <= 0 or parsed_weight != parsed_weight.to_integral_value():
+                return refuse("shipping weight must be a positive whole number of kilograms")
+            weight = int(parsed_weight)
+
+        cost_cfg = None
+        if allowed_by_user:
+            # the cost configuration is only meaningful for a shipping item:
+            # it is account specific and must never be guessed.
+            cost_cfg = shipping.get("cost_configuration_id") or self._cost_configuration_id()
+            if not cost_cfg:
+                return refuse(
+                    "the item ships but its delivery cost_configuration_id cannot be inferred; "
+                    "it is account specific and must never be guessed"
+                )
+
+        loc = raw.get("location") if isinstance(raw.get("location"), dict) else {}
+        latitude = loc.get("latitude", loc.get("lat"))
+        longitude = loc.get("longitude", loc.get("lon"))
+        if latitude is None or longitude is None:
+            return refuse(
+                "cannot infer the location of the item; refusing to move it to another place"
+            )
+        approximated = bool(loc.get("approximated", False))
+
         attributes = {
             "brand": brand if brand is not None else text(raw.get("brand")),
             "model": model if model is not None else text(raw.get("model")),
             "color": color if color is not None else text(raw.get("color")),
             "title": title if title is not None else text(raw.get("title")),
             "description": description if description is not None else text(raw.get("description")),
-            "condition": condition if condition is not None else text(raw.get("condition")) or "good",
-            "price_amount": int(round(price if price is not None else (price_raw.get("amount") or 0))),
+            "condition": cond,
+            "price_amount": new_price,
         }
 
-        me = self._authed("GET", "/users/me")
-        loc = {}
-        if me.ok and isinstance(me.data, dict):
-            loc = me.data.get("location") or {}
-        latitude = loc.get("approximated_latitude")
-        longitude = loc.get("approximated_longitude")
-        approximated = bool(loc.get("approximated_location"))
-        if latitude is None or longitude is None:
-            return Response(me.status, {"error_message": "no location in /users/me; edit requires geolocation"}, False, False)
+        images = raw.get("images")
+        if not isinstance(images, list) or not images or any(not isinstance(img, dict) or not img.get("id") for img in images):
+            return refuse("cannot infer all current picture IDs; refusing to change the listing")
+        pictures = [{"id": img["id"], "order": i} for i, img in enumerate(images)]
 
-        shipping = raw.get("shipping") or {}
-        pictures = [{"id": img.get("id"), "order": i} for i, img in enumerate(raw.get("images") or []) if img.get("id")]
+        delivery: dict[str, Any] = {"allowed_by_user": allowed_by_user}
+        if weight is not None:
+            delivery["max_weight_kg"] = weight
+        if cost_cfg:
+            delivery["cost_configuration_id"] = cost_cfg
 
         item = {
             "attributes": attributes,
-            "category_leaf_id": category_leaf_id or text(raw.get("category_leaf_id")) or "10088",
+            "category_leaf_id": leaf,
             "apply_discount": False,
             "location": {
                 "latitude": latitude,
                 "longitude": longitude,
                 "approximated": approximated,
             },
-            "delivery": {
-                "allowed_by_user": True,
-                "max_weight_kg": max_weight_kg if max_weight_kg is not None else int(shipping.get("max_weight_kg") or 1),
-                "cost_configuration_id": shipping.get("cost_configuration_id") or self._cost_configuration_id(),
-            },
+            "delivery": delivery,
             "pictures": pictures,
         }
 
@@ -637,10 +865,14 @@ class Wallapop:
         full = f"{API_ROOT}{path}"
         if params:
             full += ("&" if "?" in full else "?") + urllib.parse.urlencode(params)
-        status, data, _ = http_request(method, full, body=body, headers=self._headers(auth=True))
-        if status == 401:
-            self.refresh_web()
-            status, data, _ = http_request(method, full, body=body, headers=self._headers(auth=True))
+        retry_safe = method.upper() in ("GET", "HEAD") and body is None
+        status, data, _ = http_request(
+            method, full, body=body, headers=self._headers(auth=True), retry_safe=retry_safe
+        )
+        if status == 401 and self._refresh_access_token():
+            status, data, _ = http_request(
+                method, full, body=body, headers=self._headers(auth=True), retry_safe=retry_safe
+            )
         return Response(status, data, 200 <= status < 300, status == 401)
 
     def ensure_conversation(self, item_hash: str) -> Response:
@@ -659,6 +891,7 @@ class Wallapop:
         model: str = "",
         color: str = "",
         max_weight_kg: int = 1,
+        cost_configuration_id: Optional[str] = None,
     ) -> Response:
         """Publish an item through the pure API (no browser).
 
@@ -683,11 +916,31 @@ class Wallapop:
 
         The seller location is taken from ``GET /users/me``; the delivery
         ``cost_configuration_id`` is the account's constant (returned by
-        published items' ``shipping``).
+        published items' ``shipping``).  It is *account specific*: when it
+        cannot be inferred the publish is refused with a clear error instead
+        of guessing a value (pass ``cost_configuration_id=`` to provide it).
 
         On success the response body is ``{"id":"<item id>","flags":{}}``
-        (``Response.data`` carries the parsed JSON).
+        (``Response.data`` carries the parsed JSON).  Any ``2xx`` status is
+        accepted; a ``2xx`` answer *without* an item id is reported as an
+        unknown creation (the listing may exist) and never as a success.
+
+        The price keeps its cents (``19.95`` is published as ``19.95``); an
+        invalid price (non numeric, ``nan``/``inf``, negative, out of range or
+        with more than two decimals) is rejected with :class:`InvalidPrice`
+        before anything is sent.
+
+        If an *extra* photo cannot be uploaded the item **is** already
+        created: the response is then a partial result (``Response.partial``
+        is ``True``) whose data carries the created ``item_id``, how many
+        photos were uploaded (``photos_completed``), which photo failed
+        (``failed_photo_index`` / ``failed_photo_order``) and how to retry it
+        (``retry``).  The listing is never reported as non existent.  The
+        same holds when the upload raises: the id of the created item is
+        kept and the ``outcome`` says whether the photo was surely not sent
+        (``not_sent``) or maybe sent (``unknown``).
         """
+        amount = price_amount(price)
         if not photo_paths:
             return Response(0, {"error_message": "at least one photo is required"}, False, False)
 
@@ -701,6 +954,22 @@ class Wallapop:
         if latitude is None or longitude is None:
             return Response(me.status, {"error_message": "no location in /users/me; publish requires geolocation"}, False, False)
 
+        cost_cfg = cost_configuration_id or self._cost_configuration_id()
+        if not cost_cfg:
+            return Response(
+                0,
+                {
+                    "error_message": (
+                        "cannot infer the delivery cost_configuration_id of this account: "
+                        "it is account specific and must never be guessed. Pass "
+                        "cost_configuration_id=... (the shipping.cost_configuration_id of "
+                        "any of your published items)."
+                    ),
+                },
+                False,
+                False,
+            )
+
         upload_id = str(uuid.uuid4())
 
         item = {
@@ -712,7 +981,7 @@ class Wallapop:
                 "title": title,
                 "description": description,
                 "condition": condition,
-                "price_amount": int(round(price)),
+                "price_amount": amount,
             },
             "category_leaf_id": category_leaf_id,
             "apply_discount": False,
@@ -724,7 +993,7 @@ class Wallapop:
             "delivery": {
                 "allowed_by_user": True,
                 "max_weight_kg": max_weight_kg,
-                "cost_configuration_id": self._cost_configuration_id(),
+                "cost_configuration_id": cost_cfg,
             },
             "upload_id": upload_id,
         }
@@ -749,28 +1018,133 @@ class Wallapop:
             "Accept": "application/vnd.upload-v2+json",
             "Content-Type": f"multipart/form-data; boundary={boundary}",
         })
-        status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
-        if status == 401:
-            refreshed = self.refresh_web()
-            if refreshed:
+        try:
+            status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
+            if status == 401 and self._refresh_access_token():
                 headers = self._headers(auth=True)
                 headers.update({
                     "Accept": "application/vnd.upload-v2+json",
                     "Content-Type": f"multipart/form-data; boundary={boundary}",
                 })
                 status, payload = http_request_raw("POST", f"{API_BASE}/items", raw_body=body, headers=headers)
-        if status != 200:
+        except ApiError as exc:
+            # the listing may or may not exist: say so instead of losing it
+            return Response(
+                0,
+                {
+                    "error_message": f"publish POST did not complete: {exc}",
+                    "created": "unknown",
+                    "outcome": getattr(exc, "outcome", "unknown"),
+                    "photos_total": len(photo_paths),
+                },
+                False,
+                False,
+            )
+        if not (200 <= status < 300):
             return Response(status, {"error_message": f"publish POST failed with status {status}"}, False, status == 401)
 
         item_id = payload.get("id") if isinstance(payload, dict) else None
+        if not item_id:
+            return Response(
+                status,
+                {
+                    "error_message": (
+                        f"publish POST answered {status} but the response carries no item id; "
+                        "the listing may or may not have been created: check your listings "
+                        "before publishing it again"
+                    ),
+                    "created": "unknown",
+                    "outcome": "unknown",
+                    "photos_total": len(photo_paths),
+                },
+                False,
+                False,
+            )
 
-        if len(photo_paths) > 1 and item_id:
-            for order, extra_photo in enumerate(photo_paths[1:], start=2):
-                pic_resp = self._add_picture(item_id, extra_photo, order)
+        if len(photo_paths) > 1:
+            for index, extra_photo in enumerate(photo_paths[1:]):
+                order = index + 2
+                try:
+                    pic_resp = self._add_picture(item_id, extra_photo, order)
+                except ApiError as exc:
+                    # the item exists: keep its id and say what is known
+                    return self._partial_publish(
+                        item_id,
+                        payload,
+                        photo_paths,
+                        index,
+                        extra_photo,
+                        order,
+                        status=0,
+                        error=f"picture {order} failed: {exc}",
+                        outcome=getattr(exc, "outcome", "unknown"),
+                    )
+                except OSError as exc:
+                    # the photo could not even be read: it was surely not sent
+                    return self._partial_publish(
+                        item_id,
+                        payload,
+                        photo_paths,
+                        index,
+                        extra_photo,
+                        order,
+                        status=0,
+                        error=f"picture {order} could not be read: {exc}",
+                        outcome="not_sent",
+                    )
                 if not pic_resp.ok:
-                    return Response(pic_resp.status, {"error_message": f"picture {order} failed: {pic_resp.data}"}, False, pic_resp.unauthorized)
+                    return self._partial_publish(
+                        item_id,
+                        payload,
+                        photo_paths,
+                        index,
+                        extra_photo,
+                        order,
+                        status=pic_resp.status,
+                        error=(
+                            f"picture {order} failed ({pic_resp.status}): "
+                            f"{pic_resp.error_reason or str(pic_resp.data)[:300]}"
+                        ),
+                        outcome="unknown" if pic_resp.status >= 500 else "failed",
+                    )
 
         return Response(200, payload or {}, True, False)
+
+    def _partial_publish(
+        self,
+        item_id: str,
+        payload: Any,
+        photo_paths: list[str],
+        index: int,
+        extra_photo: str,
+        order: int,
+        status: int,
+        error: str,
+        outcome: str,
+    ) -> Response:
+        """Structured "the item exists but a photo did not" result."""
+        data = dict(payload) if isinstance(payload, dict) else {}
+        data.update(
+            {
+                "id": item_id,
+                "item_id": item_id,
+                "created": True,
+                "partial": True,
+                "error_message": error,
+                "outcome": outcome,
+                "photos_total": len(photo_paths),
+                "photos_completed": index + 1,
+                "failed_photo_index": index + 1,
+                "failed_photo_order": order,
+                "failed_photo_path": extra_photo,
+                "retry": (
+                    f"item {item_id} was created; "
+                    + ("inspect the listing before uploading this photo again; its upload outcome is unknown" if outcome == "unknown" else
+                       f"upload the missing photo with POST /api/v3/items/{item_id}/picture2 (order={order})")
+                ),
+            }
+        )
+        return Response(status, data, False, False, partial=True)
 
     def _add_picture(self, item_id: str, photo_path: str, order: int) -> Response:
         """Link a photo to an already-created item via picture2.
@@ -802,7 +1176,7 @@ class Wallapop:
             "POST", f"{API_BASE}/items/{item_id}/picture2",
             raw_body=body, headers=headers, timeout=60,
         )
-        if status == 401 and self.refresh_web():
+        if status == 401 and self._refresh_access_token():
             headers = self._headers(auth=True)
             headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
             status, payload = http_request_raw(
@@ -811,10 +1185,22 @@ class Wallapop:
             )
         if status == 200:
             return Response(status, payload or {}, True, False)
-        return Response(status, {"error_message": f"picture2 failed with status {status}"}, False, status == 401)
+        detail = payload if isinstance(payload, str) else str(payload)[:300]
+        return Response(
+            status,
+            {"error_message": f"picture2 failed with status {status}", "details": detail},
+            False,
+            status == 401,
+        )
 
-    def _cost_configuration_id(self) -> str:
-        """Our account's delivery cost configuration UUID (constant per account)."""
+    def _cost_configuration_id(self) -> Optional[str]:
+        """Our account's delivery cost configuration UUID, if it can be inferred.
+
+        The value is **account specific**: it is read from the ``shipping``
+        block of any item this account has published.  It is never hardcoded:
+        when it cannot be inferred ``None`` is returned and the caller has to
+        decide what to do (see :meth:`publish` and :meth:`edit_item`).
+        """
         uid = self.user.get("id") or ""
         if not uid:
             me = self._authed("GET", "/users/me")
@@ -828,7 +1214,7 @@ class Wallapop:
                     cfg = shipping.get("cost_configuration_id")
                     if cfg:
                         return str(cfg)
-        return "814429d6-7844-471d-97af-196cd4020f26"
+        return None
 
     def conversation_thread(self, conversation_id: str) -> Response:
         """Fetch the full message thread (messages, item, with_user) for a conversation."""
@@ -842,15 +1228,46 @@ class Wallapop:
         """Total unread message counter (instant messaging)."""
         return self._authed("GET", "/instant-messaging/messages/unread")
 
-    def send_message(self, item_hash: str, message: str, report: Optional[dict] = None) -> Response:
+    def send_message(
+        self,
+        item_hash: str,
+        message: str,
+        report: Optional[dict] = None,
+        allow_browser_fallback: bool = False,
+    ) -> Response:
         """Send a chat message to an item's seller.
 
-        Prefers the PubNub REST publish (GET to pndsn.com), which is how the
-        web app actually delivers chat messages; falls back to the browser
-        flow only if the REST publish does not ack. Idempotent guard: no send
-        when the exact text is already our last message in the thread. When
-        `report` is given it is filled with {"path": "rest"|"browser",
-        "skipped": bool, "browser_s": float}.
+        The PubNub REST publish (the way the web app delivers chat messages)
+        is used first.  The browser flow is **never** started automatically:
+        it only runs when the caller explicitly asks for it with
+        ``allow_browser_fallback=True`` *and* the message was surely not sent
+        yet (see below).
+
+        Idempotent guard: no send when the exact text is already our last
+        message in the thread (the thread is ordered by timestamp before the
+        check, so an out-of-order payload cannot fool it).
+
+        When ``report`` is given it is filled with ``{"path": "rest"|
+        "browser"|"skipped"|"unknown"|"not_sent", "skipped": bool,
+        "browser_s": float, "delivery": "confirmed"|"skipped"|"unknown"|
+        "not_sent"}``.
+
+        Delivery outcomes:
+
+        - the PubNub acknowledgement confirms the message: a compact answer
+          (``conversation_id`` + the peer) is returned right away, without
+          waiting for the message to show up in the thread.
+        - the publish was attempted but **not acknowledged** (a negative or
+          missing ack, a ``5xx``, a truncated/non-JSON answer): the outcome is
+          **unknown**.  The message is *not* retransmitted (not even with the
+          browser fallback): a publish without a valid ack is no proof that
+          the message was not delivered, so the answer says so and asks to
+          inspect the conversation before sending it again.
+        - the publish was **never attempted** (a prerequisite failed: no
+          channel, no IM token...) or the transport raised a typed
+          ``NotSentError``: the message was surely not sent, so the browser
+          fallback is allowed (when it was explicitly requested) and the
+          message can safely be sent again.
         """
         resp = self.ensure_conversation(item_hash)
         if not resp.ok:
@@ -861,36 +1278,147 @@ class Wallapop:
         thread = self.conversation_thread(conv_id)
         thread_data = thread.data if isinstance(thread.data, dict) else {}
         msgs = (((thread_data.get("messages") or {}).get("messages")) or [])
+        # the payload is not guaranteed to be ordered: compare against the
+        # *last* message we sent, by timestamp.
+        ordered = sorted(msgs, key=lambda m: m.get("timestamp") or 0)
         skipped = False
-        for m in reversed(msgs):
+        for m in reversed(ordered):
             if m.get("from_self"):
                 skipped = str(m.get("text") or "") == message
                 break
-        if not skipped:
-            channel = thread_data.get("channel") or ""
-            to_user = (thread_data.get("with_user") or {}).get("hash") or ""
-            if channel and to_user:
+        if skipped:
+            if report is not None:
+                report["path"] = "skipped"
+                report["skipped"] = True
+                report["delivery"] = "skipped"
+            return self.conversation_thread(conv_id)
+
+        channel = thread_data.get("channel") or ""
+        to_user = (thread_data.get("with_user") or {}).get("hash") or ""
+        if channel and to_user:
+            try:
                 tok = self.im_token()
-                if tok.ok:
+            except ApiError:
+                # a prerequisite failed: nothing was sent, so the browser
+                # fallback is still a safe retransmission.
+                tok = None
+            if tok is not None and tok.ok:
+                try:
                     ack = self.pubnub_publish(channel, message, to_user, conv_id, tok.data.get("token", ""))
+                except ApiError as exc:
+                    # the transport failed: the message may already be on its
+                    # way, so it must not be sent again.
+                    if not isinstance(exc, NotSentError):
+                        return self._unknown_delivery(conv_id, message, report, str(exc))
+                    # a typed NotSentError: the request never left the client,
+                    # so the browser fallback is still safe.
+                else:
                     if ack:
-                        time.sleep(1)
                         if report is not None:
                             report["path"] = "rest"
                             report["skipped"] = False
-                        return self.conversation_thread(conv_id)
-        browser_s = 0.0
-        if not skipped:
+                            report["delivery"] = "confirmed"
+                        return self._confirmed_delivery(conv_id, message, thread_data, channel)
+                    # the publish was attempted but not acknowledged: the
+                    # message may or may not have been delivered.  It must
+                    # NOT be retransmitted (not even through the browser).
+                    return self._unknown_delivery(
+                        conv_id,
+                        message,
+                        report,
+                        "PubNub did not acknowledge the publish (it may still have been delivered)",
+                    )
+
+        if allow_browser_fallback:
+            # the browser fallback is only allowed when the message was surely
+            # NOT sent: a failed prerequisite (the publish was never
+            # attempted) or a typed NotSentError from the transport.
             t0 = time.monotonic()
             if not send_chat_text(item_hash, message):
-                return Response(0, {"error_message": "chat delivery failed (browser step)"}, False, False)
+                return Response(
+                    0,
+                    {"error_message": "chat delivery failed (browser step)", "delivery": "failed"},
+                    False,
+                    False,
+                )
             browser_s = time.monotonic() - t0
-            time.sleep(2)
+            if report is not None:
+                report["path"] = "browser"
+                report["skipped"] = False
+                report["browser_s"] = browser_s
+                report["delivery"] = "confirmed"
+            return self._confirmed_delivery(conv_id, message, thread_data, channel)
+
         if report is not None:
-            report["path"] = "browser" if not skipped else "skipped"
-            report["skipped"] = skipped
-            report["browser_s"] = browser_s
-        return self.conversation_thread(conv_id)
+            report["path"] = "not_sent"
+            report["skipped"] = False
+            report["delivery"] = "not_sent"
+        return Response(
+            0,
+            {
+                "error_message": (
+                    "chat message was not sent (the publish prerequisites failed); "
+                    "it is safe to send it again"
+                ),
+                "delivery": "not_sent",
+                "outcome": "not_sent",
+                "conversation_id": conv_id,
+            },
+            False,
+            False,
+        )
+
+    def _confirmed_delivery(
+        self,
+        conversation_id: str,
+        message: str,
+        thread_data: dict,
+        channel: str,
+    ) -> Response:
+        """Compact answer for a confirmed delivery (no extra GET needed)."""
+        return Response(
+            200,
+            {
+                "conversation_id": conversation_id,
+                "delivery": "confirmed",
+                "outcome": "confirmed",
+                "message": message,
+                "channel": channel,
+                "with_user": thread_data.get("with_user") or {},
+                "item": thread_data.get("item") or {},
+            },
+            True,
+            False,
+        )
+
+    def _unknown_delivery(
+        self,
+        conversation_id: str,
+        message: str,
+        report: Optional[dict],
+        detail: str,
+    ) -> Response:
+        """Answer for a send whose outcome is unknown (it may have arrived)."""
+        if report is not None:
+            report["path"] = "unknown"
+            report["skipped"] = False
+            report["delivery"] = "unknown"
+        return Response(
+            0,
+            {
+                "error_message": (
+                    "chat delivery is unknown: the message may or may not have reached "
+                    f"the seller ({detail}); inspect the conversation before sending the "
+                    "message again"
+                ),
+                "delivery": "unknown",
+                "outcome": "unknown",
+                "conversation_id": conversation_id,
+                "message": message,
+            },
+            False,
+            False,
+        )
 
     def im_token(self) -> Response:
         """Fetch the PubNub access-manager token used as `auth` on publish."""
@@ -906,7 +1434,20 @@ class Wallapop:
     ) -> bool:
         """Publish a chat message to a conversation channel via PubNub REST.
 
-        Returns True when PubNub acks with `[1,"Sent",<timetoken>]`.
+        Returns True when PubNub acks with ``[1,"Sent",<timetoken>]`` (the
+        acknowledgement is accepted both as a decoded list and as a JSON
+        string).
+
+        The publish is a *write* carried over a ``GET``: it is never retried
+        automatically, because a replay could deliver the message twice.
+
+        .. warning::
+           ``False`` only means "there is no valid acknowledgement".  It is
+           **not** a proof that the message was not delivered: a ``5xx``, a
+           truncated or non-JSON answer and even a negative ack may hide a
+           publish the server already accepted.  Callers must treat a
+           ``False`` as an *unknown* outcome and must never retransmit the
+           message on their own.
         """
         message = json.dumps({"id": str(uuid.uuid4()), "payload": {"text": text}}, separators=(",", ":"))
         meta = {
@@ -930,14 +1471,10 @@ class Wallapop:
             "auth": auth_token,
         }
         url = path + "?" + urllib.parse.urlencode(params)
-        status, payload, _ = http_request("GET", url, headers={})
-        if status != 200 or not isinstance(payload, str):
+        status, payload, _ = http_request("GET", url, headers={}, retry_safe=False)
+        if status != 200:
             return False
-        try:
-            ack = json.loads(payload)
-        except json.JSONDecodeError:
-            return False
-        return bool(ack and ack[0] == 1 and ack[1] == "Sent")
+        return parse_pubnub_ack(payload)
 
 
 def send_chat_text(item_hash: str, text: str) -> bool:
