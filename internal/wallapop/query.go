@@ -486,7 +486,13 @@ func normalizeItem(raw map[string]any, web string) (Item, error) {
 		}
 	}
 	ship := object(raw["shipping"])
+	// Wallapop returns the canonical slug in "slug"; the older "web_slug"
+	// field is gone. A URL built from the internal ID answers 404, so use any
+	// real slug and fall back to the ID only when none is available.
 	slug := str(raw["web_slug"])
+	if slug == "" {
+		slug = str(raw["slug"])
+	}
 	if slug == "" {
 		slug = id
 	}

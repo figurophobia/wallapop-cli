@@ -431,3 +431,23 @@ func BenchmarkCachedRead(b *testing.B) {
 		}
 	}
 }
+
+func TestWriteClientKeepsProtocolNegotiation(t *testing.T) {
+	c := newTestClient(t, Config{})
+	tr, ok := c.writeClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("write transport type %T", c.writeClient.Transport)
+	}
+	if !tr.DisableKeepAlives {
+		t.Fatal("write client must not reuse connections")
+	}
+	if tr.Protocols != nil {
+		t.Fatal("write client must not pin the HTTP version")
+	}
+	if tr.TLSNextProto != nil {
+		t.Fatal("write client must not override TLSNextProto")
+	}
+	if c.httpClient.Transport == c.writeClient.Transport {
+		t.Fatal("write client must not share the pooled transport")
+	}
+}

@@ -3,6 +3,7 @@ package wallapop
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -124,5 +125,52 @@ func TestResolveRejectsForeignHost(t *testing.T) {
 	_, e := c.ResolveID(context.Background(), "https://evil.example/item/abc123def456")
 	if e == nil {
 		t.Fatal("foreign URL accepted")
+	}
+}
+
+func TestItemURLBuiltFromCanonicalSlug(t *testing.T) {
+	raw := map[string]any{"id": "abc123def456", "title": "Camera", "slug": "camara-vieja-123"}
+	it, e := normalizeItem(raw, "https://es.wallapop.com")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if it.URL != "https://es.wallapop.com/item/camara-vieja-123" {
+		t.Fatalf("url %q", it.URL)
+	}
+	// The legacy field still wins when Wallapop sends it.
+	raw["web_slug"] = "legacy-camera-1"
+	it, e = normalizeItem(raw, "https://es.wallapop.com")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if it.URL != "https://es.wallapop.com/item/legacy-camera-1" {
+		t.Fatalf("url %q", it.URL)
+	}
+	// Without any slug the ID is the only available reference.
+	delete(raw, "web_slug")
+	delete(raw, "slug")
+	it, e = normalizeItem(raw, "https://es.wallapop.com")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if it.URL != "https://es.wallapop.com/item/abc123def456" {
+		t.Fatalf("url %q", it.URL)
+	}
+}
+
+func TestItemDetailURLUsesSlugField(t *testing.T) {
+	c := fixtureClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v3/items/abc123def456" {
+			fmt.Fprint(w, `{"id":"abc123def456","title":{"original":"Mando Wii"},"slug":"mando-wii-1317524916","price":{"cash":{"amount":16,"currency":"EUR"}}}`)
+			return
+		}
+		http.NotFound(w, r)
+	}, false, "")
+	it, e := c.Item(context.Background(), "abc123def456")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if it.URL != c.web+"/item/mando-wii-1317524916" {
+		t.Fatalf("url %q", it.URL)
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"container/list"
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -160,15 +159,12 @@ func New(cfg Config) (*Client, error) {
 		transport = http.DefaultTransport
 	}
 	if standard, ok := transport.(*http.Transport); ok {
-		// A fresh HTTP/1 connection prevents net/http from silently replaying
-		// a write-shaped GET after a reused connection fails.
+		// A fresh connection per write prevents net/http from silently
+		// replaying a write-shaped GET after a reused connection fails.
+		// Negotiation stays untouched: forcing HTTP/1 breaks against servers
+		// that answer with HTTP/2 frames regardless of the ALPN offer.
 		oneShot := standard.Clone()
 		oneShot.DisableKeepAlives = true
-		oneShot.ForceAttemptHTTP2 = false
-		oneShot.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
-		protocols := new(http.Protocols)
-		protocols.SetHTTP1(true)
-		oneShot.Protocols = protocols
 		wc.Transport = oneShot
 	}
 	limit := int64(maxCacheBytes)
