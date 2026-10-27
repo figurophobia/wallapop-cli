@@ -1,17 +1,11 @@
-GO ?= go
 PYTHON ?= python3
-VERSION ?= dev
 
-.PHONY: build test-go test-python benchmark
-build:
-	$(GO) build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o bin/wallapop-mcp ./cmd/wallapop-mcp
+.PHONY: test lint install
+install:
+	$(PYTHON) -m pip install -e '.[test,mcp]'
 
-test-go:
-	$(GO) vet ./...
-	$(GO) test -race ./...
-
-test-python:
+test:
 	$(PYTHON) -m pytest
 
-benchmark:
-	$(GO) test ./internal/mcpserver ./internal/transport -run '^$$' -bench . -benchmem
+lint:
+	$(PYTHON) -m pip install -q ruff && ruff check wallapoplib tests
