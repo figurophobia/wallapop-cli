@@ -716,7 +716,12 @@ class Wallapop:
         applying a default that would change the listing.
         """
         new_price = price_amount(price) if price is not None else None
-        current = self._authed("GET", f"/items/{item_id}", extra_headers={"Accept": "application/vnd.upload-v2+json"})
+        # Read the current state with a PLAIN GET. The versioned edit shape
+        # (``Accept: application/vnd.upload-v2+json``) now answers 406, while a
+        # plain GET returns 200 but nests brand/model/color/condition under
+        # ``type_attributes`` and the category under ``taxonomy``; the mapping
+        # below reads either shape.
+        current = self._authed("GET", f"/items/{item_id}")
         if not current.ok:
             return Response(current.status, current.data, False, current.unauthorized)
         raw = current.data if isinstance(current.data, dict) else {}
@@ -725,6 +730,20 @@ class Wallapop:
             if isinstance(v, dict):
                 return v.get("original") or v.get("value") or ""
             return v or ""
+
+        type_attrs = raw.get("type_attributes") if isinstance(raw.get("type_attributes"), dict) else {}
+
+        def attr(key: str) -> str:
+            """Read an item attribute from the top level or from
+            ``type_attributes`` (the plain GET nests brand/model/color/
+            condition there as ``{"value": ...}``)."""
+            top = text(raw.get(key))
+            if top:
+                return top
+            node = type_attrs.get(key)
+            if isinstance(node, dict):
+                return node.get("value") or ""
+            return text(node)
 
         def refuse(message: str) -> Response:
             return Response(0, {"error_message": message}, False, False)
@@ -744,12 +763,17 @@ class Wallapop:
 
         leaf = category_leaf_id if category_leaf_id is not None else text(raw.get("category_leaf_id"))
         if not leaf:
+            # plain GET: the leaf is the last node of the taxonomy chain.
+            taxonomy = raw.get("taxonomy")
+            if isinstance(taxonomy, list) and taxonomy and isinstance(taxonomy[-1], dict):
+                leaf = str(taxonomy[-1].get("id") or "")
+        if not leaf:
             return refuse(
                 "cannot infer the current category_leaf_id of the item; "
                 "pass category_leaf_id=... to set it"
             )
 
-        cond = condition if condition is not None else text(raw.get("condition"))
+        cond = condition if condition is not None else attr("condition")
         if not cond:
             return refuse(
                 "cannot infer the current condition of the item; pass condition=... to set it"
@@ -762,8 +786,9 @@ class Wallapop:
             return refuse("cannot infer whether the user allows shipping; refusing to change the listing")
 
         weight = max_weight_kg if max_weight_kg is not None else shipping.get("max_weight_kg")
-        if weight is None and isinstance(raw.get("type_attributes"), dict):
-            weight = raw["type_attributes"].get("up_to_kg")
+        if weight is None:
+            up = type_attrs.get("up_to_kg")
+            weight = up.get("value") if isinstance(up, dict) else up
         if allowed_by_user and weight is None:
             return refuse(
                 "cannot infer the current shipping weight of the item; "
@@ -799,9 +824,9 @@ class Wallapop:
         approximated = bool(loc.get("approximated", False))
 
         attributes = {
-            "brand": brand if brand is not None else text(raw.get("brand")),
-            "model": model if model is not None else text(raw.get("model")),
-            "color": color if color is not None else text(raw.get("color")),
+            "brand": brand if brand is not None else attr("brand"),
+            "model": model if model is not None else attr("model"),
+            "color": color if color is not None else attr("color"),
             "title": title if title is not None else text(raw.get("title")),
             "description": description if description is not None else text(raw.get("description")),
             "condition": cond,
@@ -972,17 +997,23 @@ class Wallapop:
 
         upload_id = str(uuid.uuid4())
 
+        attributes = {
+            "suggested_data_banner": None,
+            "brand": brand,
+            "model": model,
+            "title": title,
+            "description": description,
+            "condition": condition,
+            "price_amount": amount,
+        }
+        # Only send ``color`` when one is given. Categories with no color
+        # attribute (e.g. mice, leaf 10311) answer 400 INVALID_ATTRIBUTE when
+        # ``color`` is present at all, even as an empty string; for categories
+        # that require a color, pass a non-empty value.
+        if color:
+            attributes["color"] = color
         item = {
-            "attributes": {
-                "suggested_data_banner": None,
-                "brand": brand,
-                "model": model,
-                "color": color,
-                "title": title,
-                "description": description,
-                "condition": condition,
-                "price_amount": amount,
-            },
+            "attributes": attributes,
             "category_leaf_id": category_leaf_id,
             "apply_discount": False,
             "location": {
@@ -1366,6 +1397,81 @@ class Wallapop:
             },
             False,
             False,
+        )
+
+    def reply_to_conversation(
+        self,
+        conversation_id: str,
+        message: str,
+        report: Optional[dict] = None,
+    ) -> Response:
+        """Reply in an existing conversation by its id (seller-safe).
+
+        Unlike :meth:`send_message`, this does **not** call
+        ``ensure_conversation`` (which POSTs a buyer→seller conversation and is
+        rejected with ``403`` on *your own* item). It publishes straight to the
+        conversation's PubNub channel, so it works when you are the seller
+        answering a buyer who messaged first. Same acknowledgement-based
+        delivery semantics and idempotency guard as :meth:`send_message`; there
+        is no browser fallback (there is no single-item context).
+        """
+        if not conversation_id:
+            return Response(0, {"error_message": "conversation_id required"}, False, False)
+        thread = self.conversation_thread(conversation_id)
+        if not thread.ok:
+            return thread
+        thread_data = thread.data if isinstance(thread.data, dict) else {}
+        msgs = (((thread_data.get("messages") or {}).get("messages")) or [])
+        # idempotency: never resend when our last message already says this.
+        for m in sorted(msgs, key=lambda m: m.get("timestamp") or 0)[::-1]:
+            if m.get("from_self"):
+                if str(m.get("text") or "") == message:
+                    if report is not None:
+                        report["path"] = "skipped"
+                        report["skipped"] = True
+                        report["delivery"] = "skipped"
+                    return self.conversation_thread(conversation_id)
+                break
+        channel = thread_data.get("channel") or ""
+        to_user = (thread_data.get("with_user") or {}).get("hash") or ""
+        if not channel or not to_user:
+            return Response(
+                0,
+                {"error_message": "conversation has no channel or peer; cannot reply",
+                 "delivery": "not_sent", "conversation_id": conversation_id},
+                False, False,
+            )
+        try:
+            tok = self.im_token()
+        except ApiError:
+            tok = None
+        if tok is None or not tok.ok:
+            return Response(
+                0,
+                {"error_message": "no IM token; message not sent",
+                 "delivery": "not_sent", "conversation_id": conversation_id},
+                False, False,
+            )
+        try:
+            ack = self.pubnub_publish(channel, message, to_user, conversation_id, tok.data.get("token", ""))
+        except ApiError as exc:
+            if isinstance(exc, NotSentError):
+                return Response(
+                    0,
+                    {"error_message": f"message not sent: {exc}",
+                     "delivery": "not_sent", "conversation_id": conversation_id},
+                    False, False,
+                )
+            return self._unknown_delivery(conversation_id, message, report, str(exc))
+        if ack:
+            if report is not None:
+                report["path"] = "rest"
+                report["skipped"] = False
+                report["delivery"] = "confirmed"
+            return self._confirmed_delivery(conversation_id, message, thread_data, channel)
+        return self._unknown_delivery(
+            conversation_id, message, report,
+            "PubNub did not acknowledge the publish (it may still have been delivered)",
         )
 
     def _confirmed_delivery(

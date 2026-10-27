@@ -678,6 +678,29 @@ def cmd_offer(args: argparse.Namespace) -> int:
 
 
 def cmd_message(args: argparse.Namespace) -> int:
+    conv = getattr(args, "conversation", None)
+    if conv:
+        label = f"reply in conversation {conv}"
+        if args.dry_run:
+            announce(label, None)
+            print(f"      text: {args.text}")
+            return 0
+        client, _ = authed_client()
+        report: dict[str, Any] = {}
+        resp = client.reply_to_conversation(conv, args.text, report=report)
+        announce(label, resp)
+        if resp.ok:
+            note = " (same text already sent, skipped)" if report.get("skipped") else ""
+            print(f"      delivered via {report.get('path') or '?'}{note}")
+            return 0
+        data = resp.data if isinstance(resp.data, dict) else {}
+        if data.get("delivery") == "unknown":
+            eprint(paint.yellow("delivery is unknown: the message may or may not have reached the buyer"))
+            eprint("      inspect the conversation before sending it again")
+        return 1
+    if not args.item_id:
+        eprint("message: provide an item_id (to message a seller) or --conversation (to reply)")
+        return 1
     item_hash = resolve_internal_id(args.item_id)
     label = f"message seller of item {item_hash}"
     if args.dry_run:

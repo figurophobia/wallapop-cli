@@ -1606,3 +1606,119 @@ def test_cli_message_prints_the_unknown_delivery_guidance(monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "inspect the conversation before sending the message again" in err
     assert "wzy050ee4e65" in err
+
+
+# --- regression tests for the live-API fixes (publish color / plain edit GET) ---
+
+RAW_PLAIN_OWNED_ITEM = {
+    "id": "v6gpwy9d476e",
+    "title": {"original": "Ratón Trackball Nulea"},
+    "price": {"cash": {"amount": 38.0, "currency": "EUR"}},
+    "condition": None,  # the plain GET leaves the top level empty...
+    "taxonomy": [
+        {"id": "24200", "name": "Tecnología y electrónica"},
+        {"id": "10311", "name": "Ratones"},  # ...the leaf is the last node
+    ],
+    "type_attributes": {  # ...and nests the attributes here as {"value": ...}
+        "brand": {"value": "Nulea"},
+        "model": {"value": ""},
+        "color": {"value": "black"},
+        "condition": {"value": "as_good_as_new"},
+        "up_to_kg": {"value": "1.0"},
+    },
+    "description": {"original": "Trackball como nuevo"},
+    "shipping": {
+        "item_is_shippable": True,
+        "user_allows_shipping": True,
+        "cost_configuration_id": "cfg-plain-123",
+    },
+    "location": {"latitude": 42.87, "longitude": -8.55, "approximated": True},
+    "images": [{"id": "img-1"}, {"id": "img-2"}],
+}
+
+
+def test_edit_item_reads_the_plain_get_shape(fake):
+    """A plain GET /items/<id> nests attributes under type_attributes and the
+    category under taxonomy; edit_item must still build a correct PUT body."""
+    fake.owned_item = RAW_PLAIN_OWNED_ITEM
+    resp = Wallapop(token="tk").edit_item(RAW_ITEM["id"], price=35)
+    assert resp.ok
+    body = next(c for c in fake.calls if c[0] == "PUT")[3]
+    assert body["category_leaf_id"] == "10311"            # taxonomy[-1].id
+    assert body["attributes"]["condition"] == "as_good_as_new"  # type_attributes
+    assert body["attributes"]["brand"] == "Nulea"
+    assert body["attributes"]["color"] == "black"
+    assert body["attributes"]["description"] == "Trackball como nuevo"  # plain string
+    assert body["attributes"]["price_amount"] == 35.0
+    assert body["delivery"]["allowed_by_user"] is True
+    assert body["delivery"]["max_weight_kg"] == 1          # up_to_kg {"value": "1.0"}
+    assert body["delivery"]["cost_configuration_id"] == "cfg-plain-123"
+    assert body["location"]["latitude"] == 42.87
+    assert [p["id"] for p in body["pictures"]] == ["img-1", "img-2"]
+
+
+def _publish_item_json(monkeypatch, tmp_path, **kwargs):
+    import json as _json
+    import re as _re
+
+    calls_raw = []
+
+    def fake_raw(method, url, raw_body=None, headers=None, retries=3, timeout=60):
+        calls_raw.append((method, url, raw_body))
+        return 200, {"id": "ab12cd34ef56", "flags": {}}
+
+    monkeypatch.setattr(client_mod, "http_request_raw", fake_raw)
+    photo = tmp_path / "foto.jpg"
+    photo.write_bytes(b"\xff\xd8\xff\xe0fakejpeg")
+    client = Wallapop(token="tk")
+    resp = client.publish([str(photo)], "Trackball", 38.0, category_leaf_id="10311", **kwargs)
+    assert resp.ok
+    raw = calls_raw[0][2].replace(b"\xff\xd8\xff\xe0fakejpeg", b"")
+    item_part = _re.search(r'name="item"\r\n\r\n(\{.*?\})\r\n--', raw.decode("utf-8", "replace"))
+    assert item_part is not None
+    return _json.loads(item_part.group(1))
+
+
+def test_publish_omits_color_when_empty(fake, monkeypatch, tmp_path):
+    """Categories with no color attribute (e.g. 10311) 400 when color is sent,
+    even empty; publish must leave the key out entirely when no color is given."""
+    item = _publish_item_json(monkeypatch, tmp_path)  # no color
+    assert "color" not in item["attributes"]
+
+
+def test_publish_keeps_color_when_given(fake, monkeypatch, tmp_path):
+    item = _publish_item_json(monkeypatch, tmp_path, color="black")
+    assert item["attributes"]["color"] == "black"
+
+
+# --- seller-safe reply_to_conversation (issue #3: send_message 403s on own item) ---
+
+_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJoYXNoZWRfc3ViIjoid3p5bm92bXYxcGo1In0.xx"
+
+
+def test_reply_to_conversation_publishes_without_ensure_conversation(fake):
+    client = Wallapop(token="tk")
+    client.token = _JWT
+    report = {}
+    resp = client.reply_to_conversation("conv-xyz", "Gracias, te la reservo", report=report)
+    assert resp.ok
+    assert report.get("path") == "rest"
+    # the seller-safe path must NOT POST a conversation (that 403s on your own item)
+    assert not any(
+        c[0] == "POST" and c[1].endswith("/instant-messaging/conversation") for c in fake.calls
+    )
+
+
+def test_reply_to_conversation_skips_duplicate(fake):
+    fake.thread_same = True  # thread already ends with our own identical message
+    client = Wallapop(token="tk")
+    client.token = _JWT
+    report = {}
+    resp = client.reply_to_conversation("conv-xyz", "Y tienes Super Mario 3D Land?", report=report)
+    assert report.get("skipped") is True
+
+
+def test_reply_to_conversation_requires_an_id(fake):
+    resp = Wallapop(token="tk").reply_to_conversation("", "hola")
+    assert not resp.ok
+    assert "conversation_id required" in resp.data["error_message"]
