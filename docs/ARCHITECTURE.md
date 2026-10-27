@@ -1,48 +1,49 @@
 # Architecture
 
-The repository contains two clients with separate runtimes:
+The executable has two frontends, MCP stdio and CLI, sharing `Client::invoke`.
+That boundary validates the tool contract, enforces write capability and invalidates
+read caches around mutations. Domain modules perform API operations; the transport
+owns connection, retry, pacing and memory policies.
 
-```text
-MCP client → stdio → internal/mcpserver → internal/wallapop → internal/transport
-Python CLI → wallapoplib/cli → wallapoplib/client.py → wallapoplib/http.py
-```
+| Module | Responsibility |
+| --- | --- |
+| `src/protocol.rs` | JSON-RPC envelopes, lifecycle, discovery, bounded workers, cancellation, structured results |
+| `src/tools.rs` | Tool definitions and the limited JSON Schema vocabulary they use |
+| `src/client.rs` | Client configuration, validated dispatch, common API requests |
+| `src/client/session.rs` | Explicit session loading, token refresh, login, private atomic persistence |
+| `src/client/search.rs` | Category normalization, modern/legacy search, bounded pagination, item URL resolution |
+| `src/client/models.rs` | Pure response normalization, conversation order, offer history, transactions and deal ranking |
+| `src/client/reads.rs` | Read operation dispatch |
+| `src/client/writes.rs` | Simple mutations and write dispatch |
+| `src/client/messaging.rs` | Existing-thread replies, duplicate guard, PubNub acknowledgement |
+| `src/client/publishing.rs` | Photo preflight, multipart publication, partial results, complete edit payloads |
+| `src/transport.rs` | HTTP/TLS, read retries, pacing, LRU response cache and identical-read gates |
+| `src/cli/` | Argument mapping, session import, deal automation and output |
+| `src/cli/contacts.rs` | Bounded persistent contact attempts, saved before sending |
+| `tests/` | API behavior, transport invariants, executable MCP/CLI integration |
 
-## Go server
+There is no browser runtime, interpreter, asynchronous runtime, database or
+framework dependency. Native worker threads allow ping and cancellation input to
+remain responsive while an operation is doing blocking HTTP I/O. Capacity is
+bounded; a full server returns `capacity_exceeded` instead of creating a queue.
 
-`cmd/wallapop-mcp` owns configuration, process signals and stdio. `internal/mcpserver` uses the official MCP SDK for the protocol and validates tool inputs before dispatch. Tool results are structured JSON with a compatible text representation. No shell subprocesses or browsers are used.
+Cancellation stops waits and subsequent requests. An HTTP exchange already in
+progress is bounded by the remaining tool timeout; the blocking client does not
+abort its socket immediately on cancellation. Cancelled MCP calls emit no result.
 
-`internal/wallapop` maps the fixed operation set to the endpoints researched in the original project. It normalizes response shapes, maintains authentication, preserves decimal amounts, handles partial writes and checks the write capability independently of the MCP layer.
+The response cache is per client/account, keyed by the full request including its
+headers. Entries expire after 30 seconds for public reads, five seconds for
+account reads and an hour for categories. `fresh` bypasses stored responses.
+Identical cacheable reads wait on one gate; fresh reads run independently and
+mutations never allocate cache keys or gates. Concurrent token refreshes share
+a lock. Generation checks prevent an old read from repopulating an invalidated
+cache after a mutation.
 
-`internal/transport` owns connection reuse, request pacing, retry policy, cancellation, coalescing and a bounded LRU cache. It rejects redirects and limits upstream response bodies to 4 MiB. Diagnostics exclude headers, tokens, response bodies and request URLs.
+Mutation errors distinguish a definite rejection from an unknown outcome. The
+transport does not retry writes; a definitive 401 may be repeated once after a
+changed token. A partial publication keeps the created ID and failed photo
+indices, while a failed offer keeps its generated ID. No checkout is implemented.
 
-## Scheduling and retries
-
-Each tool has a 45-second default budget, including waiting for one of four concurrent slots. Upstream requests start at least one second apart by default. Cached reads consume no upstream pacing slot. No fixed post-operation sleeps are used by the Go client.
-
-Only requests explicitly marked read-only can retry. The retry set is transient network failures and HTTP 429, 502, 503 and 504, up to three attempts. HTTP 403 is returned immediately. Retry-After is never shortened: a longer delay exhausts the caller's budget instead of retrying early.
-
-Writes are sent once per transport invocation. A definitive 401 can trigger one replay after successful token renewal. An interrupted write is marked uncertain. Write requests use fresh HTTP/1 connections to prevent Go's transport from silently replaying a GET used by PubNub to publish a message.
-
-## Cache and session boundaries
-
-Read caches live in memory, are scoped to the client, and include authorization headers in their hashed key. The cache holds at most 128 entries and 32 MiB of response data. Entries expire; `fresh` bypasses cache lookup. Invalidation generations prevent an older in-flight read from repopulating a cache after a write.
-
-Public reads use short TTLs, account reads shorter TTLs, and the category tree a longer TTL. A cache is an optimization, not proof that an offer or listing is still actionable. Mutation prerequisites must read fresh state.
-
-Concurrent readers can share one upstream request. Canceling a waiter does not abort the request while another waiter remains. Canceling the last waiter stops the shared work.
-
-Only an explicitly supplied session path is read. Tokens supplied through the environment are supported. Token values are never included in status output. Refresh updates are atomic and private; the process remains a local, single-account server.
-
-## Writes and partial results
-
-The default tool list contains only reads. Enabling writes exposes account mutations and enables a second guard in the API client.
-
-Publishing first creates the listing with its first photo, then uploads additional photos. Later failures retain the created item ID and completed count. Unknown acknowledgements must be reconciled with current state before another write. No retry policy can provide exactly-once delivery when the upstream service does not expose an idempotency guarantee.
-
-Listing text and messages are untrusted content. Tool descriptions instruct agents to treat them as data.
-
-## Compatibility
-
-The endpoint catalogue in [ENDPOINTS.md](ENDPOINTS.md) preserves upstream research. [MCP.md](MCP.md) lists the subset exposed by the new server. The Go implementation is covered by offline contract tests; live anti-bot behavior and undocumented API changes remain external dependencies.
-
-The Python library is retained separately. Shared session formats and offline fixtures support compatibility, but its defaults and features are not identical to the MCP server.
+Schemas deliberately use a small vocabulary implemented in `tools.rs`: objects,
+required properties, scalar types, enums, ranges, string/array limits and exact
+price validation. This is not a general-purpose JSON Schema implementation.

@@ -1,3 +1,5 @@
+> Historical upstream endpoint research. Python paths and browser examples below refer to the pre-Rust implementation retained in Git history. Current code and contracts: [architecture](ARCHITECTURE.md), [MCP](MCP.md), [Rust API](API.md).
+
 # Endpoints
 
 Catálogo de todos los endpoints que usa la CLI, cómo se extrajeron y a qué
@@ -878,4 +880,4 @@ devuelve un árbol de widgets y el frontend lo pinta tal cual.
 
 ## Cobertura del servidor MCP
 
-Este catálogo conserva la investigación del proyecto original. La superficie expuesta por el servidor Go y sus límites se documentan en [MCP.md](MCP.md). Los endpoints no oficiales pueden cambiar; las pruebas locales no verifican su disponibilidad en vivo.
+Este catálogo conserva la investigación del proyecto original. La superficie actual del servidor Rust y sus límites se documentan en [MCP.md](MCP.md). Los endpoints no oficiales pueden cambiar; las pruebas locales no verifican su disponibilidad en vivo.

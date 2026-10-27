@@ -1,25 +1,43 @@
-# Local performance
+# Local Rust performance
 
-Measurements on an Apple M4 Pro, macOS arm64, Go 1.27.3, on 2026-10-22. These are offline measurements, without a Wallapop account or external requests.
+Measured on 2026-10-27 with macOS 27.0.1 arm64 and Rust 1.92.0, using the
+size-optimized release profile in `Cargo.toml`. No Wallapop account, credentials
+or external requests were used.
 
 | Measurement | Observed result |
 | --- | --- |
-| Stripped native executable | 8,736,418 bytes (8.3 MiB) |
-| Process launch through MCP initialize, 10 warm launches | Median 6.0 ms; range 4.7–19.5 ms |
-| First observed initialize after building | 306 ms |
-| Construct the default MCP server | 0.60 ms; about 853 KiB allocated |
-| Read a cached 13-byte response | 501 ns; 1,008 bytes allocated |
+| Stripped executable | 1,452,704 bytes (1.39 MiB) |
+| MCP process round trip, 30 warm launches | Median 2.275 ms; p95 4.003 ms |
+| Direct runtime dependencies | 5 |
+| Rust source in `src/`, including comments, blanks and unit tests | 3,656 lines |
 
-Allocation totals are per operation, not resident memory. The cache benchmark includes copying the returned response. These figures are specific to this machine, build and workload; they do not measure live API throughput or browser login.
+The round trip includes process creation, initialization, tool discovery, a local
+`session_status` call and clean shutdown. The Rust harness validates the actual
+JSON responses on every launch. These figures describe this machine and workload;
+they do not measure live searches, resident memory or allocation totals. Earlier
+Go measurements used a different workload and are retained in Git history.
 
-Reproduce the build, protocol check and microbenchmarks:
+Reproduce with:
 
 ```sh
-make build
-python3 scripts/smoke_mcp.py ./bin/wallapop-mcp
-make benchmark
+cargo build --release --locked
+cargo run --release --locked --example footprint -- target/release/wallapop-mcp
 ```
 
-The default upstream pacing is one request start per second, with a 45-second tool budget and at most four active tool calls. Cached responses avoid upstream requests. Latency for actual searches and account operations depends mostly on Wallapop, pagination and authentication.
+On Windows, pass `target/release/wallapop-mcp.exe`. `make benchmark` runs the
+equivalent commands on systems with Make.
 
-The cache is limited to 128 entries and 32 MiB of response data. Upstream bodies are limited to 4 MiB; each tool output to 128 KiB. These limits bound individual components, not the process's total memory. Publishing can temporarily hold up to 32 MiB of input photos plus a multipart request buffer.
+The default upstream pacing is one request start per second, a 45-second tool
+budget and four active calls. Public cached reads expire after 30 seconds,
+account reads after five seconds and categories after an hour. Identical cacheable
+reads share an upstream request; fresh reads run independently.
+
+The cache holds at most 64 entries and 8 MiB, including request keys. Upstream
+bodies are limited to 4 MiB and tool payloads to 128 KiB. Publication holds at most
+32 MiB of input photos plus one multipart request buffer and normal HTTP overhead.
+Multipart buffers reserve their capacity once; writes never construct cache keys
+from image bytes. These are component limits, not a bound on total process memory.
+
+Contact history is an optional bounded JSON file, at most 2 MiB and 10,000 IDs.
+It does not cache upstream responses. The implementation uses native threads,
+pooled blocking HTTP and TLS, without an async runtime or browser framework.
