@@ -1,27 +1,26 @@
 # Contributing
 
-Keep changes focused and describe the observable behavior they fix. Bug reports should include the command or MCP tool, version, sanitized input, expected result and actual result. Never include session files, tokens, cookies or private messages.
-
-## Checks
-
-Go 1.25+ and Python 3.10+ are supported.
+Use Rust 1.85 or newer. Prefer small modules with one responsibility, explicit
+control flow, clear names and existing dependencies. Fewer lines are useful when
+they remove duplication; compressed expressions and clever abstractions are not.
 
 ```sh
-gofmt -w cmd internal
-go vet ./...
-go test -race ./...
-go build -trimpath -o bin/wallapop-mcp ./cmd/wallapop-mcp
-python3 scripts/smoke_mcp.py ./bin/wallapop-mcp
-python3 -m venv .venv
-.venv/bin/pip install -e '.[test]' build
-.venv/bin/python -m pytest
-.venv/bin/python -m build
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked
+cargo build --release --locked
 ```
 
-Add regression tests for changed API behavior using local HTTP servers or synthetic fixtures. The regular test suite must not contact Wallapop or read a developer's session. Label any manually verified live behavior separately.
+Add behavioral regressions using synthetic fixtures or a local HTTP server.
+Tests must not contact Wallapop, read real credentials or mutate an account.
+The integration suite exercises the executable's actual MCP stdin/stdout contract.
+Keep assertions on observable behavior rather than implementation structure.
 
-Keep stdout reserved for MCP. Bound new network responses and outputs. Treat mutations as non-retryable unless the upstream service provides a verified idempotency mechanism. Preserve created resource IDs after partial failures.
+API work belongs in `src/client/`, transport policy in `src/transport.rs`, MCP
+framing and lifecycle in `src/protocol.rs`, tool contracts in `src/tools.rs` and
+CLI ergonomics in `src/cli/`. Both frontends must use `Client::invoke`.
 
-Use the upstream Python client and endpoint research as evidence, not as proof that an endpoint still works. Document changes in [MCP.md](docs/MCP.md) and keep credits intact. General Python fixes can be proposed separately to the original project.
-
-AI-assisted changes are welcome when reviewed and tested by the contributor. Do not commit agent transcripts, private prompts, worktree paths or generated planning logs.
+Reserve stdout for protocol/command output. Bound network and file reads, preserve
+resource IDs after partial failures, never replay uncertain mutations, and keep
+credentials and upstream bodies out of errors. Document live checks separately
+from offline test results. Preserve the upstream history, license and credits.

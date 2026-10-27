@@ -1,9 +1,8 @@
 # cookies.txt — pega aquí el valor del campo "Cookie" de una request y luego:
 #
-#     python3 wallapop.py login
+#     wallapop-mcp --session ./session.json login --cookies-file ./cookies.txt
 #
-# (login lee cookies.txt automáticamente; también funciona
-#  "python3 wallapop.py login --cookies-file <otro fichero>")
+# Copia este ejemplo a cookies.txt y sustituye los valores antes de importarlo.
 #
 # Como conseguir el valor (sin copiar cookies a mano):
 #   1. Abre https://es.wallapop.com con tu sesión iniciada y pulsa F12.
@@ -15,7 +14,6 @@
 #   5. Pega ese valor justo debajo de esta línea (toda la línea "name=value;
 #      name2=value2; ..." entre ; ) y guarda el fichero.
 #
-# El login se queda solo con lo que necesita: accessToken,
-# __Secure-next-auth.session-token (la sesión larga), device_id y device_fgp.
+# Las cookies se guardan en el fichero de sesión. No compartas estos ficheros.
 # ----------------------------------------------------------------------------------
 device_id=REEMPLAZA; __Secure-next-auth.session-token=REEMPLAZA; accessToken=REEMPLAZA; device_fgp=REEMPLAZA

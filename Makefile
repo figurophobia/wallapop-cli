@@ -1,17 +1,16 @@
-GO ?= go
-PYTHON ?= python3
-VERSION ?= dev
+CARGO ?= cargo
 
-.PHONY: build test-go test-python benchmark
+.PHONY: build test check benchmark
 build:
-	$(GO) build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o bin/wallapop-mcp ./cmd/wallapop-mcp
+	$(CARGO) build --release --locked
 
-test-go:
-	$(GO) vet ./...
-	$(GO) test -race ./...
+test:
+	$(CARGO) test --locked
 
-test-python:
-	$(PYTHON) -m pytest
+check:
+	$(CARGO) fmt --check
+	$(CARGO) clippy --locked --all-targets -- -D warnings
+	$(CARGO) test --locked
 
-benchmark:
-	$(GO) test ./internal/mcpserver ./internal/transport -run '^$$' -bench . -benchmem
+benchmark: build
+	$(CARGO) run --release --locked --example footprint -- target/release/wallapop-mcp

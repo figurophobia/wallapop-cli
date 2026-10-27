@@ -1,180 +1,35 @@
-# wallapoplib — API pública (contrato v1)
+# Rust API
 
-Biblioteca de comunicación con Wallapop por HTTP plano (sin navegador, solo
-stdlib), con la CLI incluida (`wallapop`). Instalación local de desarrollo:
+```rust
+use std::time::Duration;
+use serde_json::json;
+use wallapop_mcp::{Context, client::{Client, Config}};
 
-```
-pip install -e '.[test]'
-```
-
-El extra `[browser]` (Playwright) permite el login y publicación con navegador, y un fallback de chat explícito. Un envío con entrega desconocida no se repite automáticamente. La comunicación normal no añade dependencias.
-
-## Quickstart
-
-```python
-from wallapoplib import Wallapop, load_credentials, load_session
-
-ses = load_session()  # o load_credentials() para login por email
-client = Wallapop(
-    token=ses.get("accessToken"),
-    web_cookies=ses if ses.get("__Secure-next-auth.session-token") else None,
-)
-
-# Buscar y leer resultados tipados (España por defecto)
-items = client.search("nintendo switch lite", pages=2, delay=1.0)
-for it in items:
-    print(it.title, it.price, it.url, it.shippable)
-
-# Hacer una oferta
-resp = client.send_offer(items[0].id, 90.0, message="Hola, aceptarias 90?")
-print(resp.ok, resp.data)
-
-# Gestionar ofertas recibidas (aceptar / rechazar / contraofertar)
-client.offer_response(offer_id, "accept")          # ACCEPTED
-client.offer_response(offer_id, "decline")         # DECLINED
-client.counter_offer(offer_id, 75.0)               # PATCH offer-price 75.00
-
-# Chat (PubNub REST; idempotente: no reenvía el mismo texto)
-client.send_message(items[0].id, "Hola! Tiene cargador?")
-
-# Marcar/desmarcar favorito
-client.favorite(items[0].id)            # marca como favorito (PUT .../favorite → 204)
-client.favorite(items[0].id, False)     # desmarca
-
-# Compras y ventas (API SDUI de los centros de la web)
-from wallapoplib import parse_sdui_transactions
-
-raw = client.purchases("finished")      # GET /sdui/purchases/finished (widget tree)
-rows = parse_sdui_transactions(raw)     # list[dict]: id, title, detail, price, ...
-ventas = client.selling("ongoing")      # GET /sdui/selling/ongoing
+let client = Client::new(Config::default())?;
+let result = client.invoke(
+    &Context::new(Duration::from_secs(45)),
+    "search",
+    &json!({"keywords":"camera","max_price":"200.00","limit":10}),
+)?;
+println!("{result}");
+# Ok::<(), wallapop_mcp::Error>(())
 ```
 
-### Imágenes de un item
+`Client` can be shared through `Arc`. `Config` selects session/token sources,
+write capability and pacing. Endpoint overrides are available to Rust callers for
+local tests; the CLI always uses the fixed Wallapop service origins.
 
-```python
-it = client.item(items[0].id)      # it.images -> URLs medium de las fotos
-print(it.images[0])                # https://cdn.wallapop.com/images/...?pictureSize=W640
+`Context` contains a total deadline and a cancellation flag. `invoke` uses the
+same validation and write gate as MCP; the CLI does not bypass it.
 
-# Descargarlas a disco (solo stdlib)
-paths = client.download_images(it, "descargas")
-print(paths)                       # ['descargas/abc_1.jpg', ...]
-```
+`Error` exposes a stable `code`, optional HTTP `status`, `unknown` outcome flag
+and optional `partial` result. Its display never includes upstream URLs, response
+bodies, tokens or user input. `Error::value()` produces a JSON error object.
 
-## Dataclasses públicas
+`Client::status()` is local and unverified. `login`, `import_session` and `logout`
+manage authentication without exposing credentials in their results. Status
+`expiry` contains unverified JWT expiration as Unix seconds when available.
 
-Ver `wallapoplib/models.py`.
-
-| Tipo | Campos | Uso |
-| --- | --- | --- |
-| `Item` | `id, title, price: float, currency, city, user_id, user_name, url, shippable: bool`, `reserved`, `sold`, `category + category_name`, `created_at`, `images: list[str]` | Un anuncio normalizado (`images` = URLs medium de las fotos) |
-| `Deal` | `item: Item, discount: float, median: float` | Un `Item` por debajo de la mediana del mercado |
-| `OfferEvent` | `kind, amount: float\|None, offer_id: str\|None, date, ts, text` | Entrada del ledger de negociación (una por evento de oferta en el hilo) |
-| `OfferState` | `kind, label, amount, offer_id, actionable: bool` | Estado actual derivado del último evento |
-
-Kinds de `OfferEvent`/`OfferState`: `our-offer` · `seller-counter` · `our-counter`
-· `seller-accepted` · `accepted-buy` · `seller-declined` · `our-declined` ·
-`expired`.
-
-## Funciones de dominio (con o sin datos crudos)
-
-```python
-from wallapoplib import parse_offer_events, offer_state_summary, rank_deals
-
-events = parse_offer_events(thread_messages)   # list[OfferEvent], ordenado por timestamp
-state = offer_state_summary(events)            # OfferState | None
-deals, median = rank_deals(items, min_discount=0.15, max_price=None)
-```
-
-- `parse_offer_events`: reconstruye el ledger del hilo y hace *forward-fill* de
-  `amount`/`offer_id` en los eventos terminales (que no los traen).
-- `offer_state_summary`: estado puro (sin colores de terminal); `actionable`
-  solo es `True` cuando hay que responder a una contraoferta.
-- `rank_deals`: mediana del conjunto de candidatos + ranking por descuento.
-- `parse_sdui_transactions`: aplana las tarjetas `list_item_transaction` del
-  árbol SDUI de Compras/Ventas (ignora cabeceras de agrupación y `empty_state`).
-
-## Cliente (`Wallapop`)
-
-Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=None, web_cookies=None)`.
-
-| Método | Endpoint |
-| --- | --- |
-| `item(item_id)` → `Item` | `GET /items/{id}` |
-| `seller(user_id)` → `dict` | `GET /users/{id}` |
-| `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
-| `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
-| `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
-| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. Si falta `category_id` y hay `subcategory_ids`, se resuelve la raíz del árbol (`category_for_subcategory`); un `category_id` intermedio se normaliza a su top-level. Salta páginas vacías con `next_page` (p. ej. `ship_only` + `price_asc`). |
-| `category_for_subcategory(subcategory_id)` → `Optional[int]` | raíz top-level del nodo en `/categories` (p. ej. `10088` → `24200`) |
-| `top_level_category(category_id)` → `int` | devuelve el id si ya es top-level; si es un nodo intermedio, sube a su raíz; si no está en el árbol, lo deja igual |
-| `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
-| `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |
-| `counter_offer(offer_id, amount, currency="EUR")` | `PATCH /delivery/offers/{id}/offer-price` |
-| `offer_details(offer_id)` / `make_offer_info(item_id)` | BFF (sujetos a anti-bot) |
-| `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | mensajería |
-| `send_message(item_hash, message, report?, allow_browser_fallback=False)` | PubNub REST publish; fallback de navegador solo si se habilita y el envío no es ambiguo |
-| `publish(photo_paths, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
-| `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
-| `reserve(item_id, reserved=True)` → `Response` | reserva/desreserva un item tuyo (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
-| `mark_sold(item_id, sold=True)` → `Response` | marca uno de tus items como vendido/no vendido (`PUT /items/{id}/sold`, 204) |
-| `edit_item(item_id, price?, title?, description?, condition?, brand?, model?, color?, category_leaf_id?, max_weight_kg?)` → `Response` | edita un anuncio publicado replicando el formulario "Actualizar" de la web (`PUT /api/v3/items/{id}` con `Accept: application/vnd.upload-v2+json`) |
-| `delete_item(item_id)` → `Response` | **borra permanentemente** un item tuyo (`DELETE /api/v3/items/{id}`, 204) |
-| `purchases(tab)` / `selling(tab)` → `dict` | centros **Compras/Ventas** de la web por SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parsea el árbol con `parse_sdui_transactions` |
-| `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
-
-`report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.
-
-## Errores
-
-Todas las operaciones de red lanzan `ApiError` solo en fallos del transporte
-(reinstatable) o de respuesta no consumible; el resto devuelve `Response`:
-
-```python
-from wallapoplib import ApiError, Response
-
-resp: Response = client.send_offer("id", 10.0)
-if not resp.ok:
-    print(resp.status, resp.error_reason)
-```
-
-## Sesión
-- `load_credentials()` — dict con `email`, `access_token`, `refresh_token`, `user` (login por email).
-- `load_session()` — dict de cookies de navegador; con `__Secure-next-auth.session-token` activa la vía de refresh por cookie.
-- `save_session(data)` — persiste la sesión de navegador.
-
-Los datos se guardan en `~/.config/wallapop_cli/` con permisos `600`, fuera del repo.
-
-## Geografía y selección de país
-
-`wallapoplib.config.CITIES` es el mapa lugares → `(lat, lon)` del que cuelgan el
-default de `search()` y el `--city` del CLI. Incluye ciudades, países y regiones
-españolas (`italia`, `portugal`, `francia`, `galicia`, `andalucia`, …).
-
-```python
-from wallapoplib.config import CITIES, DEFAULT_GEO
-lat, lon = CITIES["italia"]          # ancla a Italia
-```
-
-- Sin `latitude`/`longitude`, `search()` usa `DEFAULT_GEO` (España, 40.0, -3.5),
-  que reproduce **exactamente** la búsqueda de `es.wallapop.com`. No es una
-  restricción: pasar coords de otro país devuelve los items de ese país.
-- El país real de los resultados lo decide principalmente `search_country`
-  (que la lib no envía; el backend infiere por coords). Con `order_by` de
-  relevancia los anuncios salen del país anclado; con `newest` el API devuelve
-  un conjunto más global (mezcla de países), como a veces hace la app.
-
-El detalle completo del comportamiento geográfico está en
-`docs/ENDPOINTS.md` (sección "Comportamiento geográfico").
-
-## Referencias a ids
-
-- `resolve_internal_id(ref)` — convierte url / slug / hash de 12 chars al id interno (`v6gpwy9d476e`).
-
-## Compatibilidad
-
-- Python `>= 3.10`, cero dependencias obligatorias.
-- CI: matrix `3.10 / 3.11 / 3.12` (`pip install -e '.[test]'` → `pytest`).
-
-## Fiabilidad en este fork
-
-`build_client(required=True)` devuelve `(client, credentials)` y lanza `SessionError` si falta sesión, sin terminar el proceso. Los importes conservan céntimos; un `Response.partial` mantiene el ID creado si falla una foto posterior. Los fallos HTTP de perfiles se notifican como `ApiError`. Una escritura sin confirmación requiere comprobar su estado antes de reintentar.
+Inspect `tools::definitions()` or run `wallapop-mcp --allow-writes tools` for the
+complete argument schemas. The crate is not yet published to a registry; use a
+path or Git dependency. The old Go and Python packages are retired.

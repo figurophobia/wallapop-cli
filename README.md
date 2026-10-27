@@ -1,96 +1,111 @@
 # Wallapop MCP
 
-A local MCP server for agents that search and manage Wallapop listings.
-
-Written in Go, using the official [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). One executable, stdio transport, no browser or Python runtime required by the server. The original Python library and CLI remain available.
-
-This project is a fork of [figurophobia/wallapop-cli](https://github.com/figurophobia/wallapop-cli). Its API research, Python implementation and Git history are preserved. See [credits](CREDITS.md).
+A small Rust executable for searching and managing Wallapop through MCP or the CLI.
+Five direct dependencies, native threads, pooled HTTP and verified TLS. No interpreter,
+async runtime, browser automation framework or external process is needed at runtime.
 
 ## Build
 
-Requires Go 1.25 or later.
+Rust 1.85+ and a C toolchain (for the TLS dependency).
 
 ```sh
-git clone https://github.com/jrrome/wallapop-mcp.git
-cd wallapop-mcp
-go build -trimpath -ldflags="-s -w" -o bin/wallapop-mcp ./cmd/wallapop-mcp
-./bin/wallapop-mcp --help
+cargo build --release --locked
+./target/release/wallapop-mcp --help
 ```
 
-No release binaries or package registry publication are provided yet.
+The executable is `target/release/wallapop-mcp` (`wallapop-mcp.exe` on Windows).
+Release builds optimize for size and strip symbols. No published binaries yet.
+The local macOS arm64 build is 1.39 MiB; see [measurements](docs/PERFORMANCE.md).
 
-## Connect an agent
-
-For MCP clients that use a `mcpServers` configuration:
-
-```json
-{
-  "mcpServers": {
-    "wallapop": {
-      "command": "/absolute/path/to/wallapop-mcp/bin/wallapop-mcp",
-      "args": []
-    }
-  }
-}
-```
-
-The process communicates over stdin/stdout. Diagnostics go to stderr. Starting the server or calling `session_status` does not contact Wallapop.
-
-Public search, listings, sellers and categories work without configuring an account, subject to Wallapop's access controls. Account operations require a session. Reuse the Python CLI configuration with:
+## MCP
 
 ```json
 {
   "mcpServers": {
     "wallapop": {
       "command": "/absolute/path/to/wallapop-mcp",
-      "args": ["--session", "/absolute/path/to/.config/wallapop_cli"]
+      "args": []
     }
   }
 }
 ```
 
-Alternatively set `WALLAPOP_ACCESS_TOKEN` and optionally `WALLAPOP_REFRESH_TOKEN` in the process environment. `WALLAPOP_SESSION_PATH` is equivalent to `--session`. Session files are loaded only from an explicitly configured path. Refreshed sessions are saved atomically with owner-only permissions.
+The default command serves MCP over stdin/stdout. Diagnostics use stderr. Startup,
+discovery and `session_status` never contact Wallapop. Public reads need no account,
+subject to Wallapop's access controls.
 
-## Tools
+Add `--session /absolute/path/to/.config/wallapop_cli` to reuse a saved session,
+or set `WALLAPOP_ACCESS_TOKEN` and optionally `WALLAPOP_REFRESH_TOKEN`.
+`WALLAPOP_SESSION_PATH` is equivalent to `--session`; files are loaded only from
+an explicit path. Refresh supports both API tokens and web session cookies, with
+atomic private session persistence.
 
-| Group | Operations |
+**Writes are hidden and disabled unless `--allow-writes` is supplied.** This grants
+capability; the agent still needs the user's intent for each consequential action.
+
+| Surface | Features |
 | --- | --- |
-| Public reads | Search, item details, seller profile and reviews, category tree |
-| Account reads | Session status, inbox, conversation, unread count, purchases, sales, offer limits and history |
-| Optional writes | Favorites, messages, offers, publish, edit, reserve, mark sold, delete |
+| 14 read tools | Session, search, deals, listing, seller, categories, own listings, inbox, thread, unread count, purchases, sales, offer limits and history |
+| 10 optional write tools | Favorites, messages and seller replies, send/respond/counter offers, publish, edit, reserve, sold, delete |
+| CLI | The same tools, ergonomic commands, JSON/CSV output, deal ranking, bounded watch with optional offers/messages and dry-run |
+| Rust library | `Client::invoke`, with the same validation, write gate and errors |
 
-Writes are hidden and disabled by default. Add `--allow-writes` only when the agent should be able to change the account. The flag grants capability; the MCP client should still obtain the user's intent before consequential actions.
+## CLI
 
-[Tool and endpoint reference](docs/MCP.md) · [Architecture](docs/ARCHITECTURE.md) · [Python CLI](docs/PYTHON.md)
+```sh
+wallapop-mcp search 'nintendo switch' --city madrid --max-price 200 --ship-only
+wallapop-mcp show 'https://es.wallapop.com/item/example-slug'
+wallapop-mcp deals 'camera' --min-discount 0.2 --top 5
+wallapop-mcp call list_categories '{}'
+wallapop-mcp --session ./session.json login --cookies-file ./cookies.txt
+wallapop-mcp --session ./session.json --allow-writes message --conversation THREAD --text 'Hola'
+```
 
-## Reliability and resource limits
+Prices are decimal **strings** in tool JSON, such as `"19.95"`, and ordinary decimal
+arguments in CLI flags. All mutating CLI commands also require `--allow-writes`.
+See [usage](docs/USAGE.md), [tool reference](docs/MCP.md), [Rust API](docs/API.md)
+and [migration](docs/MIGRATION.md).
 
-- Reuses HTTP connections for reads. Read-only requests can retry transient failures; writes are never automatically retried after an uncertain outcome.
-- Short, bounded, in-memory caches; concurrent identical reads share a request. `fresh: true` bypasses cached values. Writes invalidate the client's cache.
-- Context cancellation and a 45-second tool budget. Default concurrency: 4 calls. Default upstream pacing: one request start per second.
-- Bounded search pages, response bodies, cache storage, uploads and MCP output.
-- Explicit partial publication and unknown delivery results. Check the existing listing or conversation before retrying.
-- Decimal price inputs preserve cents. No automatic browser fallback in the Go server.
+## Design and limits
 
-Run `make benchmark` to measure local overhead. See [local measurements and resource bounds](docs/PERFORMANCE.md). Network latency and Wallapop's rate limits dominate real requests; these local measurements are not live API throughput claims.
+- Separate modules for protocol, transport, sessions, search, response models,
+  messaging, publication and CLI. No duplicated API implementation.
+- 45-second total tool budget, four workers by default (maximum 16), one upstream
+  request start per second. Ping and cancellation remain responsive during I/O.
+- Reads retry transient failures, respect `Retry-After`, share identical cached
+  requests and reuse connections. Mutations use fresh connections and are never
+  retried after an uncertain result. A definitive 401 may refresh and retry once.
+- 64 KiB input frames, 32 KiB tool arguments, 4 MiB upstream bodies, 128 KiB tool
+  payloads, 64 cache entries and 8 MiB cache budget. No disk response cache.
+- At most five search pages, 50 listings, ten JPEGs, 8 MiB per photo and 32 MiB per
+  publication. Every photo is validated before creating the listing.
+- Edits preserve existing state. Failed publication steps retain the created item
+  ID. Uncertain offers retain their generated ID; uncertain messages identify the
+  conversation. Check state before retrying.
+- Automatic contact reuses bounded `contacted.json` history beside an explicit
+  session, or `--contacted-file PATH`, recording attempts before sending.
 
 ## Development
 
 ```sh
-make test-go
-make build
-python3 scripts/smoke_mcp.py ./bin/wallapop-mcp
-python3 -m venv .venv
-.venv/bin/pip install -e '.[test]' build
-make test-python PYTHON=.venv/bin/python
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked
+cargo run --release --locked --example footprint -- target/release/wallapop-mcp
 ```
 
-Tests use local fixtures and HTTP test servers. They do not need a Wallapop account. See [contributing](CONTRIBUTING.md).
+Tests use synthetic fixtures, local HTTP servers and the real executable's stdio.
+They never contact Wallapop or read a developer's session. See
+[architecture](docs/ARCHITECTURE.md), [performance](docs/PERFORMANCE.md) and
+[contributing](CONTRIBUTING.md).
 
-## Status and scope
+Experimental and unofficial: offline tests establish known API contracts, not
+current live account compatibility. No checkout, payments or remote HTTP server.
+The former browser-only helpers are replaced by session/cookie import; see the
+migration guide for compatibility details.
 
-Experimental, unofficial integration. The endpoints are derived from the web application and can change or reject non-browser clients. Offline tests cover protocol behavior and known response shapes; they do not establish current live compatibility.
-
-The Go server does not implement login UI, checkout, payment, shipping-label purchase, background watchers, or a remotely hosted HTTP transport. The Python CLI retains its existing login and browser workflows.
-
-MIT license. Wallapop and its trademarks belong to their respective owners; this project is not affiliated with Wallapop.
+MIT. Based on the endpoint research and behavior of
+[figurophobia/wallapop-cli](https://github.com/figurophobia/wallapop-cli), with the
+seller reply improvement reviewed in
+[hugoocoto's python-only-mcp branch](https://github.com/hugoocoto/wallapop-cli/tree/python-only-mcp).
+Original history and [credits](CREDITS.md) are preserved.
