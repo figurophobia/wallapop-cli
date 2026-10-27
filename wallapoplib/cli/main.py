@@ -127,8 +127,9 @@ def build_parser() -> argparse.ArgumentParser:
     of.add_argument("--dry-run", action="store_true")
     of.set_defaults(func=cmd_offer)
 
-    me = sub.add_parser("message", help="send a chat message to an item's seller")
-    me.add_argument("item_id", help="item url, web slug or internal hash")
+    me = sub.add_parser("message", help="message a seller, or reply as the seller in a conversation")
+    me.add_argument("item_id", nargs="?", help="item url, web slug or internal hash (buyer→seller); omit when using --conversation")
+    me.add_argument("--conversation", help="reply in this conversation id (seller-safe: avoids the 403 on your own item)")
     me.add_argument("--text", required=True, help="message text")
     me.add_argument("--browser-fallback", action="store_true", help="send through the web app only when PubNub was definitely not sent (opt-in)")
     me.add_argument("--dry-run", action="store_true")
