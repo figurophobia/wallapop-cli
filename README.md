@@ -1,6 +1,11 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="wallapop-mcp" width="860">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+    <img src="docs/logo-light.svg" alt="Wallapop × Model Context Protocol" height="96">
+  </picture>
 </p>
+
+<h1 align="center">wallapop-mcp</h1>
 
 <p align="center">
   <a href="https://github.com/figurophobia/wallapop-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/figurophobia/wallapop-mcp/actions/workflows/ci.yml/badge.svg"></a>
@@ -25,9 +30,9 @@ One codebase, three interfaces:
 
 | | What | Entry point |
 |---|---|---|
-| 🤖 **MCP server** | 30 tools over stdio for any MCP client; writes hidden unless you opt in | `wallapop-mcp` |
-| ⌨️ **CLI** | Search, deals, offers, chat, alerts and listing management from the terminal | `wallapop` |
-| 🐍 **Python library** | Typed client the other two are built on | `import wallapop_mcp` |
+| **MCP server** | 30 tools over stdio for any MCP client; writes hidden unless you opt in | `wallapop-mcp` |
+| ⌨ **CLI** | Search, deals, offers, chat, alerts and listing management from the terminal | `wallapop` |
+| **Python library** | Typed client the other two are built on | `import wallapop_mcp` |
 
 ## Contents
 
@@ -49,15 +54,15 @@ One codebase, three interfaces:
 
 | Area | What you get |
 |---|---|
-| 🔎 **Search** | Keyword search with category / subcategory, condition, price, shipping, ordering and geography (city, region or country presets, or exact coordinates); autocomplete; the full category tree |
-| 📉 **Deals** | `deals` ranks listings by discount against the median of the results, can auto-offer or message the best ones; `watch` keeps scanning |
-| 🔔 **Alerts** | Saved searches (deal sniping): save, check, new-hit counter, remove |
-| 📦 **Items & sellers** | Listing details, seller profile with ratings, stats, reviews and their listings |
-| 💬 **Messaging** | Inbox, conversations, message a seller or reply as the seller |
-| 🤝 **Offers** | Offer limits from the web's offer editor, send offers, accept / decline / counter, an offer-status dashboard per conversation |
-| 🏷️ **Selling** | Publish with photos (pure API or the web wizard), edit, reserve, mark sold, pause, delete |
-| 🧾 **Account** | Favorites, purchases and sales hubs |
-| 🔐 **Sessions** | Email + password, a browser login window for Google accounts, Firefox import or pasted cookies; token refresh |
+| **Search** | Keyword search with category / subcategory, condition, price, shipping, ordering and geography (city, region or country presets, or exact coordinates); autocomplete; the full category tree |
+| **Deals** | `deals` ranks listings by discount against the median of the results, can auto-offer or message the best ones; `watch` keeps scanning |
+| **Alerts** | Saved searches (deal sniping): save, check, new-hit counter, remove |
+| **Items & sellers** | Listing details, seller profile with ratings, stats, reviews and their listings |
+| **Messaging** | Inbox, conversations, message a seller or reply as the seller |
+| **Offers** | Offer limits from the web's offer editor, send offers, accept / decline / counter, an offer-status dashboard per conversation |
+| **Selling** | Publish with photos (pure API or the web wizard), edit, reserve, mark sold, pause, delete |
+| **Account** | Favorites, purchases and sales hubs |
+| **Sessions** | Email + password, a browser login window for Google accounts, Firefox import or pasted cookies; token refresh |
 
 ## Install
 
@@ -269,11 +274,11 @@ flowchart LR
 
 | | |
 |---|---|
-| 🛑 **No buying** | `send_offer` proposes a price; it never buys or pays. Accepting a seller's counter-offer commits you to buy within 24 h, so do it knowingly. |
-| 🔒 **Writes are opt-in** | The MCP server is read-only unless started with `--allow-writes`; `deals`/`offer` support `--dry-run`. |
-| 🧪 **Untrusted content** | Listing descriptions and messages are data, never instructions. |
-| 🔁 **No duplicate contact** | `deals` keeps `contacted.json` so the same seller is not messaged twice. |
-| 🐢 **Rate** | Requests are spaced (`WALLAPOP_RATE_PACE`, 1 s by default). |
+| **No buying** | `send_offer` proposes a price; it never buys or pays. Accepting a seller's counter-offer commits you to buy within 24 h, so do it knowingly. |
+| **Writes are opt-in** | The MCP server is read-only unless started with `--allow-writes`; `deals`/`offer` support `--dry-run`. |
+| **Untrusted content** | Listing descriptions and messages are data, never instructions. |
+| **No duplicate contact** | `deals` keeps `contacted.json` so the same seller is not messaged twice. |
+| **Rate** | Requests are spaced (`WALLAPOP_RATE_PACE`, 1 s by default). |
 
 ## Configuration
 
@@ -326,5 +331,5 @@ reject non-browser clients. Offline tests cover protocol behaviour and known res
 establish current live compatibility. Writes may have partial or unknown outcomes.
 
 MIT license. Wallapop and its trademarks belong to their respective owners; this project is not affiliated
-with Wallapop. The banner is original artwork in the spirit of the brand, not an official logo. See
+with Wallapop. The Wallapop and Model Context Protocol logos are trademarks of their respective owners and of the MCP project; they are shown only to identify the service and protocol this project works with. See
 [CREDITS.md](CREDITS.md).
