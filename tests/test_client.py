@@ -1,6 +1,6 @@
 """Offline tests for the Wallapop client with a mocked HTTP transport.
 
-No network: ``wallapoplib.client.http_request`` is replaced by a fake that
+No network: ``wallapop_mcp.client.http_request`` is replaced by a fake that
 answers endpoint calls the way the real API does (shapes taken from live
 captures, ids de-sensibilized).
 """
@@ -12,9 +12,9 @@ from decimal import Decimal
 
 import pytest
 
-import wallapoplib.client as client_mod
-import wallapoplib.http as http_mod
-from wallapoplib.client import Wallapop, refresh_web_session
+import wallapop_mcp.client as client_mod
+import wallapop_mcp.http as http_mod
+from wallapop_mcp.client import Wallapop, refresh_web_session
 
 # --- payload fixtures (live-shape, des-sensibilized) ------------------------
 
@@ -1220,7 +1220,7 @@ def test_price_amount_keeps_the_cents():
 
 
 def test_browser_price_keeps_cents_and_validates_before_browser():
-    from wallapoplib.publish import browser_price
+    from wallapop_mcp.publish import browser_price
 
     assert browser_price(19.95) == "19.95"
     assert browser_price(20) == "20.00"
@@ -1616,8 +1616,8 @@ def test_send_message_duplicate_guard_ignores_older_messages(monkeypatch):
 # --- CLI: the browser publish keeps the cents --------------------------------
 
 def test_cli_browser_publish_keeps_the_price_cents(monkeypatch):
-    import wallapoplib.publish as publish_mod
-    from wallapoplib.cli import commands
+    import wallapop_mcp.publish as publish_mod
+    from wallapop_mcp.cli import commands
 
     captured: dict = {}
 
@@ -1642,7 +1642,7 @@ def test_cli_browser_publish_keeps_the_price_cents(monkeypatch):
 
 
 def test_cli_message_prints_the_unknown_delivery_guidance(monkeypatch, capsys):
-    from wallapoplib.cli import commands
+    from wallapop_mcp.cli import commands
 
     class FakeClient:
         def send_message(self, item_hash, text, report=None, allow_browser_fallback=False):

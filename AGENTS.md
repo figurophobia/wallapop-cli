@@ -1,7 +1,8 @@
-# AGENTS.md — driving wallapop-cli from an AI agent
+# AGENTS.md — driving wallapop-mcp from an AI agent
 
-Python CLI + library + MCP server for Wallapop, **one codebase**: the CLI and the
-MCP server both call `wallapoplib`, so a fix lands once. Two jobs:
+MCP server + CLI + Python library for Wallapop, **one codebase**
+(`pip install wallapop-mcp`): the MCP server and the CLI both call the
+`wallapop_mcp` package, so a fix lands once. Two jobs:
 
 - **[Flow A — buy & negotiate](#flow-a--buy--negotiate)**: search, make offers, haggle a price down.
 - **[Flow B — sell](#flow-b--sell)**: publish, edit, reply to buyers, accept/decline offers.
@@ -13,31 +14,31 @@ Read **[Login](#login--session)** first, then the flow you need, then the
 
 | | MCP server | CLI | Library |
 |---|---|---|---|
-| Entry | `wallapop-mcp-py` / `python -m wallapoplib.mcp_server` (`pip install -e '.[mcp]'`) | `wallapop` (`pip install -e .`) | `import wallapoplib` |
+| Entry | `wallapop-mcp` / `python -m wallapop_mcp.mcp_server` | `wallapop` | `import wallapop_mcp` |
 | Transport | stdio MCP (tools) | shell commands | Python calls |
 | Writes | need `--allow-writes` | always available | always available |
 
-All three share `wallapoplib`. Public reads (search, item, seller, categories)
+All three share `wallapop_mcp`. Public reads (search, item, seller, categories)
 need **no account**; inbox, offers, purchases/sales and every write need a
 **session**. Ad-hoc API call:
-`client, _ = wallapoplib.build_client(); client._authed("GET"|"PUT"|…, path, body=?, extra_headers=?)`.
+`client, _ = wallapop_mcp.build_client(); client._authed("GET"|"PUT"|…, path, body=?, extra_headers=?)`.
 
 ## Login / session
 
 The tools never log in; you give them an existing session (stored outside the
-repo in `~/.config/wallapop_cli/`). Create one with the CLI:
+repo in `~/.config/wallapop-mcp/`). Create one with the CLI:
 
 | Method | Command | Use when |
 |---|---|---|
 | Email + password | `wallapop login you@mail.com` (prompts) | normal account |
-| Browser wizard | `wallapop login --wizard` (needs `pip install -e '.[browser]' && playwright install chromium`) | Google login / browser-only session |
+| Browser wizard | `wallapop login --wizard` (needs `pip install 'wallapop-mcp[browser]' && playwright install chromium`) | Google login / browser-only session |
 | Import Firefox | `wallapop login --browser firefox` | already logged in to wallapop.com in Firefox |
 | Paste cookies | `wallapop login --cookies-file cookies.txt` | any browser (copy the `Cookie:` header from DevTools) |
 
 **Headless agents:** `login you@mail.com` and `--wizard` need a TTY/GUI. Use
 **`--cookies-file`** or set **`WALLAPOP_ACCESS_TOKEN`** (+ optional
 `WALLAPOP_REFRESH_TOKEN`). The MCP server takes `--session <dir|file>` (default
-`~/.config/wallapop_cli`) or the same env var; writes need `--allow-writes`.
+`~/.config/wallapop-mcp`, or `WALLAPOP_CONFIG_DIR`) or the same env var; writes need `--allow-writes`.
 Check state with no network: `wallapop session` / the `session_status` tool.
 
 ## Flow A — buy & negotiate
@@ -62,16 +63,23 @@ Anchor your first offer below target and move up in small steps; `get_offer_stat
 
 ## MCP tool reference
 
-22 tools. The 10 writes appear only with `--allow-writes`.
+30 tools. The 13 writes appear only with `--allow-writes`.
 
-**Reads:** `session_status`, `search`, `get_item`, `get_seller`,
-`list_categories`, `list_inbox`, `get_conversation`, `unread_count`,
-`list_purchases` (`tab`), `list_sales` (`tab`), `get_offer_constraints`,
-`get_offer_status`.
+**Reads:** `session_status`, `search`, `suggest`, `get_item`, `get_seller`,
+`seller_items`, `list_categories`, `list_inbox`, `get_conversation`,
+`unread_count`, `list_purchases` (`tab`), `list_sales` (`tab`),
+`get_offer_constraints`, `get_offer_status`, `list_favorites`,
+`saved_search_hits`, `check_saved_search`.
 
 **Writes:** `set_favorite`, `send_message` (`item_id` **or** `conversation_id`),
 `send_offer`, `respond_offer`, `counter_offer`, `publish_item`, `edit_item`,
-`reserve_item`, `mark_sold`, `delete_item`.
+`reserve_item`, `mark_sold`, `pause_item`, `delete_item`, `save_search`,
+`remove_saved_search`.
+
+**Sniping / alerts:** `save_search` stores a search (same filters as `search`)
+so Wallapop notifies new matches; `saved_search_hits` returns the unseen-match
+counter, `check_saved_search` finds the id of an existing one and
+`remove_saved_search` deletes it. CLI: `wallapop alert save|check|hits|remove`.
 
 Results are JSON. Writes may be partial or unknown — inspect the returned state
 before retrying; there is no checkout or payment.
@@ -94,7 +102,7 @@ before retrying; there is no checkout or payment.
 
 ## File map
 
-- `wallapoplib/client.py` — API client (`search`, `item`, `publish`, `edit_item`, `send_offer`, `reply_to_conversation`, …).
-- `wallapoplib/mcp_server.py` — the MCP server (all tools delegate here).
-- `wallapoplib/cli/` — the `wallapop` CLI. `wallapoplib/{config,http,models,ids,session}.py` — supporting modules.
+- `wallapop_mcp/client.py` — API client (`search`, `item`, `publish`, `edit_item`, `send_offer`, `reply_to_conversation`, …).
+- `wallapop_mcp/mcp_server.py` — the MCP server (all tools delegate here).
+- `wallapop_mcp/cli/` — the `wallapop` CLI. `wallapop_mcp/{config,http,models,ids,session}.py` — supporting modules.
 - `tests/` — pytest suite (library, CLI, MCP). `docs/ENDPOINTS.md` — raw endpoint research.

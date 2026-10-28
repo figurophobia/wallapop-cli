@@ -37,7 +37,7 @@ from .output import eprint, paint
 
 def add_search_args(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--category", type=int, help=f"category id. common: {', '.join(f'{k}({v})' for k, v in sorted(CATEGORIES.items()))}")
-    sp.add_argument("--subcat", help="filter by taxonomy leaf id, e.g. 10088 = consolas, 10092 = accesorios de consola")
+    sp.add_argument("--subcat", help="filter by taxonomy leaf id, e.g. 10088 = consoles, 10092 = console accessories")
     sp.add_argument("--min-price", type=float)
     sp.add_argument("--max-price", type=float)
     sp.add_argument("--city", help=f"city preset: {', '.join(sorted(CITIES))}")
@@ -88,7 +88,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     lp = sub.add_parser(
         "login",
-        help="log in. sin argumentos detecta sesion existente, Firefox o ventana Google (wizard)",
+        help="log in. with no arguments it detects an existing session, Firefox, or opens the Google login window (wizard)",
     )
     lp.add_argument("email", nargs="?", default=None, help="email for password login")
     lp.add_argument("password", nargs="?", help="optional; if omitted you are prompted safely")
@@ -149,12 +149,12 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--json", action="store_true", help="dump raw JSON (inbox or conversation thread)")
     rp.set_defaults(func=cmd_replies)
 
-    pc = sub.add_parser("purchases", help="list your purchases (compras): ongoing or finished")
+    pc = sub.add_parser("purchases", help="list your purchases (Wallapop 'Compras'): ongoing or finished")
     pc.add_argument("--finished", action="store_true", help="show finished purchases instead of ongoing")
     pc.add_argument("--json", action="store_true", help="dump the transactions as JSON")
     pc.set_defaults(func=cmd_purchases)
 
-    sl = sub.add_parser("selling", help="list your selling (ventas): ongoing or finished")
+    sl = sub.add_parser("selling", help="list your selling (Wallapop 'Ventas'): ongoing or finished")
     sl.add_argument("--finished", action="store_true", help="show finished sales instead of ongoing")
     sl.add_argument("--json", action="store_true", help="dump the transactions as JSON")
     sl.set_defaults(func=cmd_selling)
@@ -225,7 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
     ic.add_argument("item", help="item url, web slug or internal hash (owned item)")
     ic.set_defaults(func=cmd_inactivate)
 
-    al = sub.add_parser("alert", help="manage saved searches (búsquedas guardadas)")
+    al = sub.add_parser("alert", help="manage saved searches (search alerts)")
     al.add_argument("action", choices=["save", "check", "remove", "hits"], help="save a search, check if a search exists, remove by id, or show the new-listing counter")
     al.add_argument("keyword", nargs="*", help="search keyword (used by save/check)")
     al.add_argument("--id", dest="search_id", help="saved-search id (remove)")
@@ -253,7 +253,7 @@ def build_parser() -> argparse.ArgumentParser:
     pub.add_argument("--capture-body", help="browser mode only: save the raw POST /api/v3/items body to this file (debug)")
     pub.set_defaults(func=cmd_publish)
 
-    parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")
+    parser.add_argument("--version", action="version", version=f"wallapop {VERSION}")
     return parser
 
 

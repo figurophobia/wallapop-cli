@@ -8,10 +8,15 @@ Python 3.10+.
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -e '.[test,mcp]' build
+.venv/bin/pip install -e '.[test,build]'
 .venv/bin/python -m pytest
-.venv/bin/python -m build
+.venv/bin/python -m build && .venv/bin/python scripts/check_package.py dist
+.venv/bin/python scripts/build_binary.py      # PyInstaller executables in dist/bin/
 ```
+
+Releases: bump `VERSION` in `wallapop_mcp/config.py`, then push a `vX.Y.Z` tag.
+The release workflow tests, publishes to PyPI (trusted publishing) and attaches
+Linux/macOS/Windows executables to the GitHub release.
 
 Add regression tests for changed API behavior using local HTTP servers or synthetic fixtures. The regular test suite must not contact Wallapop or read a developer's session. Label any manually verified live behavior separately.
 

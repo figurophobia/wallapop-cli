@@ -1,4 +1,4 @@
-"""Offline tests for the library session initializer (wallapoplib.session).
+"""Offline tests for the library session initializer (wallapop_mcp.session).
 
 The stored credentials/session are faked, so nothing is read from (or
 written to) the real configuration directory and no network call is made.
@@ -6,9 +6,9 @@ written to) the real configuration directory and no network call is made.
 
 import pytest
 
-import wallapoplib.session as session_mod
-from wallapoplib import build_client as exported_build_client
-from wallapoplib.session import SessionError, build_client
+import wallapop_mcp.session as session_mod
+from wallapop_mcp import build_client as exported_build_client
+from wallapop_mcp.session import SessionError, build_client
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def test_build_client_raises_session_error_without_credentials(stored):
 
 
 def test_session_error_is_an_api_error(stored):
-    from wallapoplib.http import ApiError
+    from wallapop_mcp.http import ApiError
 
     with pytest.raises(ApiError):
         build_client()
@@ -92,7 +92,7 @@ def test_build_client_mints_a_token_from_the_browser_session(stored):
 
 
 def test_cli_helper_turns_a_missing_session_into_system_exit(stored, monkeypatch):
-    from wallapoplib.cli import commands
+    from wallapop_mcp.cli import commands
 
     monkeypatch.setattr(commands, "build_client", build_client)
     with pytest.raises(SystemExit) as exc:

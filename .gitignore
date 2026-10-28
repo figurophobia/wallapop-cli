@@ -8,9 +8,7 @@ dist/
 *.egg-info/
 .venv/
 .pytest_cache/
-bin/
-coverage.out
-*.test
+.ruff_cache/
 .env
 .env.*
 .DS_Store

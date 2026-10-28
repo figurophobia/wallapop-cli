@@ -1,4 +1,4 @@
-"""wallapoplib: typed Wallapop API client + CLI, without a browser.
+"""wallapop_mcp: typed Wallapop API client + CLI, without a browser.
 
 Public surface (the v1 contract):
 
@@ -16,7 +16,7 @@ Public surface (the v1 contract):
   instead of exiting the interpreter).
 - ``InvalidPrice`` for rejected price values.
 
-The bundled CLI lives in ``wallapoplib.cli`` (entry point ``wallapop``) and is
+The bundled CLI lives in ``wallapop_mcp.cli`` (entry point ``wallapop``) and is
 not part of the library contract. Requires Python >= 3.10, zero mandatory
 dependencies.
 """

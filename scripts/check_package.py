@@ -17,5 +17,5 @@ for archive in archives:
     forbidden = {"cookies.txt", "credentials.json", "session.json", ".env"}
     assert not any(Path(n).name in forbidden for n in names), f"private file in {archive}"
     assert any(Path(n).name == "LICENSE" for n in names), f"missing license in {archive}"
-    assert any(n.endswith("wallapoplib/session.py") for n in names), f"missing session module in {archive}"
+    assert any(n.endswith("wallapop_mcp/mcp_server.py") for n in names), f"missing MCP server in {archive}"
     print(f"{archive.name}: package contents OK")

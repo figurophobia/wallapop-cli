@@ -55,7 +55,7 @@ from ..session import SessionError, build_client
 from ..tokens import token_expiry
 
 def authed_client(required: bool = True) -> tuple[Wallapop, dict]:
-    """CLI wrapper around :func:`wallapoplib.session.build_client`.
+    """CLI wrapper around :func:`wallapop_mcp.session.build_client`.
 
     The library helper raises ``SessionError``; the CLI turns that into a
     friendly ``SystemExit(1)``.
@@ -239,7 +239,7 @@ def cmd_login(args: argparse.Namespace) -> int:
 
     if not args.email:
         if not getattr(args, "force", False) and _valid_session():
-            print("already logged in. run: wallapop login --force  (para cambiar de cuenta)")
+            print("already logged in. run: wallapop login --force  (to switch accounts)")
             return 0
         if read_firefox_cookies():
             return _login_from_firefox()
@@ -249,7 +249,7 @@ def cmd_login(args: argparse.Namespace) -> int:
             pass
         else:
             return _login_via_wizard(args.timeout)
-        eprint("no account found. usa: wallapop login <email>  |  pip install -e '.[browser]' para login Google (wizard)")
+        eprint("no account found. use: wallapop login <email>  |  pip install 'wallapop-mcp[browser]' for the Google login wizard")
         return 1
     password = args.password
     if not password:
@@ -321,18 +321,18 @@ def cmd_show(args: argparse.Namespace) -> int:
     if it.brand:
         extras.append(f"marca: {it.brand}")
     if it.genre:
-        extras.append(f"género: {it.genre}")
+        extras.append(f"genre: {it.genre}")
     if it.condition or it.condition_text:
         extras.append(f"estado: {it.condition_text or it.condition}")
     if extras:
         print("  " + "  ·  ".join(extras))
-    shipped = "sí" if it.shippable else "no"
-    print(f"envío:    {shipped}  reservado: {'sí' if it.reserved else 'no'}  vendido: {'sí' if it.sold else 'no'}")
+    shipped = "yes" if it.shippable else "no"
+    print(f"shipping: {shipped}  reserved: {'yes' if it.reserved else 'no'}  sold: {'yes' if it.sold else 'no'}")
     print(f"stats:    {it.views} vistas · {it.favorites} favs {'(te gusta)' if it.favorited else ''}")
     print(f"url:      {it.url}")
     if it.description:
         print()
-        print(paint.dim("descripción:"))
+        print(paint.dim("description:"))
         print(it.description.strip())
     return 0
 
@@ -381,7 +381,7 @@ def cmd_favorite(args: argparse.Namespace) -> int:
     client, _ = authed_client()
     r = client.favorite(item_hash, not args.remove)
     if r.ok:
-        action = "añadido a" if not args.remove else "eliminado de"
+        action = "added to" if not args.remove else "removed from"
         print(f"[ok] {action} favoritos")
     else:
         eprint(f"error: {r.error_reason or r.status}")
@@ -395,7 +395,7 @@ def cmd_seller(args: argparse.Namespace) -> int:
     try:
         profile = client.seller(user_id)
     except Exception as e:
-        print(paint.error(f"error: no se pudo obtener el vendedor: {e}"))
+        print(paint.error(f"error: could not fetch the seller: {e}"))
         return 1
     try:
         stats = client.seller_stats(user_id)
@@ -425,14 +425,14 @@ def cmd_seller(args: argparse.Namespace) -> int:
             reviews_lbl = str(c.get("value", "0"))
             break
     print(paint.bold(f"{name} ({user_id})"))
-    print(f"valoración: {avg_lbl} · {reviews_lbl} reseñas")
-    print(f"total reseñas: {reviews_lbl}")
+    print(f"rating: {avg_lbl} · {reviews_lbl} reviews")
+    print(f"total reviews: {reviews_lbl}")
     if isinstance(stats.get("sells"), (int, float)):
-        print(f"ventas: {stats['sells']}")
+        print(f"sales: {stats['sells']}")
     if isinstance(stats.get("shipping"), (int, float)):
-        print(f"envíos: {stats['shipping']}")
+        print(f"shipments: {stats['shipping']}")
     if isinstance(stats.get("deliveries_on_time_in_days"), (int, float)):
-        print(f"entrega media: {stats['deliveries_on_time_in_days']} días")
+        print(f"avg. delivery: {stats['deliveries_on_time_in_days']} days")
     if extra:
         rate = extra.get("response_rate")
         level = (extra.get("validations") or {}).get("level")
@@ -440,19 +440,19 @@ def cmd_seller(args: argparse.Namespace) -> int:
         if rate:
             labels = {
                 "less_than_one_hour": "< 1 h",
-                "less_than_a_day": "< 1 día",
-                "less_than_a_week": "< 1 semana",
-                "unknown": "desconocida",
+                "less_than_a_day": "< 1 day",
+                "less_than_a_week": "< 1 week",
+                "unknown": "unknown",
             }
             rate_lbl = labels.get(rate, str(rate))
             print(f"responde: {rate_lbl}")
         if isinstance(rating, (int, float)):
-            print(f"valoración extra: {rating} ★")
+            print(f"extra rating: {rating} ★")
         if level:
             print(f"verificado: {level}")
     if reviews:
         print()
-        print(paint.dim("reseñas:"))
+        print(paint.dim("reviews:"))
         for r in reviews:
             rev = r.get("review") or {}
             score = rev.get("rating_over_five")
@@ -599,13 +599,13 @@ def run_offer_status(args: argparse.Namespace) -> int:
                 pr = f"  actual {amt:.2f}€" if amt is not None else ""
                 tag = offer_tag(kind)
             else:
-                label = paint.dim("sin ofertas")
+                label = paint.dim("no offers")
                 offer = ""
                 pr = ""
                 tag = ""
             st = f" [{istatus}]" if istatus else ""
             if not printed_header:
-                print(paint.dim("  asking = precio del anuncio · \"actual\" = importe de la última oferta en juego"))
+                print(paint.dim("  asking = listing price · \"actual\" = amount of the latest offer in play"))
                 printed_header = True
             print(f"  {tag:<13} {paint.bold(title[:40]):<40}  {amount} {cur}{st}  ·  {who:<12}  {label}{pr}{offer}")
             print(paint.dim(f"      conv {c.get('hash')}  ->  offer status {c.get('hash')}"))
@@ -891,7 +891,7 @@ def cmd_replies(args: argparse.Namespace) -> int:
 def _print_transactions(kind: str, tab: str, items: list[dict]) -> None:
     print(paint.bold(f"{kind} · {tab}"))
     if not items:
-        print("   (no hay nada aquí)")
+        print("   (nothing here)")
         return
     for t in items:
         price = t.get("price") or ""
@@ -926,7 +926,7 @@ def cmd_purchases(args: argparse.Namespace) -> int:
     if args.json:
         emit_json(items)
         return 0
-    _print_transactions("purchases", "en curso" if tab == "ongoing" else "finalizadas", items)
+    _print_transactions("purchases", "ongoing" if tab == "ongoing" else "finished", items)
     return 0
 
 
@@ -941,7 +941,7 @@ def cmd_selling(args: argparse.Namespace) -> int:
     if args.json:
         emit_json(items)
         return 0
-    _print_transactions("selling", "en curso" if tab == "ongoing" else "finalizadas", items)
+    _print_transactions("selling", "ongoing" if tab == "ongoing" else "finished", items)
     return 0
 
 
@@ -949,7 +949,7 @@ def cmd_reserve(args: argparse.Namespace) -> int:
     item_id = resolve_internal_id(args.item)
     client, _ = authed_client()
     r = client.reserve(item_id, not args.remove)
-    announce("reservado" if not args.remove else "desreservado", r)
+    announce("reserved" if not args.remove else "unreserved", r)
     return 0 if r.ok else 1
 
 
@@ -957,7 +957,7 @@ def cmd_sold(args: argparse.Namespace) -> int:
     item_id = resolve_internal_id(args.item)
     client, _ = authed_client()
     r = client.mark_sold(item_id, not args.undo)
-    announce("marcado como vendido" if not args.undo else "desmarcado como vendido", r)
+    announce("marked as sold" if not args.undo else "unmarked as sold", r)
     return 0 if r.ok else 1
 
 
@@ -975,7 +975,7 @@ def cmd_edit(args: argparse.Namespace) -> int:
         color=args.color,
         max_weight_kg=args.max_weight_kg,
     )
-    announce("editado", r)
+    announce("edited", r)
     if not r.ok:
         return 1
     if args.json and r.data:
@@ -986,13 +986,13 @@ def cmd_edit(args: argparse.Namespace) -> int:
 def cmd_delete(args: argparse.Namespace) -> int:
     item_id = resolve_internal_id(args.item)
     if not args.yes:
-        ans = input(f"borrar {item_id} permanentemente? (y/N): ").strip().lower()
+        ans = input(f"permanently delete {item_id}? (y/N): ").strip().lower()
         if ans not in ("y", "yes"):
-            eprint("cancelado")
+            eprint("cancelled")
             return 1
     client, _ = authed_client()
     r = client.delete_item(item_id)
-    announce("borrado (DELETE /items/{id})", r)
+    announce("deleted (DELETE /items/{id})", r)
     return 0 if r.ok else 1
 
 
@@ -1115,7 +1115,7 @@ def saved_search_params(client: Wallapop, args: argparse.Namespace, keyword: str
 
 
 def cmd_alert(args: argparse.Namespace) -> int:
-    """Manage saved searches ("búsquedas guardadas"): the sniper's alert list."""
+    """Manage saved searches (search alerts): the sniper's alert list."""
     action = getattr(args, "action", "") or ""
     if action in ("save", "check"):
         keyword = " ".join(args.keyword or [])
@@ -1127,7 +1127,7 @@ def cmd_alert(args: argparse.Namespace) -> int:
         if action == "save":
             search_id = client.save_search(params)
             print(f"[ok] search saved (id {search_id})")
-            print(f"     wallapop alert remove --id {search_id}   (borrarla)")
+            print(f"     wallapop alert remove --id {search_id}   (to delete it)")
             return 0
         search_id = client.saved_search_exists(params)
         if search_id is None:
@@ -1199,5 +1199,5 @@ def cmd_inactivate(args: argparse.Namespace) -> int:
     item_id = resolve_internal_id(args.item)
     client, _ = authed_client()
     r = client.inactivate_item(item_id)
-    announce("pausado (PUT /items/{id}/inactivate)", r)
+    announce("paused (PUT /items/{id}/inactivate)", r)
     return 0 if r.ok else 1

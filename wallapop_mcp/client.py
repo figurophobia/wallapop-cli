@@ -604,7 +604,7 @@ class Wallapop:
     def other_items(self, item_id: str) -> list[Item]:
         """More active items from the same seller (GET /api/v3/items/{id}/seller/other-items).
 
-        Feeds the web's "más artículos del vendedor" rail on an item page.
+        Feeds the web's "more items from this seller" rail on an item page.
         """
         resp = self._request("GET", f"/items/{item_id}/seller/other-items")
         if not resp.ok:
@@ -1496,7 +1496,7 @@ class Wallapop:
     def saved_search_hits(self) -> int:
         """Total new-listing counter across your saved searches (GET .../alerts/total-hits).
 
-        This is the badge number the web shows next to "búsquedas guardadas".
+        This is the badge number the web shows next to the saved searches ("búsquedas guardadas") menu.
         """
         resp = self._authed("GET", "/searchalerts/savedsearch/alerts/total-hits")
         if not resp.ok:

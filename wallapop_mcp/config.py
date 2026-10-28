@@ -33,7 +33,17 @@ PNSDK = "PubNub-JS-Web/10.2.6"
 WEB_APP_VERSION = "8.2656.0"
 
 
-CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".config", "wallapop_cli")
+def _default_config_dir() -> str:
+    """``~/.config/wallapop-mcp``, or the pre-rename ``wallapop_cli`` dir if only that exists."""
+    base = os.path.join(os.path.expanduser("~"), ".config")
+    current = os.path.join(base, "wallapop-mcp")
+    legacy = os.path.join(base, "wallapop_cli")
+    if not os.path.isdir(current) and os.path.isdir(legacy):
+        return legacy
+    return current
+
+
+CONFIG_DIR = os.environ.get("WALLAPOP_CONFIG_DIR") or _default_config_dir()
 
 
 CRED_PATH = os.path.join(CONFIG_DIR, "credentials.json")
@@ -48,7 +58,7 @@ CONTACTED_PATH = os.path.join(CONFIG_DIR, "contacted.json")
 CLIENT_ID = "wallapop"
 
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 USER_AGENTS = [

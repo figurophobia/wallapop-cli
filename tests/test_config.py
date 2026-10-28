@@ -8,7 +8,8 @@ import stat
 
 import pytest
 
-from wallapoplib.config import (
+from wallapop_mcp import config
+from wallapop_mcp.config import (
     load_credentials,
     load_json,
     load_session,
@@ -54,7 +55,7 @@ def test_parse_keeps_first_of_duplicate_key():
     assert parsed["device_id"] == "b"
 
 def test_cities_include_countries_and_regions():
-    from wallapoplib.config import CITIES, DEFAULT_GEO
+    from wallapop_mcp.config import CITIES, DEFAULT_GEO
     assert CITIES["italia"] == (41.9, 12.5)
     assert CITIES["portugal"] == (38.7, -9.1)
     assert CITIES["galicia"] == (42.6, -8.1)
@@ -62,13 +63,13 @@ def test_cities_include_countries_and_regions():
 
 
 def test_cities_preserve_existing_city_presets():
-    from wallapoplib.config import CITIES
+    from wallapop_mcp.config import CITIES
     assert CITIES["madrid"] == (40.4168, -3.7038)
     assert CITIES["barcelona"] == (41.3896, 2.1476)
 
 
 def test_categories_reflects_canonical_endpoint():
-    from wallapoplib.config import CATEGORIES
+    from wallapop_mcp.config import CATEGORIES
     assert CATEGORIES[100] == "Coches"
     assert CATEGORIES[12800] == "Motor y accesorios"
     assert CATEGORIES[24200] == "Tecnología y electrónica"
@@ -118,7 +119,7 @@ def test_save_json_never_truncates_the_previous_content(tmp_path):
 
 
 def test_save_credentials_and_session_are_atomic(tmp_path, monkeypatch):
-    import wallapoplib.config as config_mod
+    import wallapop_mcp.config as config_mod
 
     cred_path = tmp_path / "credentials.json"
     sess_path = tmp_path / "session.json"
@@ -157,3 +158,16 @@ def test_load_json_returns_the_default_on_broken_files(tmp_path):
     path = tmp_path / "broken.json"
     path.write_text("{not json")
     assert load_json(str(path), {"fallback": True}) == {"fallback": True}
+
+
+def test_config_dir_defaults_to_wallapop_mcp(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert config._default_config_dir() == str(tmp_path / ".config" / "wallapop-mcp")
+
+
+def test_config_dir_keeps_a_pre_rename_session(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / ".config" / "wallapop_cli").mkdir(parents=True)
+    assert config._default_config_dir() == str(tmp_path / ".config" / "wallapop_cli")
+    (tmp_path / ".config" / "wallapop-mcp").mkdir()
+    assert config._default_config_dir() == str(tmp_path / ".config" / "wallapop-mcp")
