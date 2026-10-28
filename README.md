@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
-    <img src="docs/logo-light.svg" alt="Wallapop × Model Context Protocol" height="96">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/figurophobia/wallapop-mcp/main/docs/logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/figurophobia/wallapop-mcp/main/docs/logo-light.svg" alt="Wallapop × Model Context Protocol" height="96">
   </picture>
 </p>
 
@@ -13,7 +13,7 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%E2%80%933.14-3776AB?logo=python&logoColor=white">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-stdio-16181D">
   <img alt="Tools" src="https://img.shields.io/badge/tools-30-13C1AC">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
+  <a href="https://github.com/figurophobia/wallapop-mcp/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="https://github.com/figurophobia/vinted-mcp"><img alt="Sibling: vinted-mcp" src="https://img.shields.io/badge/sibling-vinted--mcp-09B1BA"></a>
 </p>
 
@@ -175,7 +175,7 @@ a web slug or a full URL.
 | `remove_saved_search` | `search_id` | Delete a saved search by id |
 Names match [vinted-mcp](https://github.com/figurophobia/vinted-mcp) wherever the concept is the same, so an
 agent can drive both marketplaces with the same vocabulary. Agent flows (buy & negotiate, sell) are described
-step by step in [AGENTS.md](AGENTS.md).
+step by step in [AGENTS.md](https://github.com/figurophobia/wallapop-mcp/blob/main/AGENTS.md).
 
 ## CLI
 
@@ -226,7 +226,7 @@ wallapop purchases [--finished] | wallapop selling [--finished]
 ```
 </details>
 
-The complete guide with every flag is in [docs/USAGE.md](docs/USAGE.md).
+The complete guide with every flag is in [docs/USAGE.md](https://github.com/figurophobia/wallapop-mcp/blob/main/docs/USAGE.md).
 
 ## Python library
 
@@ -242,7 +242,7 @@ item_id = resolve_internal_id("https://es.wallapop.com/item/<slug>")
 r = client.send_offer(item_id, 30, "¿Te vale 30?")    # Response: r.ok, r.status, r.data
 ```
 
-Reference: [docs/API.md](docs/API.md). Raw endpoint research: [docs/ENDPOINTS.md](docs/ENDPOINTS.md).
+Reference: [docs/API.md](https://github.com/figurophobia/wallapop-mcp/blob/main/docs/API.md). Raw endpoint research: [docs/ENDPOINTS.md](https://github.com/figurophobia/wallapop-mcp/blob/main/docs/ENDPOINTS.md).
 
 ## How it works
 
@@ -268,7 +268,7 @@ flowchart LR
   `Retry-After`); writes are sent exactly once and a write that dies mid-flight reports an unknown outcome
   instead of pretending nothing happened. Requests are paced (`WALLAPOP_RATE_PACE`).
 - **Geography matters**: searches need coordinates; the CLI resolves `--city` presets and normalises category
-  ids so the API does not silently return nothing (details in [docs/ENDPOINTS.md](docs/ENDPOINTS.md)).
+  ids so the API does not silently return nothing (details in [docs/ENDPOINTS.md](https://github.com/figurophobia/wallapop-mcp/blob/main/docs/ENDPOINTS.md)).
 
 ## Safety and limits
 
@@ -310,7 +310,7 @@ python3 -m venv .venv
 ```
 
 CI runs the tests on Python 3.10–3.14 and builds the package and the Linux/macOS/Windows executables. Releasing
-(PyPI trusted publishing + GitHub release with binaries) is described in [CONTRIBUTING.md](CONTRIBUTING.md).
+(PyPI trusted publishing + GitHub release with binaries) is described in [CONTRIBUTING.md](https://github.com/figurophobia/wallapop-mcp/blob/main/CONTRIBUTING.md).
 
 ```text
 wallapop_mcp/
@@ -332,4 +332,4 @@ establish current live compatibility. Writes may have partial or unknown outcome
 
 MIT license. Wallapop and its trademarks belong to their respective owners; this project is not affiliated
 with Wallapop. The Wallapop and Model Context Protocol logos are trademarks of their respective owners and of the MCP project; they are shown only to identify the service and protocol this project works with. See
-[CREDITS.md](CREDITS.md).
+[CREDITS.md](https://github.com/figurophobia/wallapop-mcp/blob/main/CREDITS.md).
