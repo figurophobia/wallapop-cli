@@ -1,180 +1,222 @@
-# wallapoplib — API pública (contrato v1)
+# wallapop_mcp — library API (v1 contract)
 
-Biblioteca de comunicación con Wallapop por HTTP plano (sin navegador, solo
-stdlib), con la CLI incluida (`wallapop`). Instalación local de desarrollo:
+Talks to Wallapop over plain HTTP (no browser, standard library only) and
+backs both the MCP server (`wallapop-mcp`) and the CLI (`wallapop`). Local
+development install:
 
 ```
 pip install -e '.[test]'
 ```
 
-El extra `[browser]` (Playwright) permite el login y publicación con navegador, y un fallback de chat explícito. Un envío con entrega desconocida no se repite automáticamente. La comunicación normal no añade dependencias.
+The `[browser]` extra (Playwright) enables browser login and publishing, plus an
+explicit chat fallback. A send with an unknown delivery outcome is never retried
+automatically. Normal communication adds no dependencies beyond the package.
 
 ## Quickstart
 
 ```python
-from wallapoplib import Wallapop, load_credentials, load_session
+from wallapop_mcp import Wallapop, load_credentials, load_session
 
-ses = load_session()  # o load_credentials() para login por email
+ses = load_session()  # or load_credentials() for an email login
 client = Wallapop(
     token=ses.get("accessToken"),
     web_cookies=ses if ses.get("__Secure-next-auth.session-token") else None,
 )
 
-# Buscar y leer resultados tipados (España por defecto)
+# Search and read typed results (Spain by default)
 items = client.search("nintendo switch lite", pages=2, delay=1.0)
 for it in items:
     print(it.title, it.price, it.url, it.shippable)
 
-# Hacer una oferta
-resp = client.send_offer(items[0].id, 90.0, message="Hola, aceptarias 90?")
+# Make an offer
+resp = client.send_offer(items[0].id, 90.0, message="Hi, would you take 90?")
 print(resp.ok, resp.data)
 
-# Gestionar ofertas recibidas (aceptar / rechazar / contraofertar)
+# Handle received offers (accept / decline / counter)
 client.offer_response(offer_id, "accept")          # ACCEPTED
 client.offer_response(offer_id, "decline")         # DECLINED
 client.counter_offer(offer_id, 75.0)               # PATCH offer-price 75.00
 
-# Chat (PubNub REST; idempotente: no reenvía el mismo texto)
-client.send_message(items[0].id, "Hola! Tiene cargador?")
+# Chat (PubNub REST; idempotent: never re-sends the same text)
+client.send_message(items[0].id, "Hi! Does it come with the charger?")
 
-# Marcar/desmarcar favorito
-client.favorite(items[0].id)            # marca como favorito (PUT .../favorite → 204)
-client.favorite(items[0].id, False)     # desmarca
+# Favorite / unfavorite
+client.favorite(items[0].id)            # favorite (PUT .../favorite → 204)
+client.favorite(items[0].id, False)     # unfavorite
 
-# Compras y ventas (API SDUI de los centros de la web)
-from wallapoplib import parse_sdui_transactions
+# Sniper: save a search and check for new matches (ids are UUIDs)
+search_id = client.save_search({"keywords": "nintendo switch", "max_sale_price": 300})
+print(search_id)                        # 87b2e4fc-b3c9-4351-81af-43e6788aafa5
+client.saved_search_exists({"keywords": "nintendo switch", "max_sale_price": 300})
+client.saved_search_hits()              # 0 (pending new matches)
+client.remove_saved_search(search_id)
+
+# A seller's / an item's extras
+client.seller_items("9jdxxdy1v2zk", pages=2)   # all their listings (cursor: meta.next)
+client.suggest("nintendo sw")                  # the web's autocomplete
+
+# Purchases and sales (SDUI API behind the web's hubs)
+from wallapop_mcp import parse_sdui_transactions
 
 raw = client.purchases("finished")      # GET /sdui/purchases/finished (widget tree)
 rows = parse_sdui_transactions(raw)     # list[dict]: id, title, detail, price, ...
-ventas = client.selling("ongoing")      # GET /sdui/selling/ongoing
+sales = client.selling("ongoing")       # GET /sdui/selling/ongoing
 ```
 
-### Imágenes de un item
+### Item images
 
 ```python
-it = client.item(items[0].id)      # it.images -> URLs medium de las fotos
+it = client.item(items[0].id)      # it.images -> medium-size photo URLs
 print(it.images[0])                # https://cdn.wallapop.com/images/...?pictureSize=W640
 
-# Descargarlas a disco (solo stdlib)
-paths = client.download_images(it, "descargas")
-print(paths)                       # ['descargas/abc_1.jpg', ...]
+# Download them (standard library only)
+paths = client.download_images(it, "downloads")
+print(paths)                       # ['downloads/abc_1.jpg', ...]
 ```
 
-## Dataclasses públicas
+## Public dataclasses
 
-Ver `wallapoplib/models.py`.
+See `wallapop_mcp/models.py`.
 
-| Tipo | Campos | Uso |
+| Type | Fields | Use |
 | --- | --- | --- |
-| `Item` | `id, title, price: float, currency, city, user_id, user_name, url, shippable: bool`, `reserved`, `sold`, `category + category_name`, `created_at`, `images: list[str]` | Un anuncio normalizado (`images` = URLs medium de las fotos) |
-| `Deal` | `item: Item, discount: float, median: float` | Un `Item` por debajo de la mediana del mercado |
-| `OfferEvent` | `kind, amount: float\|None, offer_id: str\|None, date, ts, text` | Entrada del ledger de negociación (una por evento de oferta en el hilo) |
-| `OfferState` | `kind, label, amount, offer_id, actionable: bool` | Estado actual derivado del último evento |
+| `Item` | `id, title, price: float, currency, city, user_id, user_name, url, shippable: bool`, `reserved`, `sold`, `category + category_name`, `created_at`, `images: list[str]` | A normalized listing (`images` = medium photo URLs) |
+| `Deal` | `item: Item, discount: float, median: float` | An `Item` priced below the market median |
+| `OfferEvent` | `kind, amount: float\|None, offer_id: str\|None, date, ts, text` | One negotiation ledger entry (one per offer event in the thread) |
+| `OfferState` | `kind, label, amount, offer_id, actionable: bool` | Current state derived from the latest event |
 
-Kinds de `OfferEvent`/`OfferState`: `our-offer` · `seller-counter` · `our-counter`
+`OfferEvent`/`OfferState` kinds: `our-offer` · `seller-counter` · `our-counter`
 · `seller-accepted` · `accepted-buy` · `seller-declined` · `our-declined` ·
 `expired`.
 
-## Funciones de dominio (con o sin datos crudos)
+## Domain functions (with or without raw data)
 
 ```python
-from wallapoplib import parse_offer_events, offer_state_summary, rank_deals
+from wallapop_mcp import parse_offer_events, offer_state_summary, rank_deals
 
-events = parse_offer_events(thread_messages)   # list[OfferEvent], ordenado por timestamp
+events = parse_offer_events(thread_messages)   # list[OfferEvent], sorted by timestamp
 state = offer_state_summary(events)            # OfferState | None
 deals, median = rank_deals(items, min_discount=0.15, max_price=None)
 ```
 
-- `parse_offer_events`: reconstruye el ledger del hilo y hace *forward-fill* de
-  `amount`/`offer_id` en los eventos terminales (que no los traen).
-- `offer_state_summary`: estado puro (sin colores de terminal); `actionable`
-  solo es `True` cuando hay que responder a una contraoferta.
-- `rank_deals`: mediana del conjunto de candidatos + ranking por descuento.
-- `parse_sdui_transactions`: aplana las tarjetas `list_item_transaction` del
-  árbol SDUI de Compras/Ventas (ignora cabeceras de agrupación y `empty_state`).
+- `parse_offer_events`: rebuilds the thread's ledger and forward-fills
+  `amount`/`offer_id` into terminal events (which do not carry them).
+- `offer_state_summary`: pure state (no terminal colors); `actionable` is only
+  `True` when a counter-offer is waiting for your answer.
+- `rank_deals`: median of the candidate set + ranking by discount.
+- `parse_sdui_transactions`: flattens the `list_item_transaction` cards of the
+  Purchases/Sales SDUI tree (ignores grouping headers and `empty_state`).
 
-## Cliente (`Wallapop`)
+## Client (`Wallapop`)
 
 Constructor: `Wallapop(token=None, refresh_token=None, email=None, persist_fn=None, web_cookies=None)`.
 
-| Método | Endpoint |
+| Method | Endpoint |
 | --- | --- |
 | `item(item_id)` → `Item` | `GET /items/{id}` |
 | `seller(user_id)` → `dict` | `GET /users/{id}` |
-| `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + contadores de reseñas) |
+| `seller_stats(user_id)` → `dict` | `GET /users/{id}/stats` (rating_average + review counters) |
 | `seller_reviews(user_id)` → `list[dict]` | `GET /users/{id}/reviews` |
-| `download_images(item, dest="images")` → `list[str]` | descarga `item.images` a `dest` (solo stdlib) y devuelve las rutas guardadas |
-| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (o fallback `/general/search`). Sin `latitude`/`longitude` usa España por defecto (40.0, -3.5); pasa ambas para anclar a otra zona. Si falta `category_id` y hay `subcategory_ids`, se resuelve la raíz del árbol (`category_for_subcategory`); un `category_id` intermedio se normaliza a su top-level. Salta páginas vacías con `next_page` (p. ej. `ship_only` + `price_asc`). |
-| `category_for_subcategory(subcategory_id)` → `Optional[int]` | raíz top-level del nodo en `/categories` (p. ej. `10088` → `24200`) |
-| `top_level_category(category_id)` → `int` | devuelve el id si ya es top-level; si es un nodo intermedio, sube a su raíz; si no está en el árbol, lo deja igual |
-| `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (offer_id uuid generado por cliente) |
+| `seller_extra_info(user_id)` → `dict` | `GET /users/{id}/extra-info` (response_rate, scoring_stars, validations, activity_level) |
+| `seller_items(user_id, pages=1, max_items=25)` → `list[Item]` | `GET /users/{id}/items` (public; cursor pagination `meta.next` → `since`) |
+| `other_items(item_id)` → `list[Item]` | `GET /items/{id}/seller/other-items` (more listings from the same seller) |
+| `seller_phone_number(item_id)` → `str` | `GET /items/{id}/seller-phone-number` (`""` when unavailable) |
+| `item_actions_allowed(item_id)` → `list[dict]` | `GET /items/{id}/actions-allowed` (`[{type, allowed, cause}]`) |
+| `suggest(keyword, limit=10)` → `list[dict]` | `GET /suggesters/nonlocated` (autocomplete: `[{text, highlight, subtitle}]`) |
+| `download_images(item, dest="images")` → `list[str]` | downloads `item.images` into `dest` and returns the saved paths |
+| `search(keywords, category_id?, subcategory_ids?, order_by?, latitude?, longitude?, pages?, delay?, condition?, min_price?, max_price?, ship_only?)` → `list[Item]` | `GET /search/components` + `/search/section` (or the `/general/search` fallback). Without `latitude`/`longitude` it defaults to Spain (40.0, -3.5); pass both to anchor elsewhere. With `subcategory_ids` and no `category_id`, the tree root is resolved (`category_for_subcategory`); a mid-level `category_id` is normalized to its top level. Skips empty pages that still carry `next_page` (e.g. `ship_only` + `price_asc`). |
+| `category_for_subcategory(subcategory_id)` → `Optional[int]` | top-level root of the node in `/categories` (e.g. `10088` → `24200`) |
+| `top_level_category(category_id)` → `int` | the id itself if top-level; a mid-level node climbs to its root; unknown ids are returned unchanged |
+| `send_offer(item_id, amount, message?)` | `POST /api/v3/delivery/buyer/offers` (client-generated uuid offer_id) |
 | `offer_response(offer_id, action)` — `accept`/`decline` | `PATCH /delivery/offers/{id}/status` |
 | `counter_offer(offer_id, amount, currency="EUR")` | `PATCH /delivery/offers/{id}/offer-price` |
-| `offer_details(offer_id)` / `make_offer_info(item_id)` | BFF (sujetos a anti-bot) |
-| `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | mensajería |
-| `send_message(item_hash, message, report?, allow_browser_fallback=False)` | PubNub REST publish; fallback de navegador solo si se habilita y el envío no es ambiguo |
-| `publish(photo_paths, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publica un artículo por API pura replicando el multipart de `POST /api/v3/items` (foto + JSON `item`). `Response.data` = `{"id": <item id>, "flags": {}}` |
-| `favorite(item_id, favorited=True)` → `Response` | marca/desmarca un item como favorito (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
-| `reserve(item_id, reserved=True)` → `Response` | reserva/desreserva un item tuyo (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
-| `mark_sold(item_id, sold=True)` → `Response` | marca uno de tus items como vendido/no vendido (`PUT /items/{id}/sold`, 204) |
-| `edit_item(item_id, price?, title?, description?, condition?, brand?, model?, color?, category_leaf_id?, max_weight_kg?)` → `Response` | edita un anuncio publicado replicando el formulario "Actualizar" de la web (`PUT /api/v3/items/{id}` con `Accept: application/vnd.upload-v2+json`) |
-| `delete_item(item_id)` → `Response` | **borra permanentemente** un item tuyo (`DELETE /api/v3/items/{id}`, 204) |
-| `purchases(tab)` / `selling(tab)` → `dict` | centros **Compras/Ventas** de la web por SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parsea el árbol con `parse_sdui_transactions` |
-| `login(email, password)` / `try_refresh()` / `refresh_web()` | sesión |
+| `offer_details(offer_id)` / `make_offer_info(item_id)` | BFF (subject to anti-bot checks) |
+| `ensure_conversation(item_hash)` / `conversation_thread(conv_id)` / `inbox()` / `unread_count()` | messaging |
+| `send_message(item_hash, message, report?, allow_browser_fallback=False)` | PubNub REST publish; browser fallback only when enabled and the send was not ambiguous |
+| `reply_to_conversation(conv_id, message, report?)` | publish straight to an existing conversation (seller side) |
+| `publish(photo_paths, title, price, category_leaf_id?, condition?, description?, brand?, model?, color?, max_weight_kg?)` → `Response` | publishes a listing through the pure API, replicating the `POST /api/v3/items` multipart (photo + `item` JSON). `Response.data` = `{"id": <item id>, "flags": {}}` |
+| `favorite(item_id, favorited=True)` → `Response` | favorite/unfavorite an item (`PUT /items/{id}/favorite`, body `{"favorited": <bool>}`, 204) |
+| `favorite_lists(pages=1)` → `list[Item]` | `GET /favorite-lists` (your favorites; cursor `meta.next` → `since`) |
+| `favorite_list_add(list_id, item_id)` / `favorite_list_remove(list_id, item_id)` → `Response` | `POST /favorite-lists/{id}/items` (body `{"items": [{"id", "is_favorited"}]}`) / `DELETE /favorite-lists/{id}/items/{item_id}` |
+| `mark_viewed(item_id)` → `Response` | `PUT /items/{id}/view` (registers a view) |
+| `inactivate_item(item_id)` → `Response` | pauses one of your listings (`PUT /items/{id}/inactivate`, 403 if it is not yours); editing it puts it back online |
+| `reserve(item_id, reserved=True)` → `Response` | reserve/unreserve one of your items (`PUT /items/{id}/reserve`, body `{"reserved": <bool>}`, 204) |
+| `mark_sold(item_id, sold=True)` → `Response` | mark one of your items as sold/unsold (`PUT /items/{id}/sold`, 204) |
+| `edit_item(item_id, price?, title?, description?, condition?, brand?, model?, color?, category_leaf_id?, max_weight_kg?)` → `Response` | edits a published listing, replicating the web's "Update" form (`PUT /api/v3/items/{id}`) and preserving the fields you do not pass |
+| `delete_item(item_id)` → `Response` | **permanently deletes** one of your items (`DELETE /api/v3/items/{id}`, 204) |
+| `purchases(tab)` / `selling(tab)` → `dict` | the web's **Purchases/Sales** hubs via SDUI (`GET /sdui/{purchases\|selling}/{ongoing\|finished}`); tab = `"ongoing"`/`"finished"`. Parse the tree with `parse_sdui_transactions` |
+| `save_search(params)` → `str` | saves a search (`POST /searchalerts/savedsearch`); returns the **UUID** from the `Location` header |
+| `saved_search_exists(params)` → `Optional[str]` | id of the saved search for those filters, or `None` (`HEAD /searchalerts/savedsearch/exists`, 200+`Location` / 404) |
+| `saved_search_hits()` → `int` | new-match counter across your saved searches (`GET /searchalerts/savedsearch/alerts/total-hits` → `data.hits`) |
+| `remove_saved_search(search_id)` → `Response` | deletes a saved search by UUID (`DELETE /searchalerts/savedsearch/{id}`, 200) |
+| `login(email, password)` / `try_refresh()` / `refresh_web()` | session |
 
-`report` (dict opcional de `send_message`) recibe `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.
+`report` (optional dict for `send_message`) receives `{"path": "rest"|"browser"|"skipped", "skipped": bool, "browser_s": float}`.
 
-## Errores
+## Errors
 
-Todas las operaciones de red lanzan `ApiError` solo en fallos del transporte
-(reinstatable) o de respuesta no consumible; el resto devuelve `Response`:
+Network operations raise `ApiError` only for transport failures or unusable
+responses; everything else returns a `Response`:
 
 ```python
-from wallapoplib import ApiError, Response
+from wallapop_mcp import ApiError, Response
 
 resp: Response = client.send_offer("id", 10.0)
 if not resp.ok:
     print(resp.status, resp.error_reason)
 ```
 
-## Sesión
-- `load_credentials()` — dict con `email`, `access_token`, `refresh_token`, `user` (login por email).
-- `load_session()` — dict de cookies de navegador; con `__Secure-next-auth.session-token` activa la vía de refresh por cookie.
-- `save_session(data)` — persiste la sesión de navegador.
+`NotSentError` and `UnknownOutcomeError` (both `ApiError` subclasses) tell a
+write that never left the machine from one whose outcome is unknown. Check the
+state before retrying the latter.
 
-Los datos se guardan en `~/.config/wallapop_cli/` con permisos `600`, fuera del repo.
+## Session
 
-## Geografía y selección de país
+- `build_client(required=True)` returns `(client, credentials)` and raises
+  `SessionError` when there is no session (it never exits the process);
+  `required=False` gives an anonymous client instead.
+- `load_credentials()` — dict with `email`, `access_token`, `refresh_token`, `user` (email login).
+- `load_session()` — browser cookie dict; `__Secure-next-auth.session-token` enables cookie-based refresh.
+- `save_session(data)` — persists the browser session.
 
-`wallapoplib.config.CITIES` es el mapa lugares → `(lat, lon)` del que cuelgan el
-default de `search()` y el `--city` del CLI. Incluye ciudades, países y regiones
-españolas (`italia`, `portugal`, `francia`, `galicia`, `andalucia`, …).
+Data lives in `~/.config/wallapop-mcp/` (mode `600`), outside any repository.
+Override it with `WALLAPOP_CONFIG_DIR`. An existing pre-rename
+`~/.config/wallapop_cli/` is still picked up when the new directory does not
+exist.
+
+## Geography and country selection
+
+`wallapop_mcp.config.CITIES` maps places → `(lat, lon)`; it backs the default of
+`search()` and the CLI's `--city`. It includes Spanish cities and regions plus
+countries (`italia`, `portugal`, `francia`, `galicia`, `andalucia`, …).
 
 ```python
-from wallapoplib.config import CITIES, DEFAULT_GEO
-lat, lon = CITIES["italia"]          # ancla a Italia
+from wallapop_mcp.config import CITIES, DEFAULT_GEO
+lat, lon = CITIES["italia"]          # anchor to Italy
 ```
 
-- Sin `latitude`/`longitude`, `search()` usa `DEFAULT_GEO` (España, 40.0, -3.5),
-  que reproduce **exactamente** la búsqueda de `es.wallapop.com`. No es una
-  restricción: pasar coords de otro país devuelve los items de ese país.
-- El país real de los resultados lo decide principalmente `search_country`
-  (que la lib no envía; el backend infiere por coords). Con `order_by` de
-  relevancia los anuncios salen del país anclado; con `newest` el API devuelve
-  un conjunto más global (mezcla de países), como a veces hace la app.
+- Without `latitude`/`longitude`, `search()` uses `DEFAULT_GEO` (Spain, 40.0,
+  -3.5), which reproduces the `es.wallapop.com` search **exactly**. It is not a
+  restriction: coordinates from another country return that country's items.
+- The country of the results is mostly decided by `search_country` (not sent
+  by the library; the backend infers it from the coordinates). With relevance
+  ordering the listings come from the anchored country; with `newest` the API
+  returns a more global mix, as the app sometimes does.
 
-El detalle completo del comportamiento geográfico está en
-`docs/ENDPOINTS.md` (sección "Comportamiento geográfico").
+The full geographic behaviour is described in `docs/ENDPOINTS.md` ("Geographic
+behaviour").
 
-## Referencias a ids
+## Item references
 
-- `resolve_internal_id(ref)` — convierte url / slug / hash de 12 chars al id interno (`v6gpwy9d476e`).
+- `resolve_internal_id(ref)` — turns a URL / slug / 12-char hash into the internal id (`v6gpwy9d476e`).
 
-## Compatibilidad
+## Compatibility and reliability
 
-- Python `>= 3.10`, cero dependencias obligatorias.
-- CI: matrix `3.10 / 3.11 / 3.12` (`pip install -e '.[test]'` → `pytest`).
-
-## Fiabilidad en este fork
-
-`build_client(required=True)` devuelve `(client, credentials)` y lanza `SessionError` si falta sesión, sin terminar el proceso. Los importes conservan céntimos; un `Response.partial` mantiene el ID creado si falla una foto posterior. Los fallos HTTP de perfiles se notifican como `ApiError`. Una escritura sin confirmación requiere comprobar su estado antes de reintentar.
+- Python `>= 3.10`. The library itself only uses the standard library; the
+  `mcp` SDK is needed for the MCP server.
+- Prices keep their cents; a price with more than two decimals raises
+  `InvalidPrice` instead of being rounded.
+- A `Response.partial` keeps the created id when a later photo upload fails;
+  do not recreate the listing.
+- HTTP failures on profile endpoints surface as `ApiError` instead of empty
+  data. Writes are never retried by the transport.

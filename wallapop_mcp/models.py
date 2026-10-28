@@ -182,7 +182,7 @@ class Item:
         if isinstance(city, dict):
             city = city.get("title") or ""
         web_slug = raw.get("web_slug") or ""
-        slug = web_slug or item_id
+        slug = web_slug or raw.get("slug") or item_id
         taxonomy = raw.get("taxonomy") or []
         category = ""
         category_name = ""
@@ -352,14 +352,14 @@ class OfferState:
 
 
 STATE_LABELS = {
-    "seller-counter": "esperando tu respuesta",
-    "our-offer": "esperando la respuesta del vendedor",
-    "our-counter": "esperando la respuesta del vendedor",
-    "seller-accepted": "aceptada por el vendedor (comprar en 24h)",
-    "accepted-buy": "aceptada por ti — comprar en 24h",
-    "seller-declined": "rechazada por el vendedor",
-    "our-declined": "rechazada por ti",
-    "expired": "caducada",
+    "seller-counter": "waiting for your reply",
+    "our-offer": "waiting for the seller's reply",
+    "our-counter": "waiting for the seller's reply",
+    "seller-accepted": "accepted by the seller (buy within 24h)",
+    "accepted-buy": "accepted by you — buy within 24h",
+    "seller-declined": "declined by the seller",
+    "our-declined": "declined by you",
+    "expired": "expired",
 }
 
 __PYMAPS = {}
@@ -452,7 +452,7 @@ def offer_state_summary(events: list[OfferEvent]) -> Optional[OfferState]:
     Pure data (no terminal styling): returns the last event's ``kind``, the
     standing ``offer_id`` / ``amount`` (forward-filled from older events, since
     terminal delivery messages carry neither), and whether the state is
-    ``actionable`` for us. Colored labels live in ``wallapoplib.cli.output``.
+    ``actionable`` for us. Colored labels live in ``wallapop_mcp.cli.output``.
     """
     if not events:
         return None

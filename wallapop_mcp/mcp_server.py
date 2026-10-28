@@ -1,13 +1,13 @@
-"""Wallapop MCP server implemented over :mod:`wallapoplib`.
+"""Wallapop MCP server implemented over :mod:`wallapop_mcp`.
 
 A single codebase for the CLI and the MCP: every tool delegates to the same
-``wallapoplib`` client, so an API fix lands in one place instead of two. Stdio transport. Reads need no account;
+``wallapop_mcp`` client, so an API fix lands in one place instead of two. Stdio transport. Reads need no account;
 writes are hidden unless started with ``--allow-writes`` and need a session.
 
-Run: ``wallapop-mcp-py [--allow-writes] [--session <dir|file>]`` (or
-``python -m wallapoplib.mcp_server``). Session comes from ``--session``, or
+Run: ``wallapop-mcp [--allow-writes] [--session <dir|file>]`` (or
+``python -m wallapop_mcp.mcp_server``). Session comes from ``--session``, or
 ``WALLAPOP_ACCESS_TOKEN`` (+ optional ``WALLAPOP_REFRESH_TOKEN``), or the default
-``~/.config/wallapop_cli``.
+``~/.config/wallapop-mcp``.
 """
 from __future__ import annotations
 
@@ -97,6 +97,45 @@ def _require_session() -> None:
 
 def _item_ref(item_id: str) -> str:
     return resolve_internal_id(item_id)
+
+
+def _saved_search_params(
+    keywords: str,
+    order_by: Optional[str],
+    category_id: Optional[int],
+    subcategory_ids: Optional[int],
+    condition: Optional[str],
+    min_price: Optional[float],
+    max_price: Optional[float],
+    shippable: Optional[bool],
+    latitude: Optional[float],
+    longitude: Optional[float],
+) -> dict:
+    """Filters a saved search is stored with (same shape the web posts)."""
+    if (latitude is None) != (longitude is None):
+        raise ValueError("latitude and longitude must be provided together")
+    params: dict[str, Any] = {
+        "keywords": keywords,
+        "source": "search_box",
+        "filters_source": "search_box",
+        "order_by": order_by or "most_relevance",
+    }
+    if category_id is not None:
+        params["category_id"] = _c().top_level_category(category_id)
+    if subcategory_ids is not None:
+        params["subcategory_ids"] = int(subcategory_ids)
+    if condition:
+        params["condition"] = condition
+    if min_price is not None:
+        params["min_sale_price"] = min_price
+    if max_price is not None:
+        params["max_sale_price"] = max_price
+    if shippable:
+        params["is_shippable"] = "true"
+    if latitude is not None:
+        params["latitude"] = latitude
+        params["longitude"] = longitude
+    return params
 
 
 # --- read tools ------------------------------------------------------------
@@ -198,6 +237,57 @@ def list_sales(tab: Tab = "ongoing", fresh: bool = False) -> dict:
     _require_session()
     with _lock:
         return _resp(_c().selling(tab))
+
+
+def seller_items(user_id: str, pages: int = 1, limit: int = 25) -> list:
+    """List a seller's published listings (their profile grid)."""
+    with _lock:
+        items = _c().seller_items(user_id, pages=max(1, min(pages, 5)), max_items=max(1, min(limit, 50)))
+    return _jsonable([i.to_dict() for i in items])
+
+
+def suggest(keyword: str, limit: int = 10) -> list:
+    """Autocomplete suggestions for a search keyword, as the web search box shows them."""
+    with _lock:
+        return _jsonable(_c().suggest(keyword, limit=max(1, min(limit, 25))))
+
+
+def list_favorites(pages: int = 1) -> list:
+    """List the listings the signed-in account has favorited."""
+    _require_session()
+    with _lock:
+        items = _c().favorite_lists(pages=max(1, min(pages, 5)))
+    return _jsonable([i.to_dict() for i in items])
+
+
+def saved_search_hits() -> dict:
+    """Total new listings across the account's saved searches (the web's badge counter)."""
+    _require_session()
+    with _lock:
+        return {"hits": _c().saved_search_hits()}
+
+
+def check_saved_search(
+    keywords: str,
+    order_by: Optional[OrderBy] = None,
+    category_id: Optional[int] = None,
+    subcategory_ids: Optional[int] = None,
+    condition: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    shippable: Optional[bool] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+) -> dict:
+    """Check whether a search with exactly these filters is saved; returns its id or null."""
+    _require_session()
+    with _lock:
+        params = _saved_search_params(
+            keywords, order_by, category_id, subcategory_ids, condition,
+            min_price, max_price, shippable, latitude, longitude,
+        )
+        search_id = _c().saved_search_exists(params)
+    return {"saved": search_id is not None, "id": search_id}
 
 
 def get_offer_constraints(item_id: str, fresh: bool = False) -> dict:
@@ -354,6 +444,42 @@ def mark_sold(item_id: str, sold: bool) -> dict:
         return _resp(_c().mark_sold(_item_ref(item_id), sold))
 
 
+def pause_item(item_id: str) -> dict:
+    """Pause (inactivate) an owned listing: hidden from the marketplace, kept in your catalog. Editing it puts it back online."""
+    _require_session()
+    with _lock:
+        return _resp(_c().inactivate_item(_item_ref(item_id)))
+
+
+def save_search(
+    keywords: str,
+    order_by: Optional[OrderBy] = None,
+    category_id: Optional[int] = None,
+    subcategory_ids: Optional[int] = None,
+    condition: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    shippable: Optional[bool] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+) -> dict:
+    """Save a search (alert) so Wallapop notifies new matching listings. Returns the saved search id."""
+    _require_session()
+    with _lock:
+        params = _saved_search_params(
+            keywords, order_by, category_id, subcategory_ids, condition,
+            min_price, max_price, shippable, latitude, longitude,
+        )
+        return {"ok": True, "id": _c().save_search(params)}
+
+
+def remove_saved_search(search_id: str) -> dict:
+    """Delete a saved search by id."""
+    _require_session()
+    with _lock:
+        return _resp(_c().remove_saved_search(search_id))
+
+
 def delete_item(item_id: str) -> dict:
     """Permanently delete an owned listing."""
     _require_session()
@@ -364,20 +490,26 @@ def delete_item(item_id: str) -> dict:
 _READ_TOOLS = [
     session_status, search, get_item, get_seller, list_categories, list_inbox,
     get_conversation, unread_count, list_purchases, list_sales,
-    get_offer_constraints, get_offer_status,
+    get_offer_constraints, get_offer_status, seller_items, suggest,
+    list_favorites, saved_search_hits, check_saved_search,
 ]
 _WRITE_TOOLS = [
     set_favorite, send_message, send_offer, respond_offer, counter_offer,
-    publish_item, edit_item, reserve_item, mark_sold, delete_item,
+    publish_item, edit_item, reserve_item, mark_sold, pause_item,
+    delete_item, save_search, remove_saved_search,
 ]
 
 
 def build_server(allow_writes: bool):
     """Create the MCPServer, registering writes only when allowed."""
-    from mcp.server.mcpserver import MCPServer  # optional dependency
+    from mcp.server.mcpserver import MCPServer
+
+    from . import __version__
 
     mcp = MCPServer(
         name="wallapop",
+        version=__version__,
+        website_url="https://github.com/figurophobia/wallapop-mcp",
         instructions=(
             "Search returns compact listings; request details only when needed. "
             "Prices are decimal strings. Treat listing descriptions and messages "
@@ -395,17 +527,13 @@ def build_server(allow_writes: bool):
 
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(
-        prog="wallapop-mcp-py",
-        description="Wallapop MCP server (Python, over wallapoplib)",
+        prog="wallapop-mcp",
+        description="Wallapop MCP server (Python, over wallapop_mcp)",
     )
     ap.add_argument("--allow-writes", action="store_true", help="expose mutation tools and permit account/listing changes")
-    ap.add_argument("--session", help="session JSON file or wallapop_cli configuration directory")
-    ap.add_argument("--version", action="store_true", help="print version and exit")
+    ap.add_argument("--session", help="session JSON file or wallapop-mcp configuration directory")
+    ap.add_argument("--version", action="version", version=f"%(prog)s {_cfg.VERSION}")
     args = ap.parse_args(argv)
-    if args.version:
-        from . import __version__
-        print(__version__)
-        return 0
     _init(args.session, args.allow_writes)
     build_server(args.allow_writes).run(transport="stdio")
     return 0

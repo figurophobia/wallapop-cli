@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import argparse
-import sys
+from typing import Optional
 
 from .commands import (
+    cmd_alert,
     cmd_deals,
     cmd_delete,
     cmd_edit,
     cmd_favorite,
+    cmd_favorites,
+    cmd_inactivate,
     cmd_login,
     cmd_logout,
     cmd_message,
@@ -19,11 +22,13 @@ from .commands import (
     cmd_replies,
     cmd_reserve,
     cmd_search,
+    cmd_seller,
+    cmd_seller_items,
     cmd_selling,
     cmd_session,
     cmd_show,
-    cmd_seller,
     cmd_sold,
+    cmd_suggest,
     cmd_watch,
 )
 from ..config import CATEGORIES, CITIES, ORDER_ALIASES, VERSION
@@ -32,7 +37,7 @@ from .output import eprint, paint
 
 def add_search_args(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("--category", type=int, help=f"category id. common: {', '.join(f'{k}({v})' for k, v in sorted(CATEGORIES.items()))}")
-    sp.add_argument("--subcat", help="filter by taxonomy leaf id, e.g. 10088 = consolas, 10092 = accesorios de consola")
+    sp.add_argument("--subcat", help="filter by taxonomy leaf id, e.g. 10088 = consoles, 10092 = console accessories")
     sp.add_argument("--min-price", type=float)
     sp.add_argument("--max-price", type=float)
     sp.add_argument("--city", help=f"city preset: {', '.join(sorted(CITIES))}")
@@ -81,15 +86,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
 
-    lp = sub.add_parser("login", help="log in and store credentials (prompts for password)")
+    lp = sub.add_parser(
+        "login",
+        help="log in. with no arguments it detects an existing session, Firefox, or opens the Google login window (wizard)",
+    )
     lp.add_argument("email", nargs="?", default=None, help="email for password login")
     lp.add_argument("password", nargs="?", help="optional; if omitted you are prompted safely")
     lp.add_argument("--browser", choices=["firefox"], help="import your session from the Firefox profile (works with Google accounts)")
     lp.add_argument("--wizard", action="store_true", help="open es.wallapop.com in a real browser and capture the session after you log in (works with Google accounts from any browser)")
     lp.add_argument("--timeout", type=int, default=300, help="seconds to wait for the wizard login (default 300)")
+    lp.add_argument("--force", action="store_true", help="re-login even if a valid session is already stored")
     lp.add_argument("--cookies", help="paste cookies as a 'name=value; ...' string (accessToken, __Secure-next-auth.session-token)"
     )
-    lp.add_argument("--cookies-file", default="cookies.txt", help="read cookies from this file instead of --cookies (default: cookies.txt)")
+    lp.add_argument("--cookies-file", default=None, help="read cookies from this file instead of --cookies")
     lp.set_defaults(func=cmd_login)
 
     so = sub.add_parser("logout", help="clear stored credentials")
@@ -140,12 +149,12 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--json", action="store_true", help="dump raw JSON (inbox or conversation thread)")
     rp.set_defaults(func=cmd_replies)
 
-    pc = sub.add_parser("purchases", help="list your purchases (compras): ongoing or finished")
+    pc = sub.add_parser("purchases", help="list your purchases (Wallapop 'Compras'): ongoing or finished")
     pc.add_argument("--finished", action="store_true", help="show finished purchases instead of ongoing")
     pc.add_argument("--json", action="store_true", help="dump the transactions as JSON")
     pc.set_defaults(func=cmd_purchases)
 
-    sl = sub.add_parser("selling", help="list your selling (ventas): ongoing or finished")
+    sl = sub.add_parser("selling", help="list your selling (Wallapop 'Ventas'): ongoing or finished")
     sl.add_argument("--finished", action="store_true", help="show finished sales instead of ongoing")
     sl.add_argument("--json", action="store_true", help="dump the transactions as JSON")
     sl.set_defaults(func=cmd_selling)
@@ -191,7 +200,37 @@ def build_parser() -> argparse.ArgumentParser:
     seller = sub.add_parser("seller", help="print a seller's full profile (rating, stats, reviews)")
     seller.add_argument("user", help="seller user id (found in 'show' output)")
     seller.add_argument("--json", action="store_true", help="dump the seller profile as JSON")
+    seller.add_argument("--extra", action="store_true", help="also fetch extra-info (response rate, verification level)")
     seller.set_defaults(func=cmd_seller)
+
+    favs = sub.add_parser("favorites", help="list the items you favorited (GET /favorite-lists)")
+    favs.add_argument("--pages", type=int, default=1, help="result pages to fetch (default 1)")
+    favs.add_argument("--json", action="store_true", help="dump favorites as JSON")
+    favs.set_defaults(func=cmd_favorites)
+
+    si = sub.add_parser("seller-items", help="list every published item of a seller (public)")
+    si.add_argument("user", help="seller user id (found in 'show' output)")
+    si.add_argument("--pages", type=int, default=1, help="result pages to fetch (default 1)")
+    si.add_argument("--max", type=int, default=25, help="items per request (default 25)")
+    si.add_argument("--json", action="store_true", help="dump the items as JSON")
+    si.set_defaults(func=cmd_seller_items)
+
+    su = sub.add_parser("suggest", help="autocomplete suggestions for a search keyword")
+    su.add_argument("keyword", nargs="+")
+    su.add_argument("--top", type=int, default=10, help="max suggestions (default 10)")
+    su.add_argument("--json", action="store_true", help="dump suggestions as JSON")
+    su.set_defaults(func=cmd_suggest)
+
+    ic = sub.add_parser("inactivate", help="pause one of your published items (leaves the marketplace)")
+    ic.add_argument("item", help="item url, web slug or internal hash (owned item)")
+    ic.set_defaults(func=cmd_inactivate)
+
+    al = sub.add_parser("alert", help="manage saved searches (search alerts)")
+    al.add_argument("action", choices=["save", "check", "remove", "hits"], help="save a search, check if a search exists, remove by id, or show the new-listing counter")
+    al.add_argument("keyword", nargs="*", help="search keyword (used by save/check)")
+    al.add_argument("--id", dest="search_id", help="saved-search id (remove)")
+    add_search_args(al)
+    al.set_defaults(func=cmd_alert)
 
     pub = sub.add_parser("publish", help="publish an item (pure API by default, or the web wizard with --browser)")
     pub.add_argument("photos_dir", help="directory with the item photos (jpg/png); pure-API mode uses the first photo")
@@ -214,7 +253,7 @@ def build_parser() -> argparse.ArgumentParser:
     pub.add_argument("--capture-body", help="browser mode only: save the raw POST /api/v3/items body to this file (debug)")
     pub.set_defaults(func=cmd_publish)
 
-    parser.add_argument("--version", action="version", version=f"wallapop-cli {VERSION}")
+    parser.add_argument("--version", action="version", version=f"wallapop {VERSION}")
     return parser
 
 

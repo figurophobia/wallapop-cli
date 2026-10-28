@@ -4,12 +4,12 @@ This is the library side of "give me a client for the logged in user".  It
 lives in the library (and not in the CLI) so that consumers do not have to
 import the command line module or catch ``SystemExit``::
 
-    from wallapoplib import build_client
+    from wallapop_mcp import build_client
 
     client, creds = build_client()          # raises SessionError if not logged in
     client, creds = build_client(required=False)   # anonymous client if not logged in
 
-The CLI (``wallapoplib.cli.commands.authed_client``) wraps this helper and
+The CLI (``wallapop_mcp.cli.commands.authed_client``) wraps this helper and
 turns a missing session into a friendly ``SystemExit(1)``.
 """
 

@@ -4,7 +4,7 @@ Ledger messages are shaped like real wallapop ``delivery_generic`` thread
 payloads, with ids de-sensibilized. No network.
 """
 
-from wallapoplib.models import (
+from wallapop_mcp.models import (
     Item,
     OfferEvent,
     deep_find,
@@ -74,7 +74,7 @@ def test_offer_state_summary_counter_is_actionable():
     state = offer_state_summary(parse_offer_events(msgs))
     assert state.kind == "seller-counter"
     assert state.actionable is True
-    assert state.label == "esperando tu respuesta"
+    assert state.label == "waiting for your reply"
 
 
 def test_parse_rejects_plain_chat_messages():

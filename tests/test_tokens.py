@@ -9,7 +9,7 @@ import datetime
 import json
 import time
 
-from wallapoplib.tokens import jwt_claims, refresh_if_expired, token_expiry, user_hash_of
+from wallapop_mcp.tokens import jwt_claims, refresh_if_expired, token_expiry, user_hash_of
 
 
 def _b64url(data: bytes) -> str:

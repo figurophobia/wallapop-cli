@@ -2,7 +2,7 @@
 
 import pytest
 
-from wallapoplib.ids import is_internal_id, resolve_internal_id
+from wallapop_mcp.ids import is_internal_id, resolve_internal_id
 
 
 def test_is_internal_id_12_char_hash():

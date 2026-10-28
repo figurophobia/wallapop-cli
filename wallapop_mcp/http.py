@@ -323,8 +323,8 @@ def _send(
     attempts: int,
     safe: bool,
     timeout: int,
-) -> tuple[int, Optional[bytes], str]:
-    """Run the request loop; return ``(status, raw body, content type)``.
+) -> tuple[int, Optional[bytes], str, dict]:
+    """Run the request loop; return ``(status, raw body, content type, headers)``.
 
     HTTP errors are returned (not raised) so the caller can inspect them; the
     response body of an error is always closed before returning.
@@ -332,6 +332,7 @@ def _send(
     status = 0
     payload: Optional[bytes] = None
     ctype = ""
+    resp_headers: dict = {}
     for attempt in range(attempts):
         _pace()
         req = urllib.request.Request(url, data=data, method=method, headers=headers)
@@ -340,6 +341,7 @@ def _send(
                 status = resp.getcode()
                 payload = resp.read()
                 ctype = resp.headers.get("Content-Type", "")
+                resp_headers = dict(resp.headers.items())
             break
         except urllib.error.HTTPError as err:
             status = err.code
@@ -347,6 +349,7 @@ def _send(
                 payload = err.read()
                 hdrs_err = getattr(err, "headers", None)
                 ctype = hdrs_err.get("Content-Type", "") if hdrs_err else ""
+                resp_headers = dict(hdrs_err.items()) if hdrs_err else {}
                 retry_after = parse_retry_after(hdrs_err.get("Retry-After") if hdrs_err else None)
             finally:
                 # the error carries an open body: do not leak the socket
@@ -376,7 +379,7 @@ def _send(
                 time.sleep(_retry_delay(attempt, None))
                 continue
             raise _network_error(err, safe)
-    return status, payload, ctype
+    return status, payload, ctype, resp_headers
 
 
 def http_request(
@@ -388,12 +391,17 @@ def http_request(
     retries: int = 3,
     timeout: int = 25,
     retry_safe: Optional[bool] = None,
+    include_headers: bool = False,
 ) -> tuple[int, Any, str]:
     """Send a JSON request and return ``(status, payload, content_type)``.
 
     ``retry_safe`` decides whether transient failures may be replayed:
     ``None`` (the default) auto-detects ordinary reads, ``True``/``False``
     force the behaviour.  Writes are always sent once.
+
+    When ``include_headers`` is True the return is extended to
+    ``(status, payload, content_type, response_headers)`` (used by
+    ``Wallapop.save_search`` which needs the ``Location`` header).
     """
     if params:
         sep = "&" if "?" in url else "?"
@@ -406,7 +414,9 @@ def http_request(
         hdrs.setdefault("Content-Type", "application/json")
     safe = _is_safe(method, encoded is not None, retry_safe)
     attempts = _resolve_attempts(method, retries, encoded is not None, retry_safe)
-    status, payload, ctype = _send(method, url, encoded, hdrs, attempts, safe, timeout)
+    status, payload, ctype, resp_headers = _send(method, url, encoded, hdrs, attempts, safe, timeout)
+    if include_headers:
+        return status, decode_payload(payload, ctype), ctype, resp_headers
     return status, decode_payload(payload, ctype), ctype
 
 
@@ -431,7 +441,7 @@ def http_request_raw(
         hdrs["Content-Type"] = "application/json"
     safe = _is_safe(method, raw_body is not None, retry_safe)
     attempts = _resolve_attempts(method, retries, raw_body is not None, retry_safe)
-    status, payload, ctype = _send(method, url, raw_body, hdrs, attempts, safe, timeout)
+    status, payload, ctype, _ = _send(method, url, raw_body, hdrs, attempts, safe, timeout)
     return status, decode_payload(payload, ctype)
 
 

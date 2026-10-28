@@ -1,4 +1,4 @@
-"""Offline tests for the HTTP transport (wallapoplib.http).
+"""Offline tests for the HTTP transport (wallapop_mcp.http).
 
 No network: ``urllib.request.urlopen`` is replaced by a scripted fake and the
 ``time`` module by a deterministic clock, so retries/backoff/pacing can be
@@ -14,8 +14,8 @@ import urllib.error
 
 import pytest
 
-import wallapoplib.http as http_mod
-from wallapoplib.http import (
+import wallapop_mcp.http as http_mod
+from wallapop_mcp.http import (
     ApiError,
     http_request,
     http_request_raw,

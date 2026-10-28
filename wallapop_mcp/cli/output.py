@@ -8,9 +8,9 @@ import json
 import shutil
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
-from ..http import Response, eprint
+from ..http import Response, eprint  # noqa: F401 (re-exported to commands)
 from ..models import Deal, Item, OfferEvent, offer_payload_summary
 
 
@@ -144,29 +144,29 @@ def print_offer_events(events: list[OfferEvent], indent: str = "   ") -> None:
 def offer_label(kind: str) -> str:
     """Colored one-line state label for an offer ``kind`` (from models)."""
     labels = {
-        "seller-counter": paint.yellow("esperando tu respuesta"),
-        "our-offer": paint.dim("esperando la respuesta del vendedor"),
-        "our-counter": paint.dim("esperando la respuesta del vendedor"),
-        "seller-accepted": paint.green("aceptada por el vendedor (comprar en 24h)"),
-        "accepted-buy": paint.green("aceptada por ti — comprar en 24h"),
-        "seller-declined": paint.red("rechazada por el vendedor"),
-        "our-declined": paint.red("rechazada por ti"),
-        "expired": paint.dim("caducada"),
+        "seller-counter": paint.yellow("waiting for your reply"),
+        "our-offer": paint.dim("waiting for the seller's reply"),
+        "our-counter": paint.dim("waiting for the seller's reply"),
+        "seller-accepted": paint.green("accepted by the seller (buy within 24h)"),
+        "accepted-buy": paint.green("accepted by you — buy within 24h"),
+        "seller-declined": paint.red("declined by the seller"),
+        "our-declined": paint.red("declined by you"),
+        "expired": paint.dim("expired"),
     }
     return labels.get(kind, kind)
 
 
 def offer_tag(kind: str) -> str:
-    """Short colored badge for scanning dashboards (``[ACEPTADA]`` etc.)."""
+    """Short colored badge for scanning dashboards (``[ACCEPTED]`` etc.)."""
     tags = {
-        "accepted-buy": paint.green("[ACEPTADA]"),
-        "seller-accepted": paint.green("[ACEPTADA]"),
-        "seller-counter": paint.bold(paint.yellow("[PENDIENTE]")),
-        "our-offer": paint.cyan("[EN ESPERA]"),
-        "our-counter": paint.cyan("[EN ESPERA]"),
-        "seller-declined": paint.red("[RECHAZADA]"),
-        "our-declined": paint.red("[RECHAZADA]"),
-        "expired": paint.dim("[CADUCADA]"),
+        "accepted-buy": paint.green("[ACCEPTED]"),
+        "seller-accepted": paint.green("[ACCEPTED]"),
+        "seller-counter": paint.bold(paint.yellow("[PENDING]")),
+        "our-offer": paint.cyan("[WAITING]"),
+        "our-counter": paint.cyan("[WAITING]"),
+        "seller-declined": paint.red("[DECLINED]"),
+        "our-declined": paint.red("[DECLINED]"),
+        "expired": paint.dim("[EXPIRED]"),
     }
     return tags.get(kind, "")
 

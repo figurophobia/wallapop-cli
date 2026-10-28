@@ -50,7 +50,7 @@ def wizard_login(timeout_s: int = DEFAULT_TIMEOUT_S) -> tuple[dict, str]:
             viewport={"width": 1280, "height": 900},
         )
         page = ctx.new_page()
-        print("completa el login en la ventana del navegador (email/password o Google)...",
+        print("finish logging in in the browser window (email/password or Google)...",
               flush=True)
         page.goto(WEB_BASE, wait_until="domcontentloaded", timeout=30_000)
         page.wait_for_timeout(2500)
