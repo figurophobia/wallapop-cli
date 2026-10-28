@@ -10,6 +10,7 @@ import json
 import platform
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +28,11 @@ def build() -> None:
 
 
 def smoke_mcp(binary: Path) -> int:
+    """Run ``initialize`` + ``tools/list`` over stdio; return the tool count.
+
+    stdin stays open until the answer arrives: closing it early lets the
+    server shut down before it has replied.
+    """
     messages = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
             "protocolVersion": "2025-06-18", "capabilities": {},
@@ -34,16 +40,27 @@ def smoke_mcp(binary: Path) -> int:
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
     ]
-    stdin = "".join(json.dumps(m) + "\n" for m in messages)
-    proc = subprocess.run(
+    proc = subprocess.Popen(
         [str(binary), "--session", str(ROOT / "build" / "empty-session")],
-        input=stdin, capture_output=True, text=True, timeout=120,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
-    for line in proc.stdout.splitlines():
-        msg = json.loads(line)
-        if msg.get("id") == 2:
-            return len(msg["result"]["tools"])
-    raise SystemExit(f"no tools/list answer from {binary.name}:\n{proc.stdout}\n{proc.stderr}")
+    timer = threading.Timer(120, proc.kill)
+    timer.start()
+    try:
+        assert proc.stdin and proc.stdout
+        for message in messages:
+            proc.stdin.write(json.dumps(message) + "\n")
+        proc.stdin.flush()
+        for line in proc.stdout:
+            msg = json.loads(line)
+            if msg.get("id") == 2:
+                return len(msg["result"]["tools"])
+    finally:
+        timer.cancel()
+        if proc.stdin:
+            proc.stdin.close()
+        proc.wait(timeout=30)
+    raise SystemExit(f"no tools/list answer from {binary.name}:\n{proc.stderr.read() if proc.stderr else ''}")
 
 
 def main() -> int:
