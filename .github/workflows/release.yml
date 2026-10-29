@@ -36,7 +36,7 @@ jobs:
           python -m build
           python -m twine check --strict dist/*
           python scripts/check_package.py dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -71,7 +71,7 @@ jobs:
           else
             tar czf "../../$name.tar.gz" wallapop-mcp wallapop
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bin-${{ matrix.suffix }}
           path: wallapop-mcp-*
